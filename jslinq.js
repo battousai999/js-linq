@@ -510,9 +510,9 @@
         {
             if ((index == null) || isNaN(index) || (index < 0) || (index >= this.array.length))
                 throw new Error("Invalid index.");
-                
+
             linq_helper.processDeferredSort(this);
-            
+
             return this.array[index];
         },
 
@@ -527,19 +527,19 @@
         {
             if ((index == null) || isNaN(index) || (index < 0) || (index >= this.array.length))
                 return defaultValue;
-                
+
             linq_helper.processDeferredSort(this);
-            
+
             return this.array[index];
         },
 
-		/**
-			Returns elements in 'this' collection that do not also exist in the 'second' collection, using 'comparer'
-			(if it is given) to determine whether two items are equal.  If 'comparer' is not given, the "===" operator
-			is used to compare elements.
-			@param second The collection to use to exclude elements
-			@param comparer Optional, the function used to compare elements
-		*/
+        /**
+            Returns elements in 'this' collection that do not also exist in the 'second' collection, using 'comparer'
+            (if it is given) to determine whether two items are equal.  If 'comparer' is not given, the "===" operator
+            is used to compare elements.
+            @param second The collection to use to exclude elements
+            @param comparer Optional, the function used to compare elements
+        */
         except: function (second, comparer)
         {
             comparer = linq_helper.createLambda(comparer);
@@ -589,13 +589,13 @@
             return results;
         },
 
-		/**
-			Returns either the first element of 'this' collection (if 'predicate' is not given) or the 
-			first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
-			If there is no "first" element to return (either because 'this' collection is empty or no element 
-			satisfies the 'predicate'), an error is thrown.
-			@param predicate Optional, the predicate function used to determine the element to return
-		*/
+        /**
+            Returns either the first element of 'this' collection (if 'predicate' is not given) or the 
+            first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
+            If there is no "first" element to return (either because 'this' collection is empty or no element 
+            satisfies the 'predicate'), an error is thrown.
+            @param predicate Optional, the predicate function used to determine the element to return
+        */
         first: function (predicate)
         {
             predicate = linq_helper.createLambda(predicate);
@@ -616,14 +616,14 @@
             throw new Error("No first item was found in collection.");
         },
 
-		/**
-			Returns either the first element of 'this' collection (if 'predicate' is not given) or the
-			first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
-			If there is no "first" element to return (either because 'this' collection is empty or no element
-			satisfies the 'predicate'), the 'defaultValue' is returned.
-			@param defaultValue The value to return if no "first" element is found
-			@param predicate Optional, the predicate function used to determine the element to return
-		*/
+        /**
+            Returns either the first element of 'this' collection (if 'predicate' is not given) or the
+            first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
+            If there is no "first" element to return (either because 'this' collection is empty or no element
+            satisfies the 'predicate'), the 'defaultValue' is returned.
+            @param defaultValue The value to return if no "first" element is found
+            @param predicate Optional, the predicate function used to determine the element to return
+        */
         firstOrDefault: function (defaultValue, predicate)
         {
             predicate = linq_helper.createLambda(predicate);
@@ -644,19 +644,19 @@
             return defaultValue;
         },
 
-		/**
-			Return a collection of groupings (i.e., objects with a property called 'key' that
-			contains the grouping key and a property called 'values' that contains an array
-			of elements that are grouped under the grouping key).  The array of elements grouped
-			under the grouping key will be elements of 'this' collection (if no 'elementSelector' 
-			is given) or projected elements given by 'elementSelector'.  The grouping key for 
-			each element in 'this' collection is given by the 'keySelector' function.  If a
-			'keyComparer' function is given, it will be used to determine equality among the
-			grouping keys (if 'comparer' is not given, it the "===" operator will be used).
-			@param keySelector The function that returns the grouping key for an element
-			@param elementSelector Optional, the function that projects elements to be returned in the results
-			@param keyComparer Optional, the function used to compare grouping keys
-		*/
+        /**
+            Return a collection of groupings (i.e., objects with a property called 'key' that
+            contains the grouping key and a property called 'values' that contains an array
+            of elements that are grouped under the grouping key).  The array of elements grouped
+            under the grouping key will be elements of 'this' collection (if no 'elementSelector' 
+            is given) or projected elements given by 'elementSelector'.  The grouping key for 
+            each element in 'this' collection is given by the 'keySelector' function.  If a
+            'keyComparer' function is given, it will be used to determine equality among the
+            grouping keys (if 'comparer' is not given, it the "===" operator will be used).
+            @param keySelector The function that returns the grouping key for an element
+            @param elementSelector Optional, the function that projects elements to be returned in the results
+            @param keyComparer Optional, the function used to compare grouping keys
+        */
         groupBy: function (keySelector, elementSelector, keyComparer)
         {
             keySelector = linq_helper.createLambda(keySelector);
