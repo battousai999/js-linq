@@ -36,6 +36,7 @@
             assertTrue("linq.from() array correct #2 (1st element = 1)", col.array[0] == 1);
             assertTrue("linq.from() array correct #3 (2nd element = 2)", col.array[1] == 2);
             assertTrue("linq.from() array correct #4 (3rd element = 3)", col.array[2] == 3);
+            assertArrayEquals("empty", $linq().toArray(), []);
         }
 
         function test_construction_range()
@@ -47,6 +48,9 @@
             assertTrue("linq.range() array correct #2 (1st element = 1)", col.array[0] == 1);
             assertTrue("linq.range() array correct #3 (2nd element = 2)", col.array[1] == 2);
             assertTrue("linq.range() array correct #4 (3rd element = 3)", col.array[2] == 3);
+
+            assertException("null 'from'", function () { linq.range(null, 10); });
+            assertException("null 'to'", function () { linq.range(1, null); });
         }
 
         function test_construction_repeat()
@@ -58,6 +62,21 @@
             assertTrue("linq.repeat() array correct #2 (1st element = 'stuff')", col.array[0] == 'stuff');
             assertTrue("linq.repeat() array correct #3 (2nd element = 'stuff')", col.array[1] == 'stuff');
             assertTrue("linq.repeat() array correct #4 (3rd element = 'stuff')", col.array[2] == 'stuff');
+        }
+
+        function test_construction_matches()
+        {
+            var col = linq.matches("this is a test", "\\w+");
+
+            assertNotNull("linq.matches() returns object", col);
+            assertTrue("linq.matches() array correct #1 (length)", col.array.length == 4);
+            assertTrue("linq.matches() array correct #2 (1st element = 'this')", col.array[0] == 'this');
+            assertTrue("linq.matches() array correct #3 (2nd element = 'is')", col.array[1] == 'is');
+            assertTrue("linq.matches() array correct #4 (3rd element = 'a')", col.array[2] == 'a');
+            assertTrue("linq.matches() array correct #5 (4th element = 'test')", col.array[3] == 'test');
+
+            assertException("null 'pattern'", function () { linq.matches("this is a test", null); });
+            assertException("non-string 'text'", function () { linq.matches(99, "\\w+"); });
         }
 
         function test_construction_dollar()
