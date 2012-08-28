@@ -196,6 +196,9 @@
     */
     linq.from = function (collection)
     {
+        if (collection == null)
+            return new linq([]);
+
         if (collection instanceof linq)
             return collection;
 
@@ -218,6 +221,12 @@
     */
     linq.range = function (from, to, step)
     {
+        if ((from == null) || isNaN(from))
+            throw new Error("Invalid 'from' value.");
+
+        if ((to == null) || isNaN(to))
+            throw new Error("Invalid 'to' value.");
+
         if ((step == null) || isNaN(step))
             step = 1;
 
@@ -261,8 +270,14 @@
     */
     linq.matches = function (text, pattern, flags)
     {
-        if (input == null)
+        if (pattern == null)
+            throw new Error("Invalid 'pattern' value.");
+
+        if (text == null)
             return new linq([]);
+
+        if (typeof text != typeof "")
+            throw new Error("Parameter 'text' is not a string.");
 
         if (flags == null)
             flags = '';
@@ -286,7 +301,7 @@
             internalPattern = pattern;
 
         var regex = new RegExp(internalPattern, flags);
-        var matches = regex.exec(text);
+        var matches = text.match(regex);
 
         return new linq((matches == null ? [] : matches), false);
     };
