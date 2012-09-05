@@ -66,14 +66,21 @@
 
         function test_construction_matches()
         {
-            var col = linq.matches("this is a test", "\\w+");
+            var col1 = linq.matches("this is a test", "\\w+");
+            var col2 = linq.matches("this is a test", /\w+/);
+            var col3 = linq.matches("test_1 TEST_2 test_3 TeSt_4", "test_\\d", "");
+            var col4 = linq.matches("test_1 TEST_2 test_3 TeSt_4", "test_\\d", "i");
 
-            assertNotNull("linq.matches() returns object", col);
-            assertTrue("linq.matches() array correct #1 (length)", col.array.length == 4);
-            assertTrue("linq.matches() array correct #2 (1st element = 'this')", col.array[0] == 'this');
-            assertTrue("linq.matches() array correct #3 (2nd element = 'is')", col.array[1] == 'is');
-            assertTrue("linq.matches() array correct #4 (3rd element = 'a')", col.array[2] == 'a');
-            assertTrue("linq.matches() array correct #5 (4th element = 'test')", col.array[3] == 'test');
+            assertNotNull("linq.matches() returns object", col1);
+            assertTrue("linq.matches() array correct #1 (length)", col1.array.length == 4);
+            assertTrue("linq.matches() array correct #2 (1st element = 'this')", col1.array[0] == 'this');
+            assertTrue("linq.matches() array correct #3 (2nd element = 'is')", col1.array[1] == 'is');
+            assertTrue("linq.matches() array correct #4 (3rd element = 'a')", col1.array[2] == 'a');
+            assertTrue("linq.matches() array correct #5 (4th element = 'test')", col1.array[3] == 'test');
+
+            assertArrayEquals("RegExp pattern", col2.toArray(), ['this', 'is', 'a', 'test']);
+            assertArrayEquals("case sensitive", col3.toArray(), ['test_1', 'test_3']);
+            assertArrayEquals("case insensitive", col4.toArray(), ['test_1', 'TEST_2', 'test_3', 'TeSt_4']);
 
             assertException("null 'pattern'", function () { linq.matches("this is a test", null); });
             assertException("non-string 'text'", function () { linq.matches(99, "\\w+"); });
