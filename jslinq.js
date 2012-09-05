@@ -154,7 +154,7 @@
             if (value == 0)
             {
                 if (info.next == null)
-                    return value;
+                    return 0;
 
                 // Recursively evaluate the next level of ordering...
                 return compare(x, y, info.next);
@@ -166,6 +166,8 @@
         collection.array.sort(function (x, y) { return compare(x, y, collection.deferredSort); });
         collection.deferredSort = null;
     };
+
+    linq_helper.identity = function (x) { return x; };
 
     /**
         Creates a new linq object.
@@ -375,7 +377,7 @@
                     if (isNaN(value))
                         throw new Error("Encountered an element that is not a number.");
 
-                    sum = sum + value;
+                    sum += value;
                     counter += 1;
                 }
             }
@@ -480,7 +482,7 @@
         */
         distinct: function (comparer)
         {
-            return this.distinctBy(function (x) { return x; }, comparer);
+            return this.distinctBy(linq_helper.identity, comparer);
         },
 
         /**
@@ -502,14 +504,6 @@
                 throw new Error("Invalid comparer.");
 
             linq_helper.processDeferredSort(this);
-
-            var actualComparer = function (x, y)
-            {
-                if (comparer == null)
-                    return (keySelector(x) === keySelector(y));
-                else
-                    return comparer(keySelector(x), keySelector(y));
-            };
 
             return this.groupBy(keySelector, null, comparer)
                 .select(function (x) { return (new linq(x.values, false)).first(); });
@@ -580,21 +574,16 @@
                 {
                     var value = this.array[i];
 
-                    var inFirst = linq_helper.some(results.array, function (x)
+                    var predicate = function (x)
                     {
                         if (comparer == null)
                             return (x === value);
                         else
                             return comparer(x, value);
-                    });
+                    };
 
-                    var inSecond = linq_helper.some(secondLinq.array, function (x)
-                    {
-                        if (comparer == null)
-                            return (x === value);
-                        else
-                            return comparer(x, value);
-                    });
+                    var inFirst = linq_helper.some(results.array, predicate);
+                    var inSecond = linq_helper.some(secondLinq.array, predicate);
 
                     if (!inFirst && !inSecond)
                         results.array.push(value);
@@ -815,21 +804,16 @@
                 {
                     var value = this.array[i];
 
-                    var inFirst = linq_helper.some(results.array, function (x)
+                    var predicate = function (x)
                     {
                         if (comparer == null)
                             return (x === value);
                         else
                             return comparer(x, value);
-                    });
+                    };
 
-                    var inSecond = linq_helper.some(secondLinq.array, function (x)
-                    {
-                        if (comparer == null)
-                            return (x === value);
-                        else
-                            return comparer(x, value);
-                    });
+                    var inFirst = linq_helper.some(results.array, predicate);
+                    var inSecond = linq_helper.some(secondLinq.array, predicate);
 
                     if (!inFirst && inSecond)
                         results.array.push(value);
