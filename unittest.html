@@ -1022,6 +1022,24 @@
             assertEquals("negative index", negativeIndex, 99);
             assertEquals("too big index", tooBigIndex, 99);
         }
+
+        function test_concat()
+        {
+            var col1 = $linq([1, 2, 3]);
+            var col2 = $linq([4, 5, 6]);
+
+            var basic = col1.concat(col2);
+            var withArray = col1.concat([7, 8, 9]);
+            var onEmpty = $linq([]).concat([2, 4, 6]);
+            var withEmpty = col1.concat([]);
+            var withNull = col1.concat(null);
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4, 5, 6]);
+            assertArrayEquals("with array", withArray.toArray(), [1, 2, 3, 7, 8, 9]);
+            assertArrayEquals("on empty", onEmpty.toArray(), [2, 4, 6]);
+            assertArrayEquals("with empty", withEmpty.toArray(), [1, 2, 3]);
+            assertArrayEquals("with null", withNull.toArray(), [1, 2, 3]);
+        }
     </script>
 </body>
 </html>
