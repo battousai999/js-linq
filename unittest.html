@@ -711,6 +711,7 @@
         {
             var col1 = $linq([{ prop: 'color', value: 'red' }, { prop: 'align', value: 'center' }, { prop: 'text', value: 'nicole' }]);
             var col2 = $linq(['a_blue', 'b_red', 'c_green', 'd_purple']);
+            var col3 = $linq(['1_one', '1_uno', '2_two', '3_three']);
 
             var basic = col1.toDictionary(function (x) { return x.prop; }, function (x) { return x.value; });
             var noElementSelector = col2.toDictionary(function (x) { return x[0]; });
@@ -724,6 +725,7 @@
 
             assertException("key selector is null", function () { col1.toDictionary(null); });
             assertException("element selector is not function", function () { col1.toDictionary(function (x) { return x.prop; }, notFunction); });
+            assertException("duplicate key", function () { col3.toDictionary(function (x) { return x[0]; }, function (x) { return x.slice(2); }); });
         }
 
         function test_reverse()

@@ -459,7 +459,7 @@
         },
 
         /**
-            Returns either 'this' collection, if 'this' collection is not empty, or a collection containing
+            Returns either 'this' collection, if 'this' collection is empty, or a collection containing
             only the 'defaultValue' as an element.  In other words, this function always returns a collection 
             containing at least one element.
             @param defaultValue The value for the resulting collection to contain if 'this' collection is empty
@@ -711,7 +711,7 @@
             projected keys.  If the 'keyComparer' is not given, the "===" operator will be used to 
             compare the projected keys.  The 'resultSelector' function is used to convert the joined 
             results into the results that are returned by the groupJoin function.  The 'resultSelector' 
-            takes as parameters the outer object (of the join) and an array of the joined outer objects 
+            takes as parameters the outer object (of the join) and an array of the joined inner objects 
             (this array will be an empty array if there were no inner elements associated with the outer
             element).
             @param inner The collection that is "left-outer" joined with 'this' collection
