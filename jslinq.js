@@ -649,6 +649,28 @@
         },
 
         /**
+            Executes the given 'action' on each element in 'this' collection.
+            @param action The function that is executed for each element in 'this' collection
+        */
+        foreach: function (action)
+        {
+            action = linq_helper.createLambda(action);
+
+            if ((action == null) || !linq_helper.isFunction(action))
+                throw new Error("Invalid action.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            for (var i = 0; i < len; i++)
+            {
+                if (i in this.array)
+                    action(this.array[i], i);
+            }
+        },
+
+        /**
             Return a collection of groupings (i.e., objects with a property called 'key' that
             contains the grouping key and a property called 'values' that contains an array
             of elements that are grouped under the grouping key).  The array of elements grouped
@@ -770,6 +792,24 @@
             }
 
             return new linq(results, false);
+        },
+
+        /**
+            Returns a collection of objects with the "key" property of each object equal to either the zero-based
+            index of the element in 'this' collection (if 'startIndex' is not given) or the index, starting at
+            'startIndex', of the element in 'this' collection, and with the "value" property of the object equal to
+            the element in 'this' collection.
+            @param startIndex Optional, the starting index for the results (defaults to '0')
+        */
+        index: function (startIndex)
+        {
+            if (startIndex == null)
+                startIndex = 0;
+
+            if (isNaN(startIndex))
+                throw new Error("Invalid startIndex");
+
+            return this.select(function (x, i) { return { key: (startIndex + i), value: x }; });
         },
 
         /**
@@ -983,9 +1023,8 @@
         },
 
         /**
-            Returns the "minimum" element of 'this' collection, determined by either the element, itself
-            (if 'selector' is not given), or by the value projected by the 'selector' function.  If 'this'
-            collection is empty, an error is thrown.
+            Returns the "minimum" element of 'this' collection, determined by the value projected by 
+            the 'selector' function.  If 'this' collection is empty, an error is thrown.
             @param selector Optional, the function that projects the value to used to determine a minimum element
         */
         minBy: function (selector)
@@ -1057,9 +1096,8 @@
         },
 
         /**
-            Returns the "maximum" element of 'this' collection, determined by either the element, itself
-            (if 'selector' is not given), or by the value projected by the 'selector' function.  If 'this'
-            collection is empty, an error is thrown.
+            Returns the "maximum" element of 'this' collection, determined by the value projected by 
+            the 'selector' function.  If 'this' collection is empty, an error is thrown.
             @param selector Optional, the function that projects the value to used to determine a maximum element
         */
         maxBy: function (selector)
@@ -1408,6 +1446,22 @@
         },
 
         /**
+            Returns the elements of 'this' collection, skipping initial elements until an element satisfies
+            the 'predicate' function (that first element that satisfies the 'predicate' function is 
+            included in the results).
+            @param predicate The function that indicates when to stop skipping elements
+        */
+        skipUntil: function (predicate)
+        {
+            predicate = linq_helper.createLambda(predicate);
+
+            if ((predicate == null) || !linq_helper.isFunction(predicate))
+                throw new Error("Invalid predicate");
+
+            return this.skipWhile(function (x) { return !predicate(x); });
+        },
+
+        /**
             Returns the elements of 'this' collection skipping initial elements until an element does not
             satisfy the 'predicate' function (that first element that fails to satisfy the 'predicate' function
             is included in the results).
@@ -1488,6 +1542,56 @@
             linq_helper.processDeferredSort(this);
 
             return new linq(this.array.slice(0, count), false);
+        },
+
+        /**
+            Returns every n-th (n = step) element of 'this' collection.
+            @param step The number of elements to bypass before returning the next element
+        */
+        takeEvery: function (step)
+        {
+            if ((step == null) || isNaN(step))
+                throw new Error("Invalid count.");
+
+            linq_helper.processDeferredSort(this);
+
+            return this.where(function (x, i) { return (i % step) == 0; });
+        },
+
+        /**
+            Returns the elements of 'this' collection, taking only the last 'count' number of elements.
+            @param count The number of elements to take from the end of the collection
+        */
+        takeLast: function (count)
+        {
+            if ((count == null) || isNaN(count))
+                throw new Error("Invalid count.");
+
+            linq_helper.processDeferredSort(this);
+
+            if (count <= 0)
+                return new linq([], false);
+
+            if (count > this.array.length)
+                count = this.array.length;
+
+            return new linq(this.array.slice(this.array.length - count), false);
+        },
+
+        /**
+            Returns the elements of 'this' collection taking element until an element satisfies the
+            'predicate' function (that first element that satisfies the 'predicate' function is not
+            included in the results).
+            @param predicate The function that indicates when to stop including elements in the results
+        */
+        takeUntil: function (predicate)
+        {
+            predicate = linq_helper.createLambda(predicate);
+
+            if ((predicate == null) || !linq_helper.isFunction(predicate))
+                throw new Error("Invalid predicate");
+
+            return this.takeWhile(function (x) { return !predicate(x); });
         },
 
         /**
@@ -1588,6 +1692,21 @@
             results.deferredSort = linq_helper.extendDeferredSort(this.deferredSort, { keySelector: keySelector, comparer: comparer, reverse: true, next: null });
 
             return results;
+        },
+
+        /**
+            Returns a string consisting of all of the elements of 'this' collection delimited by the given
+            'delimiter' value.  If a 'delimiter' value is not given, then the delimiter "," is used.
+            @param delimiter The delimiter separating the elements in the results
+        */
+        toDelimitedString: function (delimiter)
+        {
+            if (delimiter == null)
+                delimiter = ',';
+
+            linq_helper.processDeferredSort(this);
+
+            return this.array.join(delimiter);
         },
 
         /**
