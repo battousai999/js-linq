@@ -1042,6 +1042,128 @@
             assertArrayEquals("with empty", withEmpty.toArray(), [1, 2, 3]);
             assertArrayEquals("with null", withNull.toArray(), [1, 2, 3]);
         }
+
+        function test_skipUntil()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+            var basic = col1.skipUntil(function (x) { return x > 4; });
+            var onEmpty = $linq([]).skipUntil(function (x) { return x > 4; });
+            var skipNone = col1.skipUntil(function (x) { return x > 0; });
+            var testStop = col2.skipUntil(function (x) { return x > 4; });
+            var lambda = col2.skipUntil("x => x > 4");
+            
+            assertArrayEquals("basic", basic.toArray(), [5, 6, 7, 8]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("skip none", skipNone.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("test stop", testStop.toArray(), [5, 1, 2, 3, 4, 5]);
+            assertArrayEquals("lambda", lambda.toArray(), [5, 1, 2, 3, 4, 5]);
+
+            assertException("predicate is null", function () { col1.skipUntil(null); });
+        }
+
+        function test_takeUntil()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+            var basic = col1.takeUntil(function (x) { return x > 4; });
+            var onEmpty = $linq([]).takeUntil(function (x) { return x > 4; });
+            var takeNone = col1.takeUntil(function (x) { return x > 0; });
+            var testStop = col2.takeUntil(function (x) { return x > 4; });
+            var lambda = col2.takeUntil("x => x > 4");
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("take none", takeNone.toArray(), []);
+            assertArrayEquals("test stop", testStop.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 2, 3, 4]);
+
+            assertException("predicate is null", function () { col1.takeUntil(null); });
+        }
+
+        function test_takeLast()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+            var basic = col1.takeLast(3);
+            var onEmpty = $linq([]).takeLast(3);
+            var moreThan = col1.takeLast(20);
+            var takeNone = col1.takeLast(0);
+
+            assertArrayEquals("basic", basic.toArray(), [6, 7, 8]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("moreThan", moreThan.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("take none", takeNone.toArray(), []);
+
+            assertException("count is null", function () { col1.takeLast(null); });
+            assertException("count is not number", function () { col1.takeLast("stuff"); });
+        }
+
+        function test_takeEvery()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+            var basic = col.takeEvery(3);
+            var onEmpty = $linq([]).takeEvery(3);
+            var moreThan = col.takeEvery(20);
+            var takeAll = col.takeEvery(1);
+            
+            assertArrayEquals("basic", basic.toArray(), [1, 4, 7]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("more than", moreThan.toArray(), [1]);
+            assertArrayEquals("take all", takeAll.toArray(), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+            assertException("count is null", function () { col.takeEvery(null); });
+            assertException("count is not number", function () { col.takeEvery("stuff"); });
+        }
+
+        function test_foreach()
+        {
+            var arr1 = [1, 2, 3, 4, 5, 6];
+            var arr2 = ['a', 'b', 'c', 'd', 'e', 'f'];
+            var testValue = '';
+
+            var basic = $linq(arr1).foreach(function (x, i) { arr2[i] = arr2[i] + x; });
+            var onEmpty = $linq([]).foreach(function (x) { testValue += '*'; });
+
+            assertArrayEquals("basic", arr2, ['a1', 'b2', 'c3', 'd4', 'e5', 'f6']);
+            assertEquals("on empty", testValue, '');
+
+            assertException("action is null", function () { $linq(arr1).foreach(null); });
+            assertException("action is not function", function () { $linq(arr1).foreach("stuff"); });
+        }
+
+        function test_toDelimitedString()
+        {
+            var arr = ['a', 'b', 'c', 'd', 'e'];
+
+            var basic = $linq(arr).toDelimitedString('|');
+            var stringDelimiter = $linq(arr).toDelimitedString(', ');
+            var impliedDelimiter = $linq(arr).toDelimitedString();
+            var noDelimiter = $linq(arr).toDelimitedString('');
+
+            assertEquals("basic", basic, 'a|b|c|d|e');
+            assertEquals("string delimiter", stringDelimiter, 'a, b, c, d, e');
+            assertEquals("impliedDelimiter", impliedDelimiter, 'a,b,c,d,e');
+            assertEquals("no delimiter", noDelimiter, 'abcde');
+        }
+
+        function test_index()
+        {
+            var arr = ['a', 'b', 'c', 'd', 'e'];
+
+            var basic = $linq(arr).index(5);
+            var noStartIndex = $linq(arr).index();
+            var onEmpty = $linq([]).index(0);
+
+            assertArrayEquals("basic", basic.toArray(), [{ key: 5, value: 'a' }, { key: 6, value: 'b' }, { key: 7, value: 'c' }, { key: 8, value: 'd' }, { key: 9, value: 'e' }]);
+            assertArrayEquals("no starting index", noStartIndex.toArray(), [{ key: 0, value: 'a' }, { key: 1, value: 'b' }, { key: 2, value: 'c' }, { key: 3, value: 'd' }, { key: 4, value: 'e' }]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+
+            assertException("start index not a number", function () { $linq(arr).index("stuff"); });
+        }
     </script>
 </body>
 </html>
