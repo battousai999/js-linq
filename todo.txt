@@ -1,9 +1,6 @@
 Functions to implement in the future: (most from MoreLinq)
 -------------------------------------
 aggregate()
-assertCount()
-batch()
-equiZip()
 pad()
 pipe()
 prepend()
@@ -13,3 +10,10 @@ singleOrFallback()
 zipLongest()
 indexOf() 
 lastIndexOf()
+
+
+operators to document:
+----------------------
+batch
+equiZip
+zipLongest

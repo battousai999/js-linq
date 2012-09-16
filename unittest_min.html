@@ -893,9 +893,8 @@
             assertArrayEquals("lambda", lambda.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
 
             assertException("result selector is not function", function () { col1.zip(col2, notFunction); });
+            assertException("result selector is null", function () { col1.zip(col2, null); });
         }
-
-        test_orderBy();
 
         function test_orderBy()
         {
@@ -1053,7 +1052,7 @@
             var skipNone = col1.skipUntil(function (x) { return x > 0; });
             var testStop = col2.skipUntil(function (x) { return x > 4; });
             var lambda = col2.skipUntil("x => x > 4");
-            
+
             assertArrayEquals("basic", basic.toArray(), [5, 6, 7, 8]);
             assertArrayEquals("on empty", onEmpty.toArray(), []);
             assertArrayEquals("skip none", skipNone.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
@@ -1109,7 +1108,7 @@
             var onEmpty = $linq([]).takeEvery(3);
             var moreThan = col.takeEvery(20);
             var takeAll = col.takeEvery(1);
-            
+
             assertArrayEquals("basic", basic.toArray(), [1, 4, 7]);
             assertArrayEquals("on empty", onEmpty.toArray(), []);
             assertArrayEquals("more than", moreThan.toArray(), [1]);
@@ -1163,6 +1162,81 @@
             assertArrayEquals("on empty", onEmpty.toArray(), []);
 
             assertException("start index not a number", function () { $linq(arr).index("stuff"); });
+        }
+
+        function test_batch()
+        {
+            var arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+            var basic = $linq(arr).batch(5);
+            var withResultSelector = $linq(arr).batch(4, function (x) { return x * 2; });
+            var withLargeSize = $linq(arr).batch(10000);
+            var withSizeOfOne = $linq(arr).batch(1);
+            var onEmpty = $linq([]).batch(10);
+            var lambda = $linq(arr).batch(8, "x => x + 1");
+
+            assertArrayEquals("basic", basic.toArray(), [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12]]);
+            assertArrayEquals("with result selector", withResultSelector.toArray(), [[2, 4, 6, 8], [10, 12, 14, 16], [18, 20, 22, 24]]);
+            assertArrayEquals("with large size", withLargeSize.toArray(), [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]]);
+            assertArrayEquals("with size of 1", withSizeOfOne.toArray(), [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12]]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("lambda", lambda.toArray(), [[2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13]]);
+
+            assertException("result selector not function", function () { $linq(arr).batch(10, notFunction); });
+            assertException("size not a number", function () { $linq(arr).batch("stuff"); });
+            assertException("size less than 1", function () { $linq(arr).batch(0); });
+        }
+
+        function test_equiZip()
+        {
+            var col1 = $linq(['a', 'b', 'c', 'd']);
+            var col2 = $linq([1, 2, 3, 4]);
+
+            var resultSelector = function (x, y) { return x + '_' + y; };
+
+            var basic = col1.equiZip(col2, resultSelector);
+            var onArray = col1.equiZip([11, 22, 33, 44], resultSelector);
+            var lambda = col1.equiZip(col2, "x, y => x + '_' + y");
+
+            assertArrayEquals("basic", basic.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+            assertArrayEquals("on array", onArray.toArray(), ['a_11', 'b_22', 'c_33', 'd_44']);
+            assertArrayEquals("lambda", lambda.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+
+            assertException("result selector is not function", function () { col1.equiZip(col2, notFunction); });
+            assertException("result selector is null", function () { col1.equiZip(col2, null); });
+            assertException("with unequal lengths", function () { col1.equiZip([1, 2, 3, 4, 5, 6], resultSelector); });
+            assertException("on empty", function () { col1.equiZip([], resultSelector); });
+            assertException("on null", function () { col1.equiZip(null, resultSelector); });
+        }
+
+        function test_zipLongest()
+        {
+            var col1 = $linq(['a', 'b', 'c', 'd']);
+            var col2 = $linq(['a', 'b', 'c', 'd', 'e', 'f']);
+            var col3 = $linq([1, 2, 3, 4]);
+
+            var resultSelector = function (x, y) { return x + '_' + y; };
+            var defaultFirst = '*';
+            var defaultSecond = '$';
+
+            var basic = col1.zipLongest(col3, defaultFirst, defaultSecond, resultSelector);
+            var firstShorter = col3.zipLongest(col2, defaultFirst, defaultSecond, resultSelector);
+            var secondShorter = col2.zipLongest(col3, defaultFirst, defaultSecond, resultSelector);
+            var onArray = col1.zipLongest([1, 2, 3, 4, 5, 6, 7, 8], defaultFirst, defaultSecond, resultSelector);
+            var onEmpty = col1.zipLongest([], defaultFirst, defaultSecond, resultSelector);
+            var onNull = col1.zipLongest(null, defaultFirst, defaultSecond, resultSelector);
+            var lambda = col1.zipLongest(col3, defaultFirst, defaultSecond, "x, y => x + '_' + y");
+
+            assertArrayEquals("basic", basic.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+            assertArrayEquals("first shorter", firstShorter.toArray(), ['1_a', '2_b', '3_c', '4_d', '*_e', '*_f']);
+            assertArrayEquals("second shorter", secondShorter.toArray(), ['a_1', 'b_2', 'c_3', 'd_4', 'e_$', 'f_$']);
+            assertArrayEquals("on array", onArray.toArray(), ['a_1', 'b_2', 'c_3', 'd_4', '*_5', '*_6', '*_7', '*_8']);
+            assertArrayEquals("on empty", onEmpty.toArray(), ['a_$', 'b_$', 'c_$', 'd_$']);
+            assertArrayEquals("on null", onNull.toArray(), ['a_$', 'b_$', 'c_$', 'd_$']);
+            assertArrayEquals("lambda", lambda.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+
+            assertException("result selector is not function", function () { col1.zipLongest(col2, defaultFirst, defaultSecond, notFunction); });
+            assertException("result selector is null", function () { col1.zipLongest(col2, defaultFirst, defaultSecond, null); });
         }
     </script>
 </body>
