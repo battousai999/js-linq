@@ -386,6 +386,55 @@
         },
 
         /**
+            Returns an array with the elements of 'this' collection grouped into separate 
+            arrays (i.e., "buckets") of the 'size' given.  If the 'result selector' is given
+            the the buckets will contain the values projected from the elements by the result
+            selector.  The given 'size' must be greater than zero.
+            @param size The size of buckets into which to group the elements
+            @param resultSelector Optional, the function to use to project the result values
+        */
+        batch: function (size, resultSelector)
+        {
+            resultSelector = linq_helper.createLambda(resultSelector);
+
+            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
+                throw new Error("Invalid result selector.");
+
+            if ((size == null) || isNaN(size) || (size <= 0))
+                throw new Error("Invalid size.");
+
+            linq_helper.processDeferredSort(this);
+
+            var results = [];
+            var index = 0;
+            var len = this.array.length;
+            var currentBucket = null;
+
+            for (var i = 0; i < len; i++)
+            {
+                if (i in this.array)
+                {
+                    if (currentBucket == null)
+                    {
+                        currentBucket = [];
+                        results.push(currentBucket);
+                    }
+
+                    currentBucket[index] = (resultSelector == null ? this.array[i] : resultSelector(this.array[i]));
+                    index += 1;
+
+                    if (index == size)
+                    {
+                        currentBucket = null;
+                        index = 0;
+                    }
+                }
+            }
+
+            return new linq(results, false);
+        },
+
+        /**
             Returns a collection containing all of the elements of 'this' collection followed by 
             all of the elements of the 'second' collection.
             @param second The collection of items to append to 'this' collection
@@ -540,6 +589,41 @@
             linq_helper.processDeferredSort(this);
 
             return this.array[index];
+        },
+
+        /**
+            Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
+            returned collection is the value projected from the corresponding element from each of 'this'
+            collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
+            collection are not equal, then an exception will be thrown.
+            @param second The collection to zip with 'this' collection
+            @param resultSelector The function to use to project the result values
+        */
+        equiZip: function (second, resultSelector)
+        {
+            resultSelector = linq_helper.createLambda(resultSelector);
+
+            if ((resultSelector == null) || !linq_helper.isFunction(resultSelector))
+                throw new Error("Invalid result selector.");
+
+            linq_helper.processDeferredSort(this);
+
+            var secondLinq = linq.from(second);
+
+            linq_helper.processDeferredSort(second);
+
+            if (this.array.length != secondLinq.array.length)
+                throw new Error("The two collections being equi-zipped are not of equal lengths.");
+
+            var len = this.array.length;
+            var results = [];
+
+            for (var i = 0; i < len; i++)
+            {
+                results.push(resultSelector(this.array[i], secondLinq.array[i]));
+            }
+
+            return new linq(results, false);
         },
 
         /**
@@ -1861,6 +1945,44 @@
             for (var i = 0; i < len; i++)
             {
                 results.push(resultSelector(this.array[i], secondLinq.array[i]));
+            }
+
+            return new linq(results, false);
+        },
+
+        /**
+            Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
+            returned collection is the value projected from the corresponding element from each of 'this'
+            collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
+            collection are not equal, the size of the returned collection will equal the maximum of the
+            sizes of 'this' collection and the 'second' collection, and the shorter collection with use
+            values given by the 'defaultForFirst' and 'defaultForSecond' parameters (corresponding with
+            which corresponding list is shorter).
+            @param second The collection to zip with 'this' collection
+            @param resultSelector The function to use to project the result values
+        */
+        zipLongest: function (second, defaultForFirst, defaultForSecond, resultSelector)
+        {
+            resultSelector = linq_helper.createLambda(resultSelector);
+
+            if ((resultSelector == null) || !linq_helper.isFunction(resultSelector))
+                throw new Error("Invalid result selector.");
+
+            linq_helper.processDeferredSort(this);
+
+            var secondLinq = linq.from(second);
+
+            linq_helper.processDeferredSort(secondLinq);
+
+            var len = Math.max(this.array.length, secondLinq.array.length);
+            var results = [];
+
+            for (var i = 0; i < len; i++)
+            {
+                results.push(
+                    resultSelector(
+                        (i >= this.array.length ? defaultForFirst : this.array[i]), 
+                        (i >= secondLinq.array.length ? defaultForSecond : secondLinq.array[i])));
             }
 
             return new linq(results, false);
