@@ -1,13 +1,10 @@
 Functions to implement in the future: (most from MoreLinq)
 -------------------------------------
 aggregate()
-pad()
 pipe()
-prepend()
 prescan()
 scan()
 singleOrFallback()
-zipLongest()
 indexOf() 
 lastIndexOf()
 
@@ -17,3 +14,6 @@ operators to document:
 batch
 equiZip
 zipLongest
+prepend
+pad
+padWith

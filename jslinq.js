@@ -1285,6 +1285,73 @@
         },
 
         /**
+            Returns a collection the same elements as 'this' collection but with extra elements added 
+            to the end so that the results collection has a length of at least 'width'.  The extra
+            elements that are added are equal to the 'padding' value.
+            @param width The length that the results collection will be at least equal to
+            @param padding The value that is added to the results collection to fill it out
+        */
+        pad: function (width, padding)
+        {
+            if ((width == null) || isNaN(width))
+                throw new Error("Invalid width.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            if (len >= width)
+                return new linq(this.array);
+
+            return new linq(this.array.concat(linq.repeat(padding, width - len).array), false);
+        },
+
+        /**
+            Returns a collection the same elements as 'this' collection but with extra elements added 
+            to the end so that the results collection has a length of at least 'width'.  The extra
+            elements that are added are determined by the 'paddingSelector' function.  
+            @param width The length that the results collection will be at least equal to
+            @param paddingSelector The function that indicates the value to add to the results collection
+        */
+        padWith: function (width, paddingSelector)
+        {
+            if ((width == null) || isNaN(width))
+                throw new Error("Invalid width");
+
+            paddingSelector = linq_helper.createLambda(paddingSelector);
+
+            if ((paddingSelector == null) || !linq_helper.isFunction(paddingSelector))
+                throw new Error("Invalid padding selector.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            if (len >= width)
+                return new linq(this.array);
+
+            var paddingArray = [];
+
+            for (var i = len; i < width; i++)
+            {
+                paddingArray.push(paddingSelector(i));
+            }
+
+            return new linq(this.array.concat(paddingArray), false);
+        },
+
+        /**
+            Returns 'this' collection with the 'value' prepended (i.e, added to the front).
+            @param value The value to be prepended to 'this' collection
+        */
+        prepend: function (value)
+        {
+            linq_helper.processDeferredSort(this);
+
+            return new linq([value].concat(this.array), false);
+        },
+
+        /**
             Returns the elements of 'this' collection in reverse order.
         */
         reverse: function ()
