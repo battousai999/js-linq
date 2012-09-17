@@ -1238,6 +1238,56 @@
             assertException("result selector is not function", function () { col1.zipLongest(col2, defaultFirst, defaultSecond, notFunction); });
             assertException("result selector is null", function () { col1.zipLongest(col2, defaultFirst, defaultSecond, null); });
         }
+
+        function test_prepend()
+        {
+            var col1 = $linq([2, 3, 4, 5, 6, 7]);
+
+            var basic = col1.prepend(1);
+            var onEmpty = $linq([]).prepend('a');
+            var withNull = col1.prepend(null);
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4, 5, 6, 7]);
+            assertArrayEquals("on empty", onEmpty.toArray(), ['a']);
+            assertArrayEquals("with null", withNull.toArray(), [null, 2, 3, 4, 5, 6, 7]);
+        }
+
+        function test_pad()
+        {
+            var col = $linq([1, 2, 3, 4]);
+
+            var basic = col.pad(8, 0);
+            var onEmpty = $linq([]).pad(8, 'a');
+            var notNeeded = col.pad(4, '$');
+            var padWithNull = col.pad(6, null);
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4, 0, 0, 0, 0]);
+            assertArrayEquals("on empty", onEmpty.toArray(), ['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a']);
+            assertArrayEquals("not needed", notNeeded.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("pad with null", padWithNull.toArray(), [1, 2, 3, 4, null, null]);
+
+            assertException("width is not number", function () { col.pad("stuff", 0); });
+        }
+
+        function test_padWith()
+        {
+            var col = $linq([0, 1, 2, 3]);
+
+            var padFunc = function (i) { return i * 10 + i; };
+
+            var basic = col.padWith(8, padFunc);
+            var onEmpty = $linq([]).padWith(8, padFunc);
+            var notNeeded = col.padWith(4, '$');
+            var lambda = col.padWith(6, "x => '_' + x + '_'");
+
+            assertArrayEquals("basic", basic.toArray(), [0, 1, 2, 3, 44, 55, 66, 77]);
+            assertArrayEquals("on empty", onEmpty.toArray(), [0, 11, 22, 33, 44, 55, 66, 77]);
+            assertArrayEquals("not needed", notNeeded.toArray(), [0, 1, 2, 3]);
+            assertArrayEquals("lambda", lambda.toArray(), [0, 1, 2, 3, '_4_', '_5_']);
+
+            assertException("padding selector is null", function () { col.padWith(8, null); });
+            assertException("padding selector is not function", function () { col.padWith(8, notFunction); });
+        }
     </script>
 </body>
 </html>
