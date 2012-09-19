@@ -1,10 +1,12 @@
 <html>
 <head>
     <title>Test jslinq.js</title>
+    <script type="text/javascript" src="jquery-1.8.0.min.js"></script>
     <script type="text/javascript" src="jslinq.min.js"></script>
     <script type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
 </head>
 <body>
+    <div id="divTest"></div>
     <script type="text/javascript">
         // This unit test uses jsUnit (http://www.jsunit.net/)
 
@@ -107,6 +109,31 @@
             assertTrue("$linq() array correct #2 (1st element = 1)", col2.array[0] == 1);
             assertTrue("$linq() array correct #3 (2nd element = 2)", col2.array[1] == 2);
             assertTrue("$linq() array correct #4 (3rd element = 3)", col2.array[2] == 3);
+        }
+
+        function test_construction_jquery()
+        {
+            var div = $('#divTest');
+
+            $('<span>').attr('id', 'construct_jquery_1').appendTo(div);
+            $('<span>').attr('id', 'construct_jquery_2').appendTo(div);
+            $('<span>').attr('id', 'construct_jquery_3').appendTo(div);
+            $('<span>').attr('id', 'construct_jquery_4').appendTo(div);
+
+            var spans = $('span', div);
+
+            assertEquals("setup correct", spans.length, 4);
+
+            var col = $linq(spans);
+
+            assertNotNull("construction returns object", col);
+            assertEquals("construction correct length", col.array.length, 4);
+            assertEquals("construction correct element 1", col.array[0].id, 'construct_jquery_1');
+            assertEquals("construction correct element 2", col.array[1].id, 'construct_jquery_2');
+            assertEquals("construction correct element 3", col.array[2].id, 'construct_jquery_3');
+            assertEquals("construction correct element 4", col.array[3].id, 'construct_jquery_4');
+
+            div.empty();
         }
 
         function test_lambda_construction()
@@ -1287,6 +1314,120 @@
 
             assertException("padding selector is null", function () { col.padWith(8, null); });
             assertException("padding selector is not function", function () { col.padWith(8, notFunction); });
+        }
+
+        function test_toJQuery()
+        {
+            var div = $('#divTest');
+
+            $('<span>').attr('id', 'test_jquery_1').appendTo(div);
+            $('<span>').attr('id', 'test_jquery_2').appendTo(div);
+            $('<span>').attr('id', 'test_jquery_3').appendTo(div);
+            $('<span>').attr('id', 'test_jquery_4').appendTo(div);
+
+            var spans = $('span', div);
+
+            assertEquals("setup correct", spans.length, 4);
+
+            var col = $linq($.makeArray(spans));
+
+            var results = col.toJQuery();
+
+            assertTrue("returns jquery object", results instanceof jQuery);
+            assertEquals("element 1 is 'test_jquery_1'", results[0].id, 'test_jquery_1');
+            assertEquals("element 2 is 'test_jquery_2'", results[1].id, 'test_jquery_2');
+            assertEquals("element 3 is 'test_jquery_3'", results[2].id, 'test_jquery_3');
+            assertEquals("element 4 is 'test_jquery_4'", results[3].id, 'test_jquery_4');
+
+            div.empty();
+        }
+
+        function test_pipe()
+        {
+            var col1 = $linq([1, 2, 3, 4]);
+
+            var obj1 = { val: 1, result: 0 },
+                obj2 = { val: 2, result: 0 },
+                obj3 = { val: 3, result: 0 };
+
+            var col2 = $linq([obj1, obj2, obj3]);
+            var arr1 = [],
+                arr2 = [],
+                arr3 = [];
+
+
+            var basic = col1.pipe(function (x) { arr1.push(x); });
+            var withIndex = col1.pipe(function (x, i) { arr2.push(i); });
+            var withEmpty = $linq([]).pipe(function (x) { arr3.push(x); });
+            var lambda = col2.pipe("x => x.result = x.val").select("x => x.val");
+
+            assertArrayEquals("basic test #1", basic.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("basic test #2", arr1, [1, 2, 3, 4]);
+            assertArrayEquals("with index test #1", withIndex.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("with index test #2", arr2, [0, 1, 2, 3]);
+            assertArrayEquals("with empty test #1", withEmpty.toArray(), []);
+            assertArrayEquals("with empty test #2", arr3, []);
+            assertArrayEquals("lambda test #1", lambda.toArray(), [1, 2, 3]);
+            assertEquals("lambda test #2", obj1.result, 1);
+            assertEquals("lambda test #3", obj2.result, 2);
+            assertEquals("lambda test #4", obj3.result, 3);
+        }
+
+        function test_singleOrFallback()
+        {
+            var col1 = $linq([1]);
+            var col2 = $linq([1, 2, 3, 4]);
+
+            var fallback = function () { return 99; };
+
+            var basic = col1.singleOrFallback(fallback);
+            var useFallback = $linq([]).singleOrFallback(fallback);
+            var lambda = $linq([]).singleOrFallback("() => 111");
+
+            assertEquals("basic", basic, 1);
+            assertEquals("use fallback", useFallback, 99);
+            assertEquals("lambda", lambda, 111);
+
+            assertException("fallback is not function", function () { col1.singleOrFallback(notFunction); });
+            assertException("with multiple", function () { col2.singleOrFallback(fallback); });
+        }
+
+        function test_indexOf()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6]);
+
+            var basic = col.indexOf(function (x) { return x == 3; });
+            var withEmpty = $linq([]).indexOf(function (x) { return x == 2; });
+            var notFound = col.indexOf(function (x) { return x == 99; });
+            var lambda = col.indexOf("x => x == 6");
+
+            assertEquals("basic", basic, 2);
+            assertEquals("with empty", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("lambda", lambda, 5);
+
+            assertException("predicate is null", function () { col.indexOf(null); });
+            assertException("predicate is not function", function () { col.indexOf(notFunction); });
+        }
+
+        function test_indexOfElement()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6]);
+            var col2 = $linq(['a', 'b', 'c', 'd']);
+
+            var basic = col1.indexOfElement(3);
+            var withEmpty = $linq([]).indexOfElement(2);
+            var notFound = col1.indexOfElement(99);
+            var withComparer = col2.indexOfElement('B', function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambdaComparer = col2.indexOfElement('C', "(x, y) => x.toLowerCase() == y.toLowerCase()");
+
+            assertEquals("basic", basic, 2);
+            assertEquals("with emtpy", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("with comparer", withComparer, 1);
+            assertEquals("with lambda comparer", lambdaComparer, 2);
+
+            assertException("comparer not function", function () { col2.indexOfElement('D', notFunction); });
         }
     </script>
 </body>

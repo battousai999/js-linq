@@ -897,6 +897,64 @@
         },
 
         /**
+            Returns the index of the first element that satisfies the 'predicate'.  Returns the value "-1" if
+            none of the elements satisfy the 'predicate'.
+            @param predicate The function used to determine which index to return
+        */
+        indexOf: function (predicate)
+        {
+            predicate = linq_helper.createLambda(predicate);
+
+            if ((predicate == null) || !linq_helper.isFunction(predicate))
+                throw new Error("Invalid predicate.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            for (var i = 0; i < len; i++)
+            {
+                if ((i in this.array) && predicate(this.array[i]))
+                    return i;
+            }
+
+            return -1;
+        },
+
+        /**
+            Returns the index of the first element to be equal to the given 'item'.  If the optional 'comparer' 
+            function is given, then the 'comparer' function is used to determine equality between the elements 
+            of 'this' collection and the given 'item'.
+            @param item The item to find within 'this' collection
+            @param comparer Optional, the function used to compare the elements of 'this' collection with the given 'item'
+        */
+        indexOfElement: function (item, comparer)
+        {
+            comparer = linq_helper.createLambda(comparer);
+
+            if ((comparer != null) && !linq_helper.isFunction(comparer))
+                throw new Error("Invalid comparer.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            for (var i = 0; i < len; i++)
+            {
+                if (i in this.array)
+                {
+                    if (((comparer == null) && (this.array[i] === item)) ||
+                        ((comparer != null) && comparer(this.array[i], item)))
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
+        },
+
+        /**
             Returns the intersection of elements in 'this' collection and the 'second' collection, using the
             'comparer' function to determine whether two different elements are equal.  If the 'comparer' 
             function is not given, then the "===" operator will be used to compare elements.
@@ -1341,6 +1399,33 @@
         },
 
         /**
+            Returns the same elements as 'this' collection, but first executes an 'action' on
+            each element of 'this' collection.
+            @param action The function to execute on each element of 'this' collection
+        */
+        pipe: function (action)
+        {
+            action = linq_helper.createLambda(action);
+
+            if ((action == null) || !linq_helper.isFunction(action))
+                throw new Error("Invalid action.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            for (var i = 0; i < len; i++)
+            {
+                if (i in this.array)
+                {
+                    action(this.array[i], i);
+                }
+            }
+
+            return new linq(this.array);
+        },
+
+        /**
             Returns 'this' collection with the 'value' prepended (i.e, added to the front).
             @param value The value to be prepended to 'this' collection
         */
@@ -1580,6 +1665,30 @@
             }
 
             return (isFound ? foundValue : defaultValue);
+        },
+
+        /**
+            Returns either the only element of 'this' collection or the value returned by the 'fallback'
+            function if 'this' collection is empty.  If there are more than one element in 'this' collection,
+            then an exception will be thrown.
+            @param fallback The function that determines the value to return if there are no elements in 'this' collection
+        */
+        singleOrFallback: function (fallback)
+        {
+            fallback = linq_helper.createLambda(fallback);
+
+            if ((fallback == null) || !linq_helper.isFunction(fallback))
+                throw new Error("Invalid fallback");
+
+            linq_helper.processDeferredSort(this);
+
+            if (this.array.length == 0)
+                return fallback();
+            else if (this.array.length == 1)
+                return this.array[0];
+            else
+                throw new Error("More than one item in the collection.");
+
         },
 
         /**
@@ -1897,6 +2006,20 @@
             }
 
             return results;
+        },
+
+        /**
+            Returns a jQuery collection containing the elements of 'this' collection.  If jQuery is not
+            available, an exception will be thrown.
+        */
+        toJQuery: function ()
+        {
+            if (!jQuery)
+                throw new Error("Cannot return jQuery object--jQuery not available.");
+
+            linq_helper.processDeferredSort(this);
+
+            return jQuery(this.array);
         },
 
         /**

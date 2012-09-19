@@ -1,12 +1,8 @@
 Functions to implement in the future: (most from MoreLinq)
 -------------------------------------
 aggregate()
-pipe()
 prescan()
 scan()
-singleOrFallback()
-indexOf() 
-lastIndexOf()
 
 
 operators to document:
@@ -17,3 +13,8 @@ zipLongest
 prepend
 pad
 padWith
+toJQuery
+pipe
+singleOrFallback
+indexOf
+indexOfElement
