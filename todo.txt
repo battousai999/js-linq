@@ -1,8 +1,6 @@
 Functions to implement in the future: (most from MoreLinq)
 -------------------------------------
-aggregate()
-prescan()
-scan()
+????
 
 
 operators to document:
@@ -18,3 +16,8 @@ pipe
 singleOrFallback
 indexOf
 indexOfElement
+lastIndexOf
+lastIndexOfElement
+scan
+prescan
+aggregate

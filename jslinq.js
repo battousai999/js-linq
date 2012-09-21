@@ -310,6 +310,45 @@
 
     linq.prototype = {
         /**
+            Returns the aggregate value of performing the 'operation' function on each of the values of
+            'this' collection, starting with a value equal to 'seed' (or to the value of the first element
+            of 'this' collection, if 'seed' is null).  The final value is either directly returned (if no
+            'result selector' function is given) or the final value is first passed to the 'result selector'
+            function and the return value from that function is returned.
+            @param seed The initial value of the aggregation
+            @param operation The function to use to aggregate the values of 'this' collection
+            @param resultSelector Optional, the function that projects the final value to the returned result
+        */
+        aggregate: function (seed, operation, resultSelector)
+        {
+            operation = linq_helper.createLambda(operation);
+            resultSelector = linq_helper.createLambda(resultSelector);
+
+            if ((operation == null) || !linq_helper.isFunction(operation))
+                throw new Error("Invalid operation.");
+
+            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
+                throw new Error("Invalid result selector.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            if ((len == 0) && (seed == null))
+                throw new Error("Cannot aggregate on empty collection when seed is not given.");
+
+            var current = (seed == null ? this.array[0] : seed);
+
+            for (var i = 0; i < len; i++)
+            {
+                if (i in this.array)
+                    current = operation(current, this.array[i]);
+            }
+
+            return (resultSelector == null ? current : resultSelector(current));
+        },
+
+        /**
             Returns a boolean value indicating whether all of the elements of the collection satisfy the 
             predicate.  Returns 'true' if the collection is empty.
             @param predicate The predicate applied to the collection
@@ -1105,6 +1144,64 @@
         },
 
         /**
+            Returns the index of the last element that satisfies the 'predicate'.  Returns the value "-1" if
+            none of the elements satisfy the 'predicate'.
+            @param predicate The function used to determine which index to return
+        */
+        lastIndexOf: function (predicate)
+        {
+            predicate = linq_helper.createLambda(predicate);
+
+            if ((predicate == null) || !linq_helper.isFunction(predicate))
+                throw new Error("Invalid predicate.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            for (var i = len - 1; i >= 0; i--)
+            {
+                if ((i in this.array) && predicate(this.array[i]))
+                    return i;
+            }
+
+            return -1;
+        },
+
+        /**
+            Returns the index of the last element to be equal to the given 'item'.  If the optional 'comparer' 
+            function is given, then the 'comparer' function is used to determine equality between the elements 
+            of 'this' collection and the given 'item'.
+            @param item The item to find within 'this' collection
+            @param comparer Optional, the function used to compare the elements of 'this' collection with the given 'item'
+        */
+        lastIndexOfElement: function (item, comparer)
+        {
+            comparer = linq_helper.createLambda(comparer);
+
+            if ((comparer != null) && !linq_helper.isFunction(comparer))
+                throw new Error("Invalid comparer.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            for (var i = len - 1; i >= 0; i--)
+            {
+                if (i in this.array)
+                {
+                    if (((comparer == null) && (this.array[i] === item)) ||
+                        ((comparer != null) && comparer(this.array[i], item)))
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
+        },
+
+        /**
             Returns either the last element of 'this' collection (if 'predicate' is not given) or the
             last element of 'this' collection that satisfies the 'predicate' (if 'predicate is given).
             If there is no "last" element to return (either because 'this' collection is empty or no element
@@ -1437,6 +1534,42 @@
         },
 
         /**
+            Returns an equal-length collection where the N-th element is the aggregate of the
+            'operation' function performed on the first N-1 elements of 'this' collection (the
+            first element of the results is set to the 'identity' value).  The 'operation' 
+            function should be a commutative, binary operation (e.g., sum, multiplication, etc.)
+            @param operation The function that aggregates the values of 'this' collection
+        */
+        prescan: function (operation, identity)
+        {
+            operation = linq_helper.createLambda(operation);
+
+            if ((operation == null) || !linq_helper.isFunction(operation))
+                throw new Error("Invalid operation.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            if (len == 0)
+                return new linq([], false);
+
+            var aggregate = identity;
+            var results = [aggregate];
+
+            for (var i = 0; i < len - 1; i++)
+            {
+                if (i in this.array)
+                {
+                    aggregate = operation(aggregate, this.array[i]);
+                    results.push(aggregate);
+                }
+            }
+
+            return new linq(results, false);
+        },
+
+        /**
             Returns the elements of 'this' collection in reverse order.
         */
         reverse: function ()
@@ -1444,6 +1577,42 @@
             linq_helper.processDeferredSort(this);
 
             return new linq(this.array.reverse(), false);
+        },
+
+        /**
+            Returns an equal-length collection where the N-th element is the aggregate of 
+            the 'operation' function performed on the first N elements of 'this' collection.  
+            The 'operation' function should be a commutative, binary operation (e.g., sum, 
+            multiplication, etc.).
+            @param operation The function that aggregates the values of 'this' collection
+        */
+        scan: function (operation)
+        {
+            operation = linq_helper.createLambda(operation);
+
+            if ((operation == null) || !linq_helper.isFunction(operation))
+                throw new Error("Invalid operation.");
+
+            linq_helper.processDeferredSort(this);
+
+            var len = this.array.length;
+
+            if (len == 0)
+                throw new Error("Cannot scan on empty collection.");
+
+            var aggregate = this.array[0];
+            var results = [aggregate];
+
+            for (var i = 1; i < len; i++)
+            {
+                if (i in this.array)
+                {
+                    aggregate = operation(aggregate, this.array[i]);
+                    results.push(aggregate);
+                }
+            }
+
+            return new linq(results, false);
         },
 
         /**
