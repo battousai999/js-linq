@@ -1,5 +1,5 @@
 /*
-    $linq Version 1.0 (by Kurtis Jones)
+    $linq Version 1.1 (by Kurtis Jones)
 */
 
 (function (window, undefined)
