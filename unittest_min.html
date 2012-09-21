@@ -1394,7 +1394,7 @@
 
         function test_indexOf()
         {
-            var col = $linq([1, 2, 3, 4, 5, 6]);
+            var col = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
 
             var basic = col.indexOf(function (x) { return x == 3; });
             var withEmpty = $linq([]).indexOf(function (x) { return x == 2; });
@@ -1412,8 +1412,8 @@
 
         function test_indexOfElement()
         {
-            var col1 = $linq([1, 2, 3, 4, 5, 6]);
-            var col2 = $linq(['a', 'b', 'c', 'd']);
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+            var col2 = $linq(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
 
             var basic = col1.indexOfElement(3);
             var withEmpty = $linq([]).indexOfElement(2);
@@ -1428,6 +1428,117 @@
             assertEquals("with lambda comparer", lambdaComparer, 2);
 
             assertException("comparer not function", function () { col2.indexOfElement('D', notFunction); });
+        }
+
+        function test_lastIndexOf()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+
+            var basic = col.lastIndexOf(function (x) { return x == 3; });
+            var withEmpty = $linq([]).lastIndexOf(function (x) { return x == 2; });
+            var notFound = col.lastIndexOf(function (x) { return x == 99; });
+            var lambda = col.lastIndexOf("x => x == 6");
+
+            assertEquals("basic", basic, 8);
+            assertEquals("with empty", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("lambda", lambda, 11);
+
+            assertException("predicate is null", function () { col.lastIndexOf(null); });
+            assertException("predicate is not function", function () { col.lastIndexOf(notFunction); });
+        }
+
+        function test_lastIndexOfElement()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+            var col2 = $linq(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
+
+            var basic = col1.lastIndexOfElement(3);
+            var withEmpty = $linq([]).lastIndexOfElement(2);
+            var notFound = col1.lastIndexOfElement(99);
+            var withComparer = col2.lastIndexOfElement('B', function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambdaComparer = col2.lastIndexOfElement('C', "(x, y) => x.toLowerCase() == y.toLowerCase()");
+
+            assertEquals("basic", basic, 8);
+            assertEquals("with emtpy", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("with comparer", withComparer, 5);
+            assertEquals("with lambda comparer", lambdaComparer, 6);
+
+            assertException("comparer not function", function () { col2.lastIndexOfElement('D', notFunction); });
+        }
+
+        function test_scan()
+        {
+            var arr1 = [1, 2, 3, 4, 5, 6, 7];
+            var arr2 = ['a', 'b', 'c', 'd', 'e'];
+
+            var addition = function (x, y) { return x + y; };
+
+            var basic = $linq(arr1).scan(addition);
+            var concat = $linq(arr2).scan(addition);
+            var lambda = $linq(arr1).scan("(x, y) => x * y");
+
+            assertArrayEquals("basic", basic.toArray(), [1, 3, 6, 10, 15, 21, 28]);
+            assertArrayEquals("concat", concat.toArray(), ['a', 'ab', 'abc', 'abcd', 'abcde']);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 2, 6, 24, 120, 720, 5040]);
+
+            assertException("with empty", function () { $linq([]).scan(addition); });
+            assertException("operation is null", function () { $linq(arr1).scan(null); });
+            assertException("operation is not function", function () { $linq(arr1).scan(notFunction); });
+
+        }
+
+        function test_prescan()
+        {
+            var arr1 = [1, 2, 3, 4, 5, 6, 7];
+            var arr2 = ['a', 'b', 'c', 'd', 'e'];
+
+            var addition = function (x, y) { return x + y; };
+
+            var basic = $linq(arr1).prescan(addition, 0);
+            var concat = $linq(arr2).prescan(addition, '');
+            var onEmpty = $linq([]).prescan(addition, 0);
+            var lambda = $linq(arr1).prescan("(x, y) => x * y", 1);
+
+            var extra1 = $linq(arr1).prescan(addition, 0);
+            var extra2 = $linq(arr1).zip(extra1, addition);
+            var extra3 = $linq(arr1).scan(addition);
+
+            assertArrayEquals("basic", basic.toArray(), [0, 1, 3, 6, 10, 15, 21]);
+            assertArrayEquals("concat", concat.toArray(), ['', 'a', 'ab', 'abc', 'abcd']);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 1, 2, 6, 24, 120, 720]);
+
+            assertArrayEquals("extra", extra2.toArray(), extra3.toArray());
+
+            assertException("operation is null", function () { $linq(arr1).prescan(null, 0); });
+            assertException("operation is not function", function () { $linq(arr1).prescan(notFunction, 1); });
+        }
+
+        function test_aggregate()
+        {
+            var arr1 = [1, 4, 5];
+            var arr2 = ['a', 'b', 'c', 'd', 'e'];
+
+            var sampleAggregate = function (current, value) { return current * 2 + value; };
+
+            var basic = $linq(arr1).aggregate(5, sampleAggregate);
+            var withResultSelector = $linq(arr1).aggregate(5, sampleAggregate, function (x) { return 'value: ' + x; });
+            var noSeed = $linq(arr1).aggregate(null, sampleAggregate);
+            var onEmptyWithSeed = $linq([]).aggregate(99, sampleAggregate);
+            var lambda = $linq(arr2).aggregate('', "(x, y) => x + y");
+
+            assertEquals("basic", basic, 57);
+            assertEquals("with result selector", withResultSelector, 'value: 57');
+            assertEquals("no seed", noSeed, 25);
+            assertEquals("on empty with seed", onEmptyWithSeed, 99);
+            assertEquals("lambda", lambda, 'abcde');
+
+            assertException("on empty without seed", function () { $linq([]).aggregate(null, sampleAggregate); });
+            assertException("operation is null", function () { $linq(arr1).aggregate(1, null); });
+            assertException("operation is not function", function () { $linq(arr1).aggregate(1, notFunction); });
+            assertException("result selector is not function", function () { $linq(arr1).aggregate(1, sampleAggregate, notFunction); });
         }
     </script>
 </body>
