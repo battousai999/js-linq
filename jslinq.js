@@ -1,5 +1,5 @@
 /*
-    $linq Version 1.1 (by Kurtis Jones)
+    $linq Version 1.2 (by Kurtis Jones)
 */
 
 (function (window, undefined)
@@ -1682,14 +1682,13 @@
         },
 
         /**
-            Returns whether 'this' collection is equivalent to the 'second' collection (that is, has the 
-            same elements regardless of order).  If the 'comparer' function is given, it is used to determine
-            whether elements from each of the two collections are equal.  Otherwise, the "===" operator is
-            used to determine equality.
+            Returns whether 'this' collection is equal to the 'second' collection (that is, has the same elements in the
+            same order).  If the 'comparer' function is given, it is used to determine whether elements from each of the
+            two collections are equal.  Otherwise, the "===" operator is used to determine equality.
             @param second The collection to which 'this' collection is compared
             @param comparer Optional, the function used to compare elements of the two collections
         */
-        sequenceEquals: function (second, comparer)
+        sequenceEqual : function (second, comparer)
         {
             if (second == null)
                 return false;
@@ -1697,7 +1696,7 @@
             comparer = linq_helper.createLambda(comparer);
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Inavlid comparer.");
+                throw new Error("Invalid comparer");
 
             linq_helper.processDeferredSort(this);
 
@@ -1705,32 +1704,74 @@
 
             linq_helper.processDeferredSort(secondLinq);
 
-            if (this.array.length != secondLinq.array.length)
+            var len = this.array.length;
+
+            if (len != secondLinq.array.length)
                 return false;
 
-            var len1 = this.array.length;
-            var len2 = secondLinq.array.length;
-
-            for (var i = 0; i < len1; i++)
+            for (var i = 0; i < len; i++)
             {
-                var found = false;
-
-                for (var j = 0; j < len2; j++)
+                if (comparer == null)
                 {
-                    if (comparer == null)
-                        found = (this.array[i] === secondLinq.array[j]);
-                    else
-                        found = comparer(this.array[i], secondLinq.array[j]);
-
-                    if (found)
-                        break;
+                    if (this.array[i] !== secondLinq.array[i])
+                        return false;
                 }
-
-                if (!found)
+                else if (!comparer(this.array[i], secondLinq.array[i]))
                     return false;
             }
 
             return true;
+        },
+
+        /**
+            Returns whether 'this' collection is equivalent to the 'second' collection (that is, has the 
+            same elements regardless of order).  If the 'comparer' function is given, it is used to determine
+            whether elements from each of the two collections are equal.  Otherwise, the "===" operator is
+            used to determine equality.
+            @param second The collection to which 'this' collection is compared
+            @param comparer Optional, the function used to compare elements of the two collections
+        */
+        sequenceEquivalent: function (second, comparer)
+        {
+            if (second == null)
+                return false;
+
+            comparer = linq_helper.createLambda(comparer);
+
+            if ((comparer != null) && !linq_helper.isFunction(comparer))
+                throw new Error("Invalid comparer.");
+
+            linq_helper.processDeferredSort(this);
+
+            var secondLinq = linq.from(second);
+
+            linq_helper.processDeferredSort(secondLinq);
+
+            var len1 = this.array.length;
+            var len2 = secondLinq.array.length;
+
+            if (len1 != len2)
+                return false;
+
+            var lookup1 = this.toLookup("x => x", comparer);
+            var lookup2 = secondLinq.toLookup("x => x", comparer);
+
+            return ((lookup1.count() == lookup2.count()) &&
+                lookup1.all(function (x)
+                {
+                    var lookupNode = lookup2.firstOrDefault(null, function (y)
+                    {
+                        if (comparer == null)
+                            return (y.key === x.key);
+                        else
+                            return comparer(y.key, x.key);
+                    });
+
+                    if (lookupNode == null)
+                        return false;
+
+                    return (x.values.length == lookupNode.values.length);
+                }));
         },
 
         /**
@@ -2189,6 +2230,58 @@
             linq_helper.processDeferredSort(this);
 
             return jQuery(this.array);
+        },
+
+        /**
+            Returns a lookup-collection with the elements of 'this' collection grouped by a key
+            projected by the 'keySelector' function.  If the optional 'comparer' is provided, then
+            the comparer will be used to determine equality between keys.  If the 'comparer is not
+            provided, the '===' operator will be used to determine equality between keys.
+            @param keySelector The function used to project keys from the elements of 'this' collection
+            @param comparer Optional, the function used to compare keys
+        */
+        toLookup: function (keySelector, comparer)
+        {
+            keySelector = linq_helper.createLambda(keySelector);
+            comparer = linq_helper.createLambda(comparer);
+
+            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
+		        throw new Error("Invalid key selector.");
+
+            if ((comparer != null) && !linq_helper.isFunction(comparer))
+                throw new Error("Invalid comparer");
+
+            linq_helper.processDeferredSort(this);
+
+            var results = new linq([], false);
+            var len = this.array.length;
+
+            for (var i = 0; i < len; i++)
+            {
+    	        if (i in this.array)
+                {
+                    var item = this.array[i];
+                    var key = keySelector(item);
+
+                    var lookupNode = results.firstOrDefault(null, function (x)
+                    {
+                        if (comparer == null)
+                            return x.key === key;
+                        else
+                            return comparer(x.key, key);
+        	        });
+
+                    if (lookupNode == null)
+                    {
+                        lookupNode = { key: key, values: [] };
+                        results.array.push(lookupNode);
+                    }
+
+                    lookupNode.values.push(item);
+                }
+            }
+
+            return results;
         },
 
         /**
