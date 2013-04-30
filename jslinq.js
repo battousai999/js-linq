@@ -1834,6 +1834,7 @@
             or there are multiple elements that satisfy the 'predicate' (if 'predicate' is given), then an
             error is thrown.  If there is no "single" element (either because 'this' collection is empty or
             no element satisfies the 'predicate'), the 'defaultValue' is returned.
+            @param defaultValue The default value that is returned if no "single" element is found
             @param predicate Optional, the predicate function used to determine the element to return
         */
         singleOrDefault: function (defaultValue, predicate)
@@ -2246,7 +2247,7 @@
             comparer = linq_helper.createLambda(comparer);
 
             if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-		        throw new Error("Invalid key selector.");
+                throw new Error("Invalid key selector.");
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer");
@@ -2258,7 +2259,7 @@
 
             for (var i = 0; i < len; i++)
             {
-    	        if (i in this.array)
+                if (i in this.array)
                 {
                     var item = this.array[i];
                     var key = keySelector(item);
@@ -2269,7 +2270,7 @@
                             return x.key === key;
                         else
                             return comparer(x.key, key);
-        	        });
+                    });
 
                     if (lookupNode == null)
                     {
