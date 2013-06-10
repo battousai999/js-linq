@@ -401,8 +401,8 @@
             linq_helper.processDeferredSort(this);
 
             var len = this.array.length;
-            var sum = 0;
-            var counter = 0;
+            var result = 0;
+            var counter = 1;
 
             for (var i = 0; i < len; i++)
             {
@@ -416,12 +416,12 @@
                     if (isNaN(value))
                         throw new Error("Encountered an element that is not a number.");
 
-                    sum += value;
+                    result += (value - result) / counter;
                     counter += 1;
                 }
             }
 
-            return (sum / counter);
+            return result;
         },
 
         /**
