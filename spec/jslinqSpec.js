@@ -259,7 +259,7 @@ describe('jslinq', function ()
         it('works with a predicate', function () { expect(col.count(function (x) { return x % 2 == 0; })).toEqual(4); });
         it('works with a lambda predicate', function () { expect(col.count('x => x % 2 == 0')).toEqual(4); });
 
-        it('throws an exception on non-function "predicate" parameter', function ()
+        it('throws an exception on a non-function "predicate" parameter', function ()
         {
             expect(function () { col.count(99); }).toThrow();
         });
@@ -311,7 +311,7 @@ describe('jslinq', function ()
             expect(function () { col.selectMany(null); }).toThrow();
         });
 
-        it('throws an exception on non-function "result selector" parameter', function ()
+        it('throws an exception on a non-function "result selector" parameter', function ()
         {
             expect(function () { col.selectMany(function () { }, 99); }).toThrow();
         });
@@ -346,7 +346,7 @@ describe('jslinq', function ()
             expect(lambda).toBeTruthy();
         });
 
-        it('throws an exception on non-function "predicate" parameter', function ()
+        it('throws an exception on a non-function "predicate" parameter', function ()
         {
             expect(function () { col.any(99); }).toThrow();
         });
@@ -406,7 +406,7 @@ describe('jslinq', function ()
             expect(lambda).toEqual(4);
         });
 
-        it('throws an exception on non-function "predicate" parameter', function ()
+        it('throws an exception on a non-function "predicate" parameter', function ()
         {
             expect(function () { col.first(99); }).toThrow();
         });
@@ -436,14 +436,252 @@ describe('jslinq', function ()
 
         it('works with a lambda predicate', function ()
         {
-            var lambda = col.firstOrDefault(99, "x => x > 3");
+            var value1 = col.firstOrDefault(99, "x => x > 3");
+            var value2 = col.firstOrDefault(99, "x => x > 100");
 
-            expect(lambda).toEqual(4);
+            expect(value1).toEqual(4);
+            expect(value2).toEqual(99);
         });
 
-        it('throws an exception on non-function "predicate" parameter', function ()
+        it('throws an exception on a non-function "predicate" parameter', function ()
         {
             expect(function () { col.firstOrDefault(99, 99); }).toThrow();
+        });
+    });
+
+    describe('single', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5]);
+
+        it('works with a predicate', function ()
+        {
+            var value = col.single(function (x) { return x > 4; });
+
+            expect(value).toEqual(5);
+        });
+
+        it('works without a predicate', function ()
+        {
+            var value = $linq([1]).single();
+
+            expect(value).toEqual(1);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            var value = col.single("x => x > 4");
+
+            expect(value).toEqual(5);
+        });
+
+        it('throws an exception on a non-function "predicate" parameter', function ()
+        {
+            expect(function () { col.single(99); }).toThrow();
+        });
+
+        it('throws an exception when called on an empty collection', function ()
+        {
+            var empty = $linq([]);
+            var func = function (x) { return x > 100; };
+
+            expect(function () { empty.single(); }).toThrow();
+            expect(function () { empty.single(function (x) { return x > 100; }); }).toThrow();
+        });
+
+        it('throws an exception when no elements in the collection satisfy the predicate', function ()
+        {
+            expect(function () { col.single(function (x) { return x > 100; }); }).toThrow();
+        });
+
+        it('throws an exception when called on a collection with more than one element (and no predicate)', function ()
+        {
+            expect(function () { col.single(); }).toThrow();
+        });
+
+        it('throws an exception when multiple elements in the collection satisfy the predicate', function ()
+        {
+            expect(function () { col.single(function (x) { return x > 1; }); }).toThrow();
+        });
+    });
+
+    describe('singleOrDefault', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5]);
+
+        it('works with a predicate', function ()
+        {
+            var value1 = col.singleOrDefault(99, function (x) { return x > 4; });
+            var value2 = col.singleOrDefault(99, function (x) { return x > 100; });
+
+            expect(value1).toEqual(5);
+            expect(value2).toEqual(99);
+        });
+
+        it('works without a predicate', function ()
+        {
+            var value1 = $linq([1]).singleOrDefault(99);
+            var value2 = $linq([]).singleOrDefault(99);
+
+            expect(value1).toEqual(1);
+            expect(value2).toEqual(99);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            var value1 = col.singleOrDefault(99, "x => x > 4");
+            var value2 = col.singleOrDefault(99, "x => x > 100");
+
+            expect(value1).toEqual(5);
+            expect(value2).toEqual(99);
+        });
+
+        it('throws an exception on a non-function "predicate" parameter', function ()
+        {
+            expect(function () { col.singleOrDefault(99, 99); }).toThrow();
+        });
+
+        it('throws an exception when called on a collection with more than one element (and no predicate)', function ()
+        {
+            expect(function () { col.singleOrDefault(99); }).toThrow();
+        });
+
+        it('throws an exception when multple elements in the collection satisfy the predicate', function ()
+        {
+            expect(function () { col.singleOrDefault(99, function (x) { return x > 1; }); }).toThrow();
+        });
+    });
+
+    describe('last', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5, 6]);
+
+        it('works with a predicate', function ()
+        {
+            var predicateFirst = col.last(function (x) { return x < 4; });
+
+            expect(predicateFirst).toEqual(3);
+        });
+
+        it('works without a predicate', function ()
+        {
+            var basicFirst = col.last();
+
+            expect(basicFirst).toEqual(6);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            var lambda = col.last("x => x < 4");
+
+            expect(lambda).toEqual(3);
+        });
+
+        it('throws an exception on a non-function "predicate" parameter', function ()
+        {
+            expect(function () { col.last(99); }).toThrow();
+        });
+    });
+
+    describe('lastOrDefault', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5, 6]);
+
+        it('works with a predicate', function ()
+        {
+            var defaultFirst1 = col.lastOrDefault(99, function (x) { return x < 4; });
+            var defaultFirst2 = col.lastOrDefault(99, function (x) { x > 100; });
+
+            expect(defaultFirst1).toEqual(3);
+            expect(defaultFirst2).toEqual(99);
+        });
+
+        it('works without a predicate', function ()
+        {
+            var defaultFirst1 = col.lastOrDefault(99);
+            var defaultFirst2 = $linq([]).lastOrDefault(99);
+
+            expect(defaultFirst1).toEqual(6);
+            expect(defaultFirst2).toEqual(99);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            var value1 = col.lastOrDefault(99, "x => x < 4");
+            var value2 = col.lastOrDefault(99, "x => x > 100");
+
+            expect(value1).toEqual(3);
+            expect(value2).toEqual(99);
+        });
+
+        it('throws an exception on a non-function "predicate" parameter', function ()
+        {
+            expect(function () { col.lastOrDefault(99, 99); }).toThrow();
+        });
+    });
+
+    describe('defaultIfEmpty', function ()
+    {
+        it('works on an empty collection', function ()
+        {
+            var value = $linq([1, 2, 3, 4]).defaultIfEmpty(99).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works on a non-empty collection', function ()
+        {
+            var value = $linq([]).defaultIfEmpty(99).toArray();
+
+            expect(value).toEqual([99]);
+        });
+
+        it('works with a null "defaultValue" parameter', function ()
+        {
+            var value = $linq([]).defaultIfEmpty(null).toArray();
+
+            expect(value).toEqual([null]);
+        });
+    });
+
+    describe('distinct', function ()
+    {
+        var col = $linq(["one", "two", "three", "ONE", "TWO", "THREE"]);
+
+        it('works when there are duplicate elements', function ()
+        {
+            var value1 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]).distinct().toArray();
+            var value2 = col.distinct(function (x, y) { return x.toLowerCase() == y.toLowerCase(); }).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4, 5]);
+            expect(value2).toEqual(["one", "two", "three"]);
+        });
+
+        it('works when there are no duplicate elements', function ()
+        {
+            var value1 = $linq([1, 2, 3, 4, 5]).distinct().toArray();
+            var value2 = col.distinct(function (x, y) { return x == y; }).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4, 5]);
+            expect(value2).toEqual(["one", "two", "three", "ONE", "TWO", "THREE"]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            var value = $linq([]).distinct().toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works with a lambda comparer', function ()
+        {
+            var value = col.distinct("(x, y) => x == y").toArray();
+
+            expect(value).toEqual(["one", "two", "three", "ONE", "TWO", "THREE"]);
+        });
+
+        it('throws an exception on a non-function "comparer" parameter', function ()
+        {
+            expect(function () { col.distinct(99); }).toThrow();
         });
     });
 });
