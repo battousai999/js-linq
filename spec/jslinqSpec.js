@@ -696,4 +696,205 @@ describe('jslinq', function ()
             expect(function () { col.distinct(99); }).toThrow();
         });
     });
+
+    describe('distinctBy', function ()
+    {
+        var col1 = $linq([{ id: 1, name: 'steve' }, { id: 2, name: 'barbara' }, { id: 3, name: 'david' }, { id: 4, name: 'steve' }]);
+        var col2 = $linq([{ id: 1, name: 'steve' }, { id: 2, name: 'barbara' }, { id: 3, name: 'david' }, { id: 4, name: 'STEVE' }]);
+
+        var nameProjection = function (x) { return x.name; };
+        var idProjection = function (x) { return x.id; };
+
+        it('works when there are duplicate elements', function ()
+        {
+            var value1 = col1
+                .distinctBy(nameProjection)
+                .select(idProjection)
+                .toArray();
+
+            var value2 = col2
+                .distinctBy(nameProjection, function (x, y) { return x.toLowerCase() == y.toLowerCase(); })
+                .select(idProjection)
+                .toArray();
+
+            expect(value1).toEqual([1, 2, 3]);
+            expect(value2).toEqual([1, 2, 3]);
+        });
+
+        it('works when there are no duplicate elements', function ()
+        {
+            var value1 = col1
+                .distinctBy(idProjection)
+                .select(idProjection)
+                .toArray();
+
+            var value2 = col2
+                .distinctBy(nameProjection, function (x, y) { return x == y; })
+                .select(idProjection)
+                .toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            var value = $linq([])
+                .distinctBy(idProjection)
+                .toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works with a lambda projection and comparer', function ()
+        {
+            var value = col2
+                .distinctBy("x => x.name", "(x, y) => x == y")
+                .select(idProjection)
+                .toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+
+        it('throws an exception on a non-function "key selector" parameter', function ()
+        {
+            expect(function () { col1.distinctBy(99); }).toThrow();
+        });
+
+        it('throws an exception on a non-function "comparer" parameter', function ()
+        {
+            expect(function () { col1.distinctBy(nameProjection, 99); }).toThrow();
+        });
+    });
+
+    describe('union', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4]);
+        var col2 = $linq([5, 6, 7, 8]);
+        var col3 = $linq(["one", "two", "three", "three", "four"]);
+        var col4 = $linq(["ONE", "TWO", "TWO", "THREE"]);
+
+        it('works with distinct elements in the sets', function ()
+        {
+            var value1 = col1.union(col2).toArray();
+            var value2 = col1.union([11, 22, 33, 44]).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+            expect(value2).toEqual([1, 2, 3, 4, 11, 22, 33, 44]);
+        });
+
+        it('works with non-distinct elements in the sets', function ()
+        {
+            var value1 = col1.union([3, 4, 5, 6]).toArray();
+            var value2 = col3.union(col4).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4, 5, 6]);
+            expect(value2).toEqual(["one", "two", "three", "four", "ONE", "TWO", "THREE"]);
+        });
+
+        it('works with a comparer', function ()
+        {
+            var value = col3.union(col4, function (x, y) { return x.toLowerCase() == y.toLowerCase(); }).toArray();
+
+            expect(value).toEqual(["one", "two", "three", "four"]);
+        });
+
+        it('works with a lambda comparer', function ()
+        {
+            var value = col3.union(col4, "(x, y) => x.toLowerCase() == y.toLowerCase()").toArray();
+
+            expect(value).toEqual(["one", "two", "three", "four"]);
+        });
+
+        it('works with an empty collection', function ()
+        {
+            var value1 = col1.union([]).toArray();
+            var value2 = $linq([]).union(col2).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([5, 6, 7, 8]);
+        });
+
+        it('works with a null second collection', function ()
+        {
+            var value = col1.union(null).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+
+        it('throws an exception on a non-function "comparer" parameter', function ()
+        {
+            expect(function () { col1.union(col2, 99); }).toThrow();
+        });
+    });
+
+    describe('intersect', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4]);
+        var col2 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+        var col3 = $linq([5, 6, 7, 8]);
+        var col4 = $linq(["one", "two", "three", "three", "four"]);
+        var col5 = $linq(["ONE", "TWO", "TWO", "THREE"]);
+
+        it('works when there are duplicates between the sets', function ()
+        {
+            var value1 = col1.intersect(col2).toArray();
+            var value2 = col2.intersect(col3).toArray();
+            var value3 = col2.intersect([2, 4, 6, 100]).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([5, 6, 7, 8]);
+            expect(value3).toEqual([2, 4, 6]);
+        });
+
+        it('works when there are no duplicates between the sets', function ()
+        {
+            var value1 = col1.intersect([5, 6, 7, 8]).toArray();
+            var value2 = col4.intersect(col5).toArray();
+
+            expect(value1).toEqual([]);
+            expect(value2).toEqual([]);
+        });
+
+        it('works with an empty collection', function ()
+        {
+            var empty = $linq([]);
+
+            var value1 = col1.intersect(empty).toArray();
+            var value2 = empty.intersect(col2).toArray();
+            var value3 = empty.intersect([]).toArray();
+
+            expect(value1).toEqual([]);
+            expect(value2).toEqual([]);
+            expect(value3).toEqual([]);
+        });
+
+        it('works with a null second collection', function ()
+        {
+            var value = col1.intersect(null).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works with a comparer', function ()
+        {
+            var value1 = col4.intersect(col5, function (x, y) { return x == y; }).toArray();
+            var value2 = col4.intersect(col5, function (x, y) { return x.toLowerCase() == y.toLowerCase(); }).toArray();
+
+            expect(value1).toEqual([]);
+            expect(value2).toEqual(["one", "two", "three"]);
+        });
+
+        it('works with a lambda comparer', function ()
+        {
+            var value = col4.intersect(col5, "(x, y) => x.toLowerCase() == y.toLowerCase()").toArray();
+
+            expect(value).toEqual(["one", "two", "three"]);
+        });
+
+        it('throws an exception on a non-function "comparer" parameter', function ()
+        {
+            expect(function () { col1.intersect(col2, 99); }).toThrow();
+        });
+    });
 });
