@@ -208,7 +208,7 @@
             return new linq(collection);
 
         if (jQuery && (collection instanceof jQuery))
-            return new linq($.makeArray(collection));
+            return new linq(collection.get());
 
         // Create an array with 'collection' as the only element
         return new linq([collection], false);

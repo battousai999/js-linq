@@ -35,6 +35,15 @@ describe('jslinq', function ()
     {
         var arr = [1, 2, 3, 4, 5, 6];
         var col = linq.from(arr);
+
+        var div = $('#divTest');
+        
+        $('<span>').attr('id', 'test_jquery_1').appendTo(div);
+        $('<span>').attr('id', 'test_jquery_2').appendTo(div);
+        $('<span>').attr('id', 'test_jquery_3').appendTo(div);
+        $('<span>').attr('id', 'test_jquery_4').appendTo(div);
+
+        var spans = $('span', div);
     
         it('returns an object', function () { expect(col).not.toBeNull(); });
         it('has the correct length', function () { expect(col.array.length).toEqual(arr.length); });
@@ -42,7 +51,10 @@ describe('jslinq', function ()
         it('has the correct elements', function () { expect(col.array).toEqual(arr); });
            
         it('contains a copy of the original array', function () { expect(col.array).not.toBe(arr); });
-        it('can be empty', function () { expect(linq.from(null).array).toEqual([]); });        
+
+        it('can accept a null', function () { expect(linq.from(null).array).toEqual([]); });
+        it('can accept another linq object', function () { expect(linq.from($linq(arr)).array).toEqual(arr); });
+        it('can accept a jQuery object', function () { expect(linq.from(spans).array).toEqual(spans.get()); });
     });
     
     describe('range (constructor)', function ()
