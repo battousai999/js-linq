@@ -1,0 +1,1594 @@
+<html>
+<head>
+    <title>Test jslinq.js</title>
+    <script type="text/javascript" src="jquery-1.8.0.min.js"></script>
+    <script type="text/javascript" src="jslinq.min.js"></script>
+    <script type="text/javascript" src="jsunit/app/jsUnitCore.js"></script>
+</head>
+<body>
+    <div id="divTest"></div>
+    <script type="text/javascript">
+        // This unit test uses jsUnit (http://www.jsunit.net/)
+
+        function assertException(message, func)
+        {
+            var error;
+
+            try
+            {
+                func();
+                error = true;
+            }
+            catch (e)
+            {
+                error = false;
+            }
+
+            assertFalse(message, error);
+        }
+
+        var notFunction = 99;
+
+        function test_construction_from()
+        {
+            var col = linq.from([1, 2, 3]);
+
+            assertNotNull("linq.from() returns object", col);
+            assertTrue("linq.from() array correct #1 (length)", col.array.length == 3);
+            assertTrue("linq.from() array correct #2 (1st element = 1)", col.array[0] == 1);
+            assertTrue("linq.from() array correct #3 (2nd element = 2)", col.array[1] == 2);
+            assertTrue("linq.from() array correct #4 (3rd element = 3)", col.array[2] == 3);
+            assertArrayEquals("empty", $linq().toArray(), []);
+        }
+
+        function test_construction_range()
+        {
+            var col = linq.range(1, 3);
+
+            assertNotNull("linq.range() returns object", col);
+            assertTrue("linq.range() array correct #1 (length)", col.array.length == 3);
+            assertTrue("linq.range() array correct #2 (1st element = 1)", col.array[0] == 1);
+            assertTrue("linq.range() array correct #3 (2nd element = 2)", col.array[1] == 2);
+            assertTrue("linq.range() array correct #4 (3rd element = 3)", col.array[2] == 3);
+
+            assertException("null 'from'", function () { linq.range(null, 10); });
+            assertException("null 'to'", function () { linq.range(1, null); });
+        }
+
+        function test_construction_repeat()
+        {
+            var col = linq.repeat("stuff", 3);
+
+            assertNotNull("linq.repeat() returns object", col);
+            assertTrue("linq.repeat() array correct #1 (length)", col.array.length == 3);
+            assertTrue("linq.repeat() array correct #2 (1st element = 'stuff')", col.array[0] == 'stuff');
+            assertTrue("linq.repeat() array correct #3 (2nd element = 'stuff')", col.array[1] == 'stuff');
+            assertTrue("linq.repeat() array correct #4 (3rd element = 'stuff')", col.array[2] == 'stuff');
+        }
+
+        function test_construction_matches()
+        {
+            var col1 = linq.matches("this is a test", "\\w+");
+            var col2 = linq.matches("this is a test", /\w+/);
+            var col3 = linq.matches("test_1 TEST_2 test_3 TeSt_4", "test_\\d", "");
+            var col4 = linq.matches("test_1 TEST_2 test_3 TeSt_4", "test_\\d", "i");
+
+            assertNotNull("linq.matches() returns object", col1);
+            assertTrue("linq.matches() array correct #1 (length)", col1.array.length == 4);
+            assertTrue("linq.matches() array correct #2 (1st element = 'this')", col1.array[0] == 'this');
+            assertTrue("linq.matches() array correct #3 (2nd element = 'is')", col1.array[1] == 'is');
+            assertTrue("linq.matches() array correct #4 (3rd element = 'a')", col1.array[2] == 'a');
+            assertTrue("linq.matches() array correct #5 (4th element = 'test')", col1.array[3] == 'test');
+
+            assertArrayEquals("RegExp pattern", col2.toArray(), ['this', 'is', 'a', 'test']);
+            assertArrayEquals("case sensitive", col3.toArray(), ['test_1', 'test_3']);
+            assertArrayEquals("case insensitive", col4.toArray(), ['test_1', 'TEST_2', 'test_3', 'TeSt_4']);
+
+            assertException("null 'pattern'", function () { linq.matches("this is a test", null); });
+            assertException("non-string 'text'", function () { linq.matches(99, "\\w+"); });
+        }
+
+        function test_construction_dollar()
+        {
+            var col = $linq([1, 2, 3]);
+
+            assertNotNull("$linq() returns object", col);
+            assertTrue("$linq() array correct #1 (length)", col.array.length == 3);
+            assertTrue("$linq() array correct #2 (1st element = 1)", col.array[0] == 1);
+            assertTrue("$linq() array correct #3 (2nd element = 2)", col.array[1] == 2);
+            assertTrue("$linq() array correct #4 (3rd element = 3)", col.array[2] == 3);
+        }
+
+        function test_construction_linq()
+        {
+            var col1 = $linq([1, 2, 3]);
+            var col2 = $linq(col1);
+
+            assertNotNull("$linq() returns object", col2);
+            assertTrue("$linq() array correct #1 (length)", col2.array.length == 3);
+            assertTrue("$linq() array correct #2 (1st element = 1)", col2.array[0] == 1);
+            assertTrue("$linq() array correct #3 (2nd element = 2)", col2.array[1] == 2);
+            assertTrue("$linq() array correct #4 (3rd element = 3)", col2.array[2] == 3);
+        }
+
+        function test_construction_jquery()
+        {
+            var div = $('#divTest');
+
+            $('<span>').attr('id', 'construct_jquery_1').appendTo(div);
+            $('<span>').attr('id', 'construct_jquery_2').appendTo(div);
+            $('<span>').attr('id', 'construct_jquery_3').appendTo(div);
+            $('<span>').attr('id', 'construct_jquery_4').appendTo(div);
+
+            var spans = $('span', div);
+
+            assertEquals("setup correct", spans.length, 4);
+
+            var col = $linq(spans);
+
+            assertNotNull("construction returns object", col);
+            assertEquals("construction correct length", col.array.length, 4);
+            assertEquals("construction correct element 1", col.array[0].id, 'construct_jquery_1');
+            assertEquals("construction correct element 2", col.array[1].id, 'construct_jquery_2');
+            assertEquals("construction correct element 3", col.array[2].id, 'construct_jquery_3');
+            assertEquals("construction correct element 4", col.array[3].id, 'construct_jquery_4');
+
+            div.empty();
+        }
+
+        function test_lambda_construction()
+        {
+            var col = $linq([1, 2, 3, 4, 5]);
+
+            var identity1 = col.select("x => x");
+            var identity2 = col.select("$");
+            var basic1 = col.select("x => x * 2");
+            var basic2 = col.select("$ * 2");
+            var comparer1 = col.orderByDescending("x => x", "x, y => x - y");
+            var comparer2 = col.orderByDescending("x => x", "(x, y) => x - y");
+            var comparer3 = col.orderByDescending("$", "$ - $$");
+
+            assertArrayEquals("identity #1", identity1.toArray(), [1, 2, 3, 4, 5]);
+            assertArrayEquals("identity #2", identity2.toArray(), [1, 2, 3, 4, 5]);
+            assertArrayEquals("basic #1", basic1.toArray(), [2, 4, 6, 8, 10]);
+            assertArrayEquals("basic #2", basic2.toArray(), [2, 4, 6, 8, 10]);
+            assertArrayEquals("comparer #1", comparer1.toArray(), [5, 4, 3, 2, 1]);
+            assertArrayEquals("comparer #2", comparer2.toArray(), [5, 4, 3, 2, 1]);
+            assertArrayEquals("comparer #3", comparer3.toArray(), [5, 4, 3, 2, 1]);
+        }
+
+        function test_where()
+        {
+            var col = $linq([1, 2, 3, 4, 5]);
+
+            var lessThan4 = col.where(function (x) { return x < 4; });
+            var none = col.where(function (x) { return x < 0; });
+            var all = col.where(function (x) { return x > 0; });
+            var lambda = col.where("x => x < 4");
+
+            assertArrayEquals("where less than 4", lessThan4.toArray(), [1, 2, 3]);
+            assertArrayEquals("empty result", none.toArray(), []);
+            assertArrayEquals("full result", all.toArray(), [1, 2, 3, 4, 5]);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 2, 3]);
+
+            assertException("predicate is null", function () { col.where(null); });
+        }
+
+        function test_select()
+        {
+            var col = $linq([1, 2, 3, 4, 5]);
+
+            var double = col.select(function (x) { return x * 2; });
+            var whereAndDouble = col.where(function (x) { return x < 4; }).select(function (x) { return x * 2; });
+            var lambda = col.select("x => x * 2");
+
+            assertArrayEquals("double", double.toArray(), [2, 4, 6, 8, 10]);
+            assertArrayEquals("where and double", whereAndDouble.toArray(), [2, 4, 6]);
+            assertArrayEquals("lambda", lambda.toArray(), [2, 4, 6, 8, 10]);
+
+            assertException("selector is null", function () { col.select(null); });
+        }
+
+        function test_compound()
+        {
+            var col = $linq([1, 2, 3, 4, 5]);
+
+            var results = col.where(function (x) { return x < 4; })
+                .select(function (x) { return "a" + x; });
+
+            assertArrayEquals("where and select", results.toArray(), ["a1", "a2", "a3"]);
+        }
+
+        function test_count()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+            assertEquals("full count is 8", col.count(), 8);
+            assertEquals("even count is 4", col.count(function (x) { return x % 2 == 0; }), 4);
+            assertEquals("lambda", col.count("x => x % 2 == 0"), 4);
+
+            assertException("predicate is not function", function () { col.count(notFunction); });
+        }
+
+        function test_selectMany()
+        {
+            var col = $linq([{ str: "test", list: [1, 2, 3] }, { str: "part", list: [4, 5, 6] }, { str: "time", list: [7, 8, 9] }]);
+
+            var projection = col.selectMany(function (x) { return x.list; }, function (x) { return "a" + x; });
+
+            var projectionAndIndex = col.selectMany(
+                function (x, i) { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
+                function (x) { return "b" + x; });
+
+            var projectionAndIndex2 = col.selectMany(
+                function (x, i) { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
+                function (x, parent) { return parent.str + "-" + "b" + x; });
+
+            var linqInLinq = col.selectMany(
+                function (x) { return $linq(x.list).where(function (x) { return x % 2 == 0; }); },
+                function (x) { return "c" + x; });
+
+            var lambda = col.selectMany("x => x.list", "x => 'a' + x");
+
+            assertArrayEqualsIgnoringOrder("projection", projection.toArray(), ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9"]);
+            assertArrayEqualsIgnoringOrder("projectionAndIndex", projectionAndIndex.toArray(), ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b20", "b30"]);
+            assertArrayEqualsIgnoringOrder("projectionAndIndex2", projectionAndIndex2.toArray(), ["test-b1", "test-b2", "test-b3", "part-b4", "part-b5", "part-b6", "time-b7", "time-b8", "time-b9", "test-b10", "part-b20", "time-b30"]);
+            assertArrayEqualsIgnoringOrder("linqInLinq", linqInLinq.toArray(), ["c2", "c4", "c6", "c8"]);
+            assertArrayEqualsIgnoringOrder("lambda", lambda.toArray(), ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9"]);
+
+            assertException("collection selector is null", function () { col.selectMany(null); });
+            assertException("result selector is not function", function () { col.selectMany(function () { }, notFunction); });
+        }
+
+        function test_any()
+        {
+            var col = $linq([2, 4, 6, 8]);
+
+            var basicAny = col.any();
+            var basicNotAny = $linq([]).any();
+            var anyEven = col.any(function (x) { return x % 2 == 0; });
+            var anyOdd = col.any(function (x) { return x % 2 == 1; });
+            var lambda = col.any("x => x % 2 == 0");
+
+            assertTrue("basic any", basicAny);
+            assertFalse("basic not any", basicNotAny);
+            assertTrue("any even", anyEven);
+            assertFalse("any odd", anyOdd);
+            assertTrue("lambda", lambda);
+
+            assertException("predicate is not function", function () { col.any(notFunction); });
+        }
+
+        function test_all()
+        {
+            var allEvenCol = $linq([2, 4, 6, 8]);
+            var mixedCol = $linq([1, 2, 3, 4, 5, 6]);
+
+            var allEven1 = allEvenCol.all(function (x) { return x % 2 == 0; });
+            var allEven2 = mixedCol.all(function (x) { return x % 2 == 0; });
+            var emptyCol = $linq([]).all(function (x) { return x % 2 == 0; });
+            var lambda = allEvenCol.all("x => x % 2 == 0");
+
+            assertTrue("all even true", allEven1);
+            assertFalse("all even false", allEven2);
+            assertTrue("empty returns true", emptyCol);
+            assertTrue("lambda", lambda);
+
+            assertException("predicate is null", function () { mixedCol.all(null); });
+        }
+
+        function test_first()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6]);
+
+            var basicFirst = col.first();
+            var predicateFirst = col.first(function (x) { return x > 3; });
+            var lambda1 = col.first("x => x > 3");
+            var lambda2 = col.firstOrDefault(99, "x => x > 3");
+
+            var defaultFirst1 = col.firstOrDefault(99);
+            var defaultFirst2 = col.firstOrDefault(99, function (x) { return x > 3; });
+            var defaultFirst3 = $linq([]).firstOrDefault(99);
+            var defaultFirst4 = col.firstOrDefault(99, function (x) { return x > 100; });
+
+            assertEquals("basic first", basicFirst, 1);
+            assertEquals("predicate first", predicateFirst, 4);
+            assertEquals("default first #1", defaultFirst1, 1);
+            assertEquals("default first #2", defaultFirst2, 4);
+            assertEquals("default first #3", defaultFirst3, 99);
+            assertEquals("default first #4", defaultFirst4, 99);
+            assertEquals("lambda #1", lambda1, 4);
+            assertEquals("lambda #2", lambda2, 4);
+
+            assertException("first predicate is not function", function () { col.first(notFunction); });
+            assertException("firstOrDefault predicate is not function", function () { col.firstOrDefault(99, notFunction); });
+        }
+
+        function test_single()
+        {
+            var col1 = $linq([1]);
+            var col2 = $linq([1, 2, 3, 4, 5]);
+
+            var basicSingle = col1.single();
+            var predicateSingle = col2.single(function (x) { return x > 4; });
+            var lambda1 = col2.single("x => x > 4");
+            var lambda2 = col2.singleOrDefault(99, "x => x > 4");
+
+            var defaultSingle1 = col1.singleOrDefault(99);
+            var defaultSingle2 = col2.singleOrDefault(99, function (x) { return x > 4; });
+            var defaultSingle3 = $linq([]).singleOrDefault(99);
+            var defaultSingle4 = col2.singleOrDefault(99, function (x) { return x > 100; });
+
+            assertEquals("basic single", basicSingle, 1);
+            assertEquals("predicate single", predicateSingle, 5);
+            assertEquals("default single #1", defaultSingle1, 1);
+            assertEquals("default single #2", defaultSingle2, 5);
+            assertEquals("default single #3", defaultSingle3, 99);
+            assertEquals("default single #4", defaultSingle4, 99);
+            assertEquals("lambda #1", lambda1, 5);
+            assertEquals("lambda #2", lambda2, 5);
+
+            assertException("predicate is not function #1", function () { col1.single(notFunction); });
+            assertException("predicate is not function #2", function () { col1.singleOrDefault(99, notFunction); });
+            assertException("single on empty", function () { $linq([]).single(); });
+            assertException("predicate single but empty", function () { col2.single(function (x) { return x > 100; }); });
+        }
+
+        function test_last()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6]);
+
+            var basicLast = col.last();
+            var predicateLast = col.last(function (x) { return x < 4; });
+            var lambda1 = col.last("x => x < 4");
+            var lambda2 = col.lastOrDefault(99, "x => x < 4");
+
+            var defaultLast1 = col.lastOrDefault(99);
+            var defaultLast2 = col.lastOrDefault(99, function (x) { return x < 4; });
+            var defaultLast3 = $linq([]).lastOrDefault(99);
+            var defaultLast4 = col.lastOrDefault(99, function (x) { return x > 100; });
+
+            assertEquals("basic last", basicLast, 6);
+            assertEquals("predicate last", predicateLast, 3);
+            assertEquals("default last #1", defaultLast1, 6);
+            assertEquals("default last #2", defaultLast2, 3);
+            assertEquals("default last #3", defaultLast3, 99);
+            assertEquals("default last #4", defaultLast4, 99);
+            assertEquals("lambda #1", lambda1, 3);
+            assertEquals("lambda #2", lambda2, 3);
+
+            assertException("last predicate is not function", function () { col.last(notFunction); });
+            assertException("lastOrDefault predicate is not function", function () { col.lastOrDefault(99, notFunction); });
+        }
+
+        function test_defaultIfEmpty()
+        {
+            var col = $linq([1, 2, 3, 4]);
+
+            var notEmpty = col.defaultIfEmpty(99);
+            var empty = $linq([]).defaultIfEmpty(99);
+
+            assertArrayEquals("not empty", notEmpty.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("empty", empty.toArray(), [99]);
+        }
+
+        function test_distinct()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+            var col2 = $linq([1, 2, 3, 4, 5]);
+            var col3 = $linq(["one", "two", "three", "ONE", "TWO", "THREE"]);
+
+            var basic = col1.distinct();
+            var doNothing = col2.distinct();
+            var emptyDoNothing = $linq([]).distinct();
+
+            var caseSensitive = col3.distinct(function (x, y) { return x == y; });
+            var caseInsensitive = col3.distinct(function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambda = col3.distinct("x, y => x == y");
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4, 5]);
+            assertArrayEquals("do nothing", doNothing.toArray(), [1, 2, 3, 4, 5]);
+            assertArrayEquals("empty do nothing", emptyDoNothing.toArray(), []);
+            assertArrayEquals("case sensitive", caseSensitive.toArray(), ["one", "two", "three", "ONE", "TWO", "THREE"]);
+            assertArrayEquals("case insensitive", caseInsensitive.toArray(), ["one", "two", "three"]);
+            assertArrayEquals("lambda", lambda.toArray(), ["one", "two", "three", "ONE", "TWO", "THREE"]);
+
+            assertException("comparer is not function", function () { col1.distinct(notFunction); });
+        }
+
+        function test_distinctBy()
+        {
+            var col1 = $linq([{ id: 1, name: 'steve' }, { id: 2, name: 'barbara' }, { id: 3, name: 'david' }, { id: 4, name: 'steve' }]);
+            var col2 = $linq([{ id: 1, name: 'steve' }, { id: 2, name: 'barbara' }, { id: 3, name: 'david' }, { id: 4, name: 'STEVE' }]);
+
+            var basic = col1.distinctBy(function (x) { return x.name; });
+            var doNothing = col1.distinctBy(function (x) { return x.id; });
+            var emptyDoNothing = $linq([]).distinctBy(function (x) { return x.id; });
+
+            var caseSensitive = col2.distinctBy(function (x) { return x.name; }, function (x, y) { return x == y; });
+            var caseInsensitive = col2.distinctBy(function (x) { return x.name; }, function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambda = col2.distinctBy("x => x.name", "x, y => x == y");
+
+            var idFunc = function (x) { return x.id; };
+
+            assertArrayEquals("basic", basic.select(idFunc).toArray(), [1, 2, 3]);
+            assertArrayEquals("do nothing", doNothing.select(idFunc).toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("empty do nothing", emptyDoNothing.select(idFunc).toArray(), []);
+            assertArrayEquals("case sensitive", caseSensitive.select(idFunc).toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("case insensitive", caseInsensitive.select(idFunc).toArray(), [1, 2, 3]);
+            assertArrayEquals("lambda", lambda.select(idFunc).toArray(), [1, 2, 3, 4]);
+
+            assertException("key selector is null", function () { col2.distinctBy(null); });
+            assertException("comparer is not function", function () { col2.distinctBy(idFunc, notFunction); });
+        }
+
+        function test_union()
+        {
+            var col1 = $linq([1, 2, 3, 4]);
+            var col2 = $linq([5, 6, 7, 8]);
+            var col3 = $linq(["one", "two", "three", "three", "four"]);
+            var col4 = $linq(["ONE", "TWO", "TWO", "THREE"]);
+
+            var basic1 = col1.union(col2);
+            var basic2 = col1.union([11, 22, 33, 44]);
+            var emptyPlus = $linq([]).union(col1);
+            var plusEmpty = col1.union([]);
+            var plusNull = col1.union(null);
+            var withComparer = col3.union(col4, function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambda = col3.union(col4, "x, y => x.toLowerCase() == y.toLowerCase()");
+
+            assertArrayEquals("basic1", basic1.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("basic2", basic2.toArray(), [1, 2, 3, 4, 11, 22, 33, 44]);
+            assertArrayEquals("empty plus", emptyPlus.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("plus empty", plusEmpty.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("plus null", plusNull.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("with comparer", withComparer.toArray(), ["one", "two", "three", "four"]);
+            assertArrayEquals("lambda", lambda.toArray(), ["one", "two", "three", "four"]);
+
+            assertException("comparer is not function", function () { col1.union(col2, notFunction); });
+        }
+
+        function test_intersect()
+        {
+            var col1 = $linq([1, 2, 3, 4]);
+            var col2 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col3 = $linq([5, 6, 7, 8]);
+            var col4 = $linq(["one", "two", "three", "three", "four"]);
+            var col5 = $linq(["ONE", "TWO", "TWO", "THREE"]);
+
+            var left = col1.intersect(col2);
+            var right = col2.intersect(col3);
+            var withArray = col2.intersect([2, 4, 6]);
+            var onEmpty = $linq([]).intersect(col1);
+            var withEmpty = col2.intersect([]);
+            var withNull = col2.intersect(null);
+            var withComparer = col4.intersect(col5, function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambda = col4.intersect(col5, "x, y => x.toLowerCase() == y.toLowerCase()");
+
+            assertArrayEquals("left", left.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("right", right.toArray(), [5, 6, 7, 8]);
+            assertArrayEquals("with array", withArray.toArray(), [2, 4, 6]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("with empty", withEmpty.toArray(), []);
+            assertArrayEquals("with null", withNull.toArray(), []);
+            assertArrayEquals("with comparer", withComparer.toArray(), ["one", "two", "three"]);
+            assertArrayEquals("lambda", lambda.toArray(), ["one", "two", "three"]);
+
+            assertException("comparer is not function", function () { col1.intersect(col2, notFunction); });
+        }
+
+        function test_except()
+        {
+            var col1 = $linq([1, 2, 3, 4]);
+            var col2 = $linq([3, 4, 5, 6]);
+            var col3 = $linq(["one", "two", "two", "three", "four"]);
+            var col4 = $linq(["three", "three", "four", "five", "six"]);
+
+            var basic = col1.except(col2);
+            var withArray = col1.except([2, 3]);
+            var onEmpty = $linq([]).except(col1);
+            var withEmpty = col1.except([]);
+            var withNull = col1.except(null);
+            var withComparer = col3.except(col4, function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambda = col3.except(col4, "x, y => x.toLowerCase() == y.toLowerCase()");
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2]);
+            assertArrayEquals("with array", withArray.toArray(), [1, 4]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("with empty", withEmpty.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("with null", withNull.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("with comparer", withComparer.toArray(), ["one", "two"]);
+            assertArrayEquals("lambda", lambda.toArray(), ["one", "two"]);
+
+            assertException("comparer is not function", function () { col1.except(col2, notFunction); });
+        }
+
+        function test_join()
+        {
+            var col1 = $linq([{ id: 1, name: 'steve', color: 'blue' }, { id: 2, name: 'paul', color: 'red' }, { id: 3, name: 'eve', color: 'pink' }, { id: 4, name: 'zoe', color: 'yellow' }]);
+            var col2 = $linq([{ personId: 1, make: 'Honda', model: 'Civic' },
+                { personId: 2, make: 'Toyota', model: 'Camry' },
+                { personId: 2, make: 'Acura', model: 'TL' },
+                { personId: 3, make: 'Ford', model: 'Focus' }]);
+            var col3 = $linq([{ color: 'blue', trait: 'reliable' }, { color: 'BLUE', trait: 'sincere' },
+                { color: 'red', trait: 'courageous' }, { color: 'RED', trait: 'confident' },
+                { color: 'green', trait: 'practical' }, { color: 'GREEN', trait: 'intelligent' },
+                { color: 'pink', trait: 'friendly' }, { color: 'PINK', trait: 'sensitive' },
+                { color: 'yellow', trait: 'happy' }, { color: 'YELLOW', trait: 'impulsive' }]);
+
+            var carFunc = function (outer, inner) { return outer.name + ': ' + inner.make + ' ' + inner.model; };
+
+            var basic = col1.join(col2,
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var withArray = col1.join([{ personId: 2, make: 'Lexus', model: 'LS' }],
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var onEmpty = $linq([]).join(col2,
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var withEmpty = col1.join([],
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var withComparer = col1.join(col3,
+                function (x) { return x.color; },
+                function (x) { return x.color; },
+                function (outer, inner) { return outer.name + ': ' + inner.trait; },
+                function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+
+            var lambda = col1.join(col2, "x => x.id", "x => x.personId", carFunc);
+
+            assertArrayEquals("basic", basic.toArray(), ["steve: Honda Civic", "paul: Toyota Camry", "paul: Acura TL", "eve: Ford Focus"]);
+            assertArrayEquals("with array", withArray.toArray(), ["paul: Lexus LS"]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("with empty", withEmpty.toArray(), []);
+            assertArrayEquals("with comparer", withComparer.toArray(), ["steve: reliable", "steve: sincere", "paul: courageous", "paul: confident",
+                "eve: friendly", "eve: sensitive", "zoe: happy", "zoe: impulsive"]);
+            assertArrayEquals("lambda", lambda.toArray(), ["steve: Honda Civic", "paul: Toyota Camry", "paul: Acura TL", "eve: Ford Focus"]);
+
+            assertException("inner is null", function () { col1.join(null, function (x) { return x.id; }, function (x) { return x.id; }, function (x, y) { return null; }); });
+            assertException("key comparer is not function", function () { col1.join(col2, function (x) { return x.id; }, function (x) { return x.personId; }, function (x, y) { return null; }, notFunction); });
+            assertException("outer selector is null", function () { col1.join(col2, null, function (x) { return x.personId; }, function (x, y) { return null; }); });
+            assertException("inner selector is null", function () { col1.join(col2, function (x) { return x.id; }, null, function (x, y) { return null; }); });
+            assertException("result selector is null", function () { col1.join(col2, function (x) { return x.id; }, function (x) { return x.personId; }, null); });
+        }
+
+        function test_groupBy()
+        {
+            var col1 = $linq([{ name: 'steve', state: 'ut' }, { name: 'john', state: 'ut' }, { name: 'kelly', state: 'nv' }, { name: 'abbey', state: 'wa' }]);
+            var col2 = $linq(['apple', 'carrot', 'corn', 'tomato', 'watermellon', 'watercrest']);
+            var col3 = $linq([{ name: 'kevin', state: 'UT' }, { name: 'spencer', state: 'ut' }, { name: 'glenda', state: 'co' }, { name: 'may', state: 'CO' }]);
+
+            var stateProjection = function (x) { return x.state; };
+            var groupSelector = function (x) { return x.key + ': ' + x.values.join(','); };
+            var nameSelector = function (x) { return x.name; };
+
+            var basic = col1.groupBy(stateProjection, nameSelector).select(groupSelector);
+            var noElementSelector = col2.groupBy(function (x) { return (x == null || x.length == 0 ? '' : x[0]); }).select(groupSelector);
+            var onEmpty = $linq([]).groupBy(stateProjection, nameSelector);
+            var withComparer = col3.groupBy(stateProjection, nameSelector, function (x, y) { return x.toLowerCase() == y.toLowerCase(); }).select(groupSelector);
+            var lambda = col3.groupBy("x => x.state", "x => x.name", "x, y => x.toLowerCase() == y.toLowerCase()").select(groupSelector);
+
+            assertArrayEquals("basic", basic.toArray(), ["ut: steve,john", "nv: kelly", "wa: abbey"]);
+            assertArrayEquals("no element selector", noElementSelector.toArray(), ["a: apple", "c: carrot,corn", "t: tomato", "w: watermellon,watercrest"]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("with comparer", withComparer.toArray(), ["UT: kevin,spencer", "co: glenda,may"]);
+            assertArrayEquals("lambda", lambda.toArray(), ["UT: kevin,spencer", "co: glenda,may"]);
+
+            assertException("key selector is null", function () { col1.groupBy(null); });
+            assertException("element selector is not function", function () { col1.groupBy(stateProjection, notFunction); });
+            assertException("key comparer is not function", function () { col1.groupBy(stateProjection, null, notFunction); });
+        }
+
+        function test_groupJoin()
+        {
+            var col1 = $linq([{ id: 1, name: 'steve', color: 'blue' }, { id: 2, name: 'paul', color: 'red' }, { id: 3, name: 'eve', color: 'pink' }, { id: 4, name: 'zoe', color: 'grey' }]);
+            var col2 = $linq([{ personId: 1, make: 'Honda', model: 'Civic' },
+                { personId: 2, make: 'Toyota', model: 'Camry' },
+                { personId: 2, make: 'Acura', model: 'TL' },
+                { personId: 3, make: 'Ford', model: 'Focus' }]);
+            var col3 = $linq([{ color: 'blue', trait: 'reliable' }, { color: 'BLUE', trait: 'sincere' },
+                { color: 'red', trait: 'courageous' }, { color: 'RED', trait: 'confident' },
+                { color: 'green', trait: 'practical' }, { color: 'GREEN', trait: 'intelligent' },
+                { color: 'pink', trait: 'friendly' }, { color: 'PINK', trait: 'sensitive' },
+                { color: 'yellow', trait: 'happy' }, { color: 'YELLOW', trait: 'impulsive' }]);
+
+            var carFunc = function (outer, inner)
+            {
+                if (inner.length == 0)
+                    return outer.name + ': <none>';
+                else
+                    return outer.name + ': ' + $linq(inner).select(function (x) { return x.make + ' ' + x.model; }).toArray().join(', ');
+            };
+
+            var basic = col1.groupJoin(col2,
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var withArray = col1.groupJoin([{ personId: 2, make: 'Lexus', model: 'LS' }],
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var onEmpty = $linq([]).groupJoin(col2,
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var withEmpty = col1.groupJoin([],
+                function (x) { return x.id; },
+                function (x) { return x.personId; },
+                carFunc);
+
+            var withComparer = col1.groupJoin(col3,
+                function (x) { return x.color; },
+                function (x) { return x.color; },
+                function (outer, inner)
+                {
+                    if (inner.length == 0)
+                        return outer.name + ': <none>';
+                    else
+                        return outer.name + ': ' + $linq(inner).select(function (x) { return x.trait; }).toArray().join(', ');
+                },
+                function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+
+            var lambda = col1.groupJoin(col2, "x => x.id", "x => x.personId", carFunc);
+
+            assertArrayEquals("basic", basic.toArray(), ["steve: Honda Civic", "paul: Toyota Camry, Acura TL", "eve: Ford Focus", "zoe: <none>"]);
+            assertArrayEquals("with array", withArray.toArray(), ["steve: <none>", "paul: Lexus LS", "eve: <none>", "zoe: <none>"]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("with empty", withEmpty.toArray(), ["steve: <none>", "paul: <none>", "eve: <none>", "zoe: <none>"]);
+            assertArrayEquals("with comparer", withComparer.toArray(), ["steve: reliable, sincere", "paul: courageous, confident",
+                "eve: friendly, sensitive", "zoe: <none>"]);
+            assertArrayEquals("lambda", lambda.toArray(), ["steve: Honda Civic", "paul: Toyota Camry, Acura TL", "eve: Ford Focus", "zoe: <none>"]);
+
+            assertException("inner is null", function () { col1.join(null, function (x) { return x.id; }, function (x) { return x.id; }, function (x, y) { return null; }); });
+            assertException("key comparer is not function", function () { col1.join(col2, function (x) { return x.id; }, function (x) { return x.personId; }, function (x, y) { return null; }, notFunction); });
+            assertException("outer selector is null", function () { col1.join(col2, null, function (x) { return x.personId; }, function (x, y) { return null; }); });
+            assertException("inner selector is null", function () { col1.join(col2, function (x) { return x.id; }, null, function (x, y) { return null; }); });
+            assertException("result selector is null", function () { col1.join(col2, function (x) { return x.id; }, function (x) { return x.personId; }, null); });
+        }
+
+        function test_take()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+            var basic = col1.take(4);
+            var onEmpty = $linq([]).take(4);
+            var moreThan = col1.take(20);
+            var takeNone = col1.take(0);
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("moreThan", moreThan.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("take none", takeNone.toArray(), []);
+
+            assertException("count is null", function () { col1.take(null); });
+            assertException("count is not number", function () { col1.take("stuff"); });
+        }
+
+        function test_takeWhile()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+            var basic = col1.takeWhile(function (x) { return x < 5; });
+            var onEmpty = $linq([]).takeWhile(function (x) { return x < 5; });
+            var takeNone = col1.takeWhile(function (x) { return x < 0; });
+            var testStop = col2.takeWhile(function (x) { return x < 5; });
+            var lambda = col2.takeWhile("x => x < 5");
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("take none", takeNone.toArray(), []);
+            assertArrayEquals("test stop", testStop.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 2, 3, 4]);
+
+            assertException("predicate is null", function () { col1.takeWhile(null); });
+        }
+
+        function test_skip()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+            var basic = col1.skip(4);
+            var onEmpty = $linq([]).skip(4);
+            var moreThan = col1.skip(20);
+            var skipNone = col1.skip(0);
+
+            assertArrayEquals("basic", basic.toArray(), [5, 6, 7, 8]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("moreThan", moreThan.toArray(), []);
+            assertArrayEquals("skip none", skipNone.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+
+            assertException("count is null", function () { col1.skip(null); });
+            assertException("count is not number", function () { col1.skip("stuff"); });
+        }
+
+        function test_skipWhile()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+            var basic = col1.skipWhile(function (x) { return x < 5; });
+            var onEmpty = $linq([]).skipWhile(function (x) { return x < 5; });
+            var skipNone = col1.skipWhile(function (x) { return x < 0; });
+            var testStop = col2.skipWhile(function (x) { return x < 5; });
+            var lambda = col2.skipWhile("x => x < 5");
+
+            assertArrayEquals("basic", basic.toArray(), [5, 6, 7, 8]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("skip none", skipNone.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("test stop", testStop.toArray(), [5, 1, 2, 3, 4, 5]);
+            assertArrayEquals("lambda", lambda.toArray(), [5, 1, 2, 3, 4, 5]);
+
+            assertException("predicate is null", function () { col1.skipWhile(null); });
+        }
+
+        function test_toDictionary()
+        {
+            var col1 = $linq([{ prop: 'color', value: 'red' }, { prop: 'align', value: 'center' }, { prop: 'text', value: 'nicole' }]);
+            var col2 = $linq(['a_blue', 'b_red', 'c_green', 'd_purple']);
+            var col3 = $linq(['1_one', '1_uno', '2_two', '3_three']);
+
+            var basic = col1.toDictionary(function (x) { return x.prop; }, function (x) { return x.value; });
+            var noElementSelector = col2.toDictionary(function (x) { return x[0]; });
+            var onEmpty = $linq([]).toDictionary(function (x) { return x.prop; });
+            var lambda = col1.toDictionary("x => x.prop", "x => x.value");
+
+            assertObjectEquals("basic", basic, { color: 'red', align: 'center', text: 'nicole' });
+            assertObjectEquals("no element selector", noElementSelector, { a: 'a_blue', b: 'b_red', c: 'c_green', d: 'd_purple' });
+            assertObjectEquals("on empty", onEmpty, {});
+            assertObjectEquals("lambda", lambda, { color: 'red', align: 'center', text: 'nicole' });
+
+            assertException("key selector is null", function () { col1.toDictionary(null); });
+            assertException("element selector is not function", function () { col1.toDictionary(function (x) { return x.prop; }, notFunction); });
+            assertException("duplicate key", function () { col3.toDictionary(function (x) { return x[0]; }, function (x) { return x.slice(2); }); });
+        }
+
+        function test_reverse()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6]);
+
+            var basic = col1.reverse();
+            var onEmpty = $linq([]).reverse();
+
+            assertArrayEquals("basic", basic.toArray(), [6, 5, 4, 3, 2, 1]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+        }
+
+        function test_sum()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6]);
+            var col2 = $linq([{ id: 1, value: 100 }, { id: 2, value: 200 }, { id: 3, value: 300 }, { id: 4, value: 400 }]);
+
+            var basic = col1.sum();
+            var withProjection = col2.sum(function (x) { return x.value; });
+            var lambda = col2.sum("x => x.value");
+
+            assertEquals("basic", basic, 21);
+            assertEquals("with projection", withProjection, 1000);
+            assertEquals("lambda", lambda, 1000);
+
+            assertException("selector not function", function () { col2.sum(notFunction); });
+        }
+
+        function test_min()
+        {
+            var col1 = $linq([15, 42, 98, 6, 475, 3, 333]);
+            var col2 = $linq([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+            var basic = col1.min();
+            var withSelector = col2.min(function (x) { return x.value; });
+            var basicMinBy = col2.minBy(function (x) { return x.value; });
+            var lambda1 = col2.min("x => x.value");
+            var lambda2 = col2.minBy("x => x.value");
+
+            assertEquals("basic", basic, 3);
+            assertEquals("with selector", withSelector, 17);
+            assertObjectEquals("basic min by", basicMinBy, { id: 3, value: 17 });
+            assertEquals("lambda #1", lambda1, 17);
+            assertObjectEquals("lambda #2", lambda2, { id: 3, value: 17 });
+
+            assertException("selector is not function", function () { col1.min(notFunction); });
+            assertException("selector is null", function () { col1.minBy(null); });
+            assertException("on empty", function () { $linq([]).min(); });
+        }
+
+        function test_max()
+        {
+            var col1 = $linq([15, 42, 98, 6, 475, 3, 333]);
+            var col2 = $linq([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+            var basic = col1.max();
+            var withSelector = col2.max(function (x) { return x.value; });
+            var basicMaxBy = col2.maxBy(function (x) { return x.value; });
+            var lambda1 = col2.max("x => x.value");
+            var lambda2 = col2.maxBy("x => x.value");
+
+            assertEquals("basic", basic, 475);
+            assertEquals("with selector", withSelector, 9000);
+            assertObjectEquals("basic max by", basicMaxBy, { id: 1, value: 9000 });
+            assertEquals("lambda #1", lambda1, 9000);
+            assertObjectEquals("lambda #2", lambda2, { id: 1, value: 9000 });
+
+            assertException("selector is not function", function () { col1.max(notFunction); });
+            assertException("selector is null", function () { col1.maxBy(null); });
+            assertException("on empty", function () { $linq([]).max(); });
+        }
+
+        function test_average()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col2 = $linq([{ id: 1, value: 100 }, { id: 2, value: 200 }, { id: 3, value: 300 }, { id: 4, value: 400 }]);
+
+            var basic = col1.average();
+            var withSelector = col2.average(function (x) { return x.value; });
+            var lambda = col2.average("x => x.value");
+
+            assertEquals("basic", basic, 4.5);
+            assertEquals("with selector", withSelector, 250);
+            assertEquals("lambda", lambda, 250);
+
+            assertException("selector is not function", function () { col1.average(notFunction); });
+            assertException("list with non-number", function () { $linq([1, 2, 'a']).average(); });
+        }
+
+        function test_contains()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6]);
+            var col2 = $linq(["one", "two", "three", "four", "five", "six"]);
+
+            var basic = col1.contains(3);
+            var notIn = col1.contains(77);
+            var onEmpty = $linq([]).contains("test");
+            var withComparer1 = col2.contains("FOUR", function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var withComparer2 = col2.contains("TEN", function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambda = col2.contains("TEN", "x, y => x.toLowerCase() == y.toLowerCase()");
+
+            assertTrue("basic", basic);
+            assertFalse("no in list", notIn);
+            assertFalse("on empty", onEmpty);
+            assertTrue("with comparer #1", withComparer1);
+            assertFalse("with comparer #2", withComparer2);
+            assertFalse("lambda", lambda);
+
+            assertException("comparer is not function", function () { col2.contains("test", notFunction); });
+        }
+
+        function test_sequenceEqual()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5]);
+            var col2 = $linq([1, 2, 3, 4, 5]);
+            var col3 = $linq([1, 2, 2, 3, 4, 5]);
+            var col4 = $linq([1, 2, 7, 4, 5]);
+            var col5 = $linq(["one", "two", "three", "four"]);
+            var col6 = $linq(["ONE", "TWO", "THREE", "FOUR"]);
+            var col7 = $linq(["ONE", "TWO", "THREE"]);
+            var col8 = $linq(["ONE", "SEVEN", "THREE", "FOUR"]);
+
+            var comparer = function (x, y) { return x.toLowerCase() == y.toLowerCase(); };
+
+            var basic = col1.sequenceEqual(col2);
+            var basicNot1 = col1.sequenceEqual(col3);
+            var basicNot2 = col1.sequenceEqual(col4);
+            var onArray1 = col1.sequenceEqual([1, 2, 3, 4, 5]);
+            var onArray2 = col1.sequenceEqual([1, 2, 3]);
+            var onArray3 = col1.sequenceEqual([1, 2, 7, 4, 5]);
+            var onNull = col1.sequenceEqual(null);
+            var onEmpty = col1.sequenceEqual([]);
+            var withComparer1 = col5.sequenceEqual(col6, comparer);
+            var withComparer2 = col5.sequenceEqual(col7, comparer);
+            var withComparer3 = col5.sequenceEqual(col8, comparer);
+            var withLambda = col5.sequenceEqual(col6, "x, y => x.toLowerCase() == y.toLowerCase()");
+
+            assertTrue("basic", basic);
+            assertFalse("basic not #1", basicNot1);
+            assertFalse("basic not #2", basicNot2);
+            assertTrue("on array #1", onArray1);
+            assertFalse("on array #2", onArray2);
+            assertFalse("on array #3", onArray3);
+            assertFalse("on null", onNull);
+            assertFalse("on empty", onEmpty);
+            assertTrue("with comparer #1", withComparer1);
+            assertFalse("with comparer #2", withComparer2);
+            assertFalse("with comparere #3", withComparer3);
+            assertTrue("with lambda", withLambda);
+
+            assertException("comparer is not function", function () { col1.sequenceEqual(col1, notFunction); });
+        }
+
+        function test_sequenceEquivalent()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5]);
+            var col2 = $linq([5, 4, 3, 2, 1]);
+            var col3 = $linq([1, 7, 3, 4, 5]);
+            var col4 = $linq(["one", "two", "three", "four"]);
+            var col5 = $linq(["FOUR", "THREE", "TWO", "ONE"]);
+            var col6 = $linq(["three", "two", "one"]);
+            var col7 = $linq([1, 1, 2, 2, 3, 4]);
+            var col8 = $linq([1, 1, 2, 2, 3, 4]);
+            var col9 = $linq([1, 2, 2, 3, 3, 4]);
+
+            var basic = col1.sequenceEquivalent(col2);
+            var basicNot = col1.sequenceEquivalent(col3);
+            var onArray1 = col1.sequenceEquivalent([5, 4, 3, 2, 1]);
+            var onArray2 = col1.sequenceEquivalent([1, 2, 3]);
+            var onNull = col1.sequenceEquivalent(null);
+            var onEmpty = col1.sequenceEquivalent([]);
+            var withComparer1 = col4.sequenceEquivalent(col5, function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var withComparer2 = col4.sequenceEquivalent(col6, function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambda = col4.sequenceEquivalent(col6, "x, y => x.toLowerCase() == y.toLowerCase()");
+            var extra1 = col7.sequenceEquivalent(col8);
+            var extra2 = col7.sequenceEquivalent(col9);
+
+            assertTrue("basic", basic);
+            assertFalse("basic not", basicNot);
+            assertTrue("on array #1", onArray1);
+            assertFalse("on array #2", onArray2);
+            assertFalse("on null", onNull);
+            assertFalse("on empty", onEmpty);
+            assertTrue("with comparer #1", withComparer1);
+            assertFalse("with comparer #2", withComparer2);
+            assertFalse("lambda", lambda);
+            assertTrue("extra #1", extra1);
+            assertFalse("extra #2", extra2);
+
+            assertException("comparer is not function", function () { col1.sequenceEquivalent(col2, notFunction); });
+        }
+
+        function test_zip()
+        {
+            var col1 = $linq(['a', 'b', 'c', 'd']);
+            var col2 = $linq(['a', 'b', 'c', 'd', 'e', 'f']);
+            var col3 = $linq([1, 2, 3, 4]);
+
+            var resultSelector = function (x, y) { return x + '_' + y; };
+
+            var basic = col1.zip(col3, resultSelector);
+            var unequalLengths = col2.zip(col3, resultSelector);
+            var onArray = col1.zip([1, 2, 3, 4, 5, 6, 7, 8], resultSelector);
+            var onEmpty = col1.zip([], resultSelector);
+            var onNull = col1.zip(null, resultSelector);
+            var lambda = col1.zip(col3, "x, y => x + '_' + y");
+
+            assertArrayEquals("basic", basic.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+            assertArrayEquals("unequal lengths", unequalLengths.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+            assertArrayEquals("on array", onArray.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("on null", onNull.toArray(), []);
+            assertArrayEquals("lambda", lambda.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+
+            assertException("result selector is not function", function () { col1.zip(col2, notFunction); });
+            assertException("result selector is null", function () { col1.zip(col2, null); });
+        }
+
+        function test_orderBy()
+        {
+            var col1 = $linq([2, 5, 1, 3, 4, 6]);
+            var col2 = $linq([{ id: 3, value: 543 }, { id: 4, value: 956 }, { id: 1, value: 112 }, { id: 2, value: 456 }]);
+            var col3 = $linq([{ id: 3, value: "c" }, { id: 4, value: "D" }, { id: 1, value: "a" }, { id: 2, value: "B" }]);
+
+            var identityKeySelector = function (x) { return x; };
+            var keySelector = function (x) { return x.value; };
+            var selector = function (x) { return x.id; };
+
+            var comparer = function (x, y)
+            {
+                var tempX = x.toLowerCase();
+                var tempY = y.toLowerCase();
+
+                if (tempX < tempY)
+                    return -1;
+                else if (tempX > tempY)
+                    return 1;
+                else
+                    return 0;
+            };
+
+            var basic1 = col1.orderBy(identityKeySelector);
+            var basic2 = col1.orderByDescending(identityKeySelector);
+            var withKeySelector1 = col2.orderBy(keySelector).select(selector);
+            var withKeySelector2 = col2.orderByDescending(keySelector).select(selector);
+            var withComparer1 = col3.orderBy(keySelector, comparer).select(selector);
+            var withComparer2 = col3.orderByDescending(keySelector, comparer).select(selector);
+            var lambda1 = col3.orderBy("x => x.value", "x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))").select(selector);
+            var lambda2 = col3.orderByDescending("x => x.value", "x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))").select(selector);
+
+            assertArrayEquals("basic #1", basic1.toArray(), [1, 2, 3, 4, 5, 6]);
+            assertArrayEquals("basic #2", basic2.toArray(), [6, 5, 4, 3, 2, 1]);
+            assertArrayEquals("with key selector #1", withKeySelector1.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("with key selector #2", withKeySelector2.toArray(), [4, 3, 2, 1]);
+            assertArrayEquals("with comparer #1", withComparer1.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("with comparer #2", withComparer2.toArray(), [4, 3, 2, 1]);
+            assertArrayEquals("lambda #1", lambda1.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("lambda #2", lambda2.toArray(), [4, 3, 2, 1]);
+
+            assertException("key selector is null #1", function () { col1.orderBy(null); });
+            assertException("key selector is null #2", function () { col1.orderByDescending(null); });
+            assertException("comparer is not function #1", function () { col1.orderBy(identityKeySelector, notFunction); });
+            assertException("comparer is not function #2", function () { col1.orderByDescending(identityKeySelector, notFunction); });
+        }
+
+        function test_thenBy()
+        {
+            var col1 = $linq([{ id: 3, level1: 222, level2: 99 }, { id: 7, level1: 444, level2: 44 }, { id: 1, level1: 111, level2: 10 }, { id: 4, level1: 333, level2: 44 }, { id: 8, level1: 555, level2: 99 }, { id: 5, level1: 333, level2: 66 }, { id: 6, level1: 444, level2: 22 }, { id: 2, level1: 111, level2: 20 }]);
+            var col2 = $linq([{ id: 3, level1: 222, level2: 'a' }, { id: 7, level1: 444, level2: 'B' }, { id: 1, level1: 111, level2: 'A' }, { id: 4, level1: 333, level2: 'a' }, { id: 8, level1: 555, level2: 'a' }, { id: 5, level1: 333, level2: 'C' }, { id: 6, level1: 444, level2: 'a' }, { id: 2, level1: 111, level2: 'b' }]);
+
+            var level1Selector = function (x) { return x.level1; };
+            var level2Selector = function (x) { return x.level2; };
+            var resultSelector = function (x) { return x.id; };
+
+            var comparer = function (x, y)
+            {
+                var tempX = x.toLowerCase();
+                var tempY = y.toLowerCase();
+
+                if (tempX < tempY)
+                    return -1;
+                else if (tempX > tempY)
+                    return 1;
+                else
+                    return 0;
+            };
+
+            var basic1 = col1.orderBy(level1Selector).thenBy(level2Selector).select(resultSelector);
+            var basic2 = col1.orderBy(level1Selector).thenByDescending(level2Selector).select(resultSelector);
+            var withComparer1 = col2.orderBy(level1Selector).thenBy(level2Selector, comparer).select(resultSelector);
+            var withComparer2 = col2.orderBy(level1Selector).thenByDescending(level2Selector, comparer).select(resultSelector);
+            var lambda1 = col2.orderBy(level1Selector).thenBy("x => x.level2", "x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))").select(resultSelector);
+            var lambda2 = col2.orderBy(level1Selector).thenByDescending("x => x.level2", "x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))").select(resultSelector);
+
+            assertArrayEquals("basic #1", basic1.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("basic #2", basic2.toArray(), [2, 1, 3, 5, 4, 7, 6, 8]);
+            assertArrayEquals("with comparer #1", withComparer1.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("with comparer #2", withComparer2.toArray(), [2, 1, 3, 5, 4, 7, 6, 8]);
+            assertArrayEquals("lambda #1", lambda1.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("lambda #2", lambda2.toArray(), [2, 1, 3, 5, 4, 7, 6, 8]);
+
+            assertException("key selector is null #1", function () { col1.orderBy(level1Selector).thenBy(null); });
+            assertException("key selector is null #2", function () { col1.orderByDescending(level1Selector).thenByDescending(null); });
+            assertException("comparer is not function #1", function () { col1.orderBy(level1Selector).thenBy(level2Selector, notFunction); });
+            assertException("comparer is not function #2", function () { col1.orderByDescending(level1Selector).thenByDescending(level2Selector, notFunction); });
+        }
+
+        function test_elementAt()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+            var basic1 = col1.elementAt(0);
+            var basic2 = col1.elementAt(5);
+            var basic3 = col1.elementAt(7);
+
+            assertEquals("basic #1", basic1, 1);
+            assertEquals("basic #2", basic2, 6);
+            assertEquals("basic #3", basic3, 8);
+
+            assertException("null index", function () { col1.elementAt(null); });
+            assertException("NaN index", function () { col1.elementAt("stuff"); });
+            assertException("negative index", function () { col1.elementAt(-11); });
+            assertException("too big index", function () { col1.elementAt(9999); });
+        }
+
+        function test_elementAtOrDefault()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+            var basic1 = col1.elementAtOrDefault(0, 99);
+            var basic2 = col1.elementAtOrDefault(5, 99);
+            var basic3 = col1.elementAtOrDefault(7, 99);
+            var nullIndex = col1.elementAtOrDefault(null, 99);
+            var NaNIndex = col1.elementAtOrDefault("stuff", 99);
+            var negativeIndex = col1.elementAtOrDefault(-11, 99);
+            var tooBigIndex = col1.elementAtOrDefault(9999, 99);
+
+            assertEquals("basic #1", basic1, 1);
+            assertEquals("basic #2", basic2, 6);
+            assertEquals("basic #3", basic3, 8);
+            assertEquals("null index", nullIndex, 99);
+            assertEquals("NaN index", NaNIndex, 99);
+            assertEquals("negative index", negativeIndex, 99);
+            assertEquals("too big index", tooBigIndex, 99);
+        }
+
+        function test_concat()
+        {
+            var col1 = $linq([1, 2, 3]);
+            var col2 = $linq([4, 5, 6]);
+
+            var basic = col1.concat(col2);
+            var withArray = col1.concat([7, 8, 9]);
+            var onEmpty = $linq([]).concat([2, 4, 6]);
+            var withEmpty = col1.concat([]);
+            var withNull = col1.concat(null);
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4, 5, 6]);
+            assertArrayEquals("with array", withArray.toArray(), [1, 2, 3, 7, 8, 9]);
+            assertArrayEquals("on empty", onEmpty.toArray(), [2, 4, 6]);
+            assertArrayEquals("with empty", withEmpty.toArray(), [1, 2, 3]);
+            assertArrayEquals("with null", withNull.toArray(), [1, 2, 3]);
+        }
+
+        function test_skipUntil()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+            var basic = col1.skipUntil(function (x) { return x > 4; });
+            var onEmpty = $linq([]).skipUntil(function (x) { return x > 4; });
+            var skipNone = col1.skipUntil(function (x) { return x > 0; });
+            var testStop = col2.skipUntil(function (x) { return x > 4; });
+            var lambda = col2.skipUntil("x => x > 4");
+            
+            assertArrayEquals("basic", basic.toArray(), [5, 6, 7, 8]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("skip none", skipNone.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("test stop", testStop.toArray(), [5, 1, 2, 3, 4, 5]);
+            assertArrayEquals("lambda", lambda.toArray(), [5, 1, 2, 3, 4, 5]);
+
+            assertException("predicate is null", function () { col1.skipUntil(null); });
+        }
+
+        function test_takeUntil()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+            var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+            var basic = col1.takeUntil(function (x) { return x > 4; });
+            var onEmpty = $linq([]).takeUntil(function (x) { return x > 4; });
+            var takeNone = col1.takeUntil(function (x) { return x > 0; });
+            var testStop = col2.takeUntil(function (x) { return x > 4; });
+            var lambda = col2.takeUntil("x => x > 4");
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("take none", takeNone.toArray(), []);
+            assertArrayEquals("test stop", testStop.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 2, 3, 4]);
+
+            assertException("predicate is null", function () { col1.takeUntil(null); });
+        }
+
+        function test_takeLast()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+            var basic = col1.takeLast(3);
+            var onEmpty = $linq([]).takeLast(3);
+            var moreThan = col1.takeLast(20);
+            var takeNone = col1.takeLast(0);
+
+            assertArrayEquals("basic", basic.toArray(), [6, 7, 8]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("moreThan", moreThan.toArray(), [1, 2, 3, 4, 5, 6, 7, 8]);
+            assertArrayEquals("take none", takeNone.toArray(), []);
+
+            assertException("count is null", function () { col1.takeLast(null); });
+            assertException("count is not number", function () { col1.takeLast("stuff"); });
+        }
+
+        function test_takeEvery()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+            var basic = col.takeEvery(3);
+            var onEmpty = $linq([]).takeEvery(3);
+            var moreThan = col.takeEvery(20);
+            var takeAll = col.takeEvery(1);
+            
+            assertArrayEquals("basic", basic.toArray(), [1, 4, 7]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("more than", moreThan.toArray(), [1]);
+            assertArrayEquals("take all", takeAll.toArray(), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+            assertException("count is null", function () { col.takeEvery(null); });
+            assertException("count is not number", function () { col.takeEvery("stuff"); });
+        }
+
+        function test_foreach()
+        {
+            var arr1 = [1, 2, 3, 4, 5, 6];
+            var arr2 = ['a', 'b', 'c', 'd', 'e', 'f'];
+            var testValue = '';
+
+            var basic = $linq(arr1).foreach(function (x, i) { arr2[i] = arr2[i] + x; });
+            var onEmpty = $linq([]).foreach(function (x) { testValue += '*'; });
+
+            assertArrayEquals("basic", arr2, ['a1', 'b2', 'c3', 'd4', 'e5', 'f6']);
+            assertEquals("on empty", testValue, '');
+
+            assertException("action is null", function () { $linq(arr1).foreach(null); });
+            assertException("action is not function", function () { $linq(arr1).foreach("stuff"); });
+        }
+
+        function test_toDelimitedString()
+        {
+            var arr = ['a', 'b', 'c', 'd', 'e'];
+
+            var basic = $linq(arr).toDelimitedString('|');
+            var stringDelimiter = $linq(arr).toDelimitedString(', ');
+            var impliedDelimiter = $linq(arr).toDelimitedString();
+            var noDelimiter = $linq(arr).toDelimitedString('');
+
+            assertEquals("basic", basic, 'a|b|c|d|e');
+            assertEquals("string delimiter", stringDelimiter, 'a, b, c, d, e');
+            assertEquals("impliedDelimiter", impliedDelimiter, 'a,b,c,d,e');
+            assertEquals("no delimiter", noDelimiter, 'abcde');
+        }
+
+        function test_index()
+        {
+            var arr = ['a', 'b', 'c', 'd', 'e'];
+
+            var basic = $linq(arr).index(5);
+            var noStartIndex = $linq(arr).index();
+            var onEmpty = $linq([]).index(0);
+
+            assertArrayEquals("basic", basic.toArray(), [{ key: 5, value: 'a' }, { key: 6, value: 'b' }, { key: 7, value: 'c' }, { key: 8, value: 'd' }, { key: 9, value: 'e' }]);
+            assertArrayEquals("no starting index", noStartIndex.toArray(), [{ key: 0, value: 'a' }, { key: 1, value: 'b' }, { key: 2, value: 'c' }, { key: 3, value: 'd' }, { key: 4, value: 'e' }]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+
+            assertException("start index not a number", function () { $linq(arr).index("stuff"); });
+        }
+
+        function test_batch()
+        {
+            var arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+            var basic = $linq(arr).batch(5);
+            var withResultSelector = $linq(arr).batch(4, function (x) { return x * 2; });
+            var withLargeSize = $linq(arr).batch(10000);
+            var withSizeOfOne = $linq(arr).batch(1);
+            var onEmpty = $linq([]).batch(10);
+            var lambda = $linq(arr).batch(8, "x => x + 1");
+
+            assertArrayEquals("basic", basic.toArray(), [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12]]);
+            assertArrayEquals("with result selector", withResultSelector.toArray(), [[2, 4, 6, 8], [10, 12, 14, 16], [18, 20, 22, 24]]);
+            assertArrayEquals("with large size", withLargeSize.toArray(), [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]]);
+            assertArrayEquals("with size of 1", withSizeOfOne.toArray(), [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12]]);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("lambda", lambda.toArray(), [[2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13]]);
+
+            assertException("result selector not function", function () { $linq(arr).batch(10, notFunction); });
+            assertException("size not a number", function () { $linq(arr).batch("stuff"); });
+            assertException("size less than 1", function () { $linq(arr).batch(0); });
+        }
+
+        function test_equiZip()
+        {
+            var col1 = $linq(['a', 'b', 'c', 'd']);
+            var col2 = $linq([1, 2, 3, 4]);
+
+            var resultSelector = function (x, y) { return x + '_' + y; };
+
+            var basic = col1.equiZip(col2, resultSelector);
+            var onArray = col1.equiZip([11, 22, 33, 44], resultSelector);
+            var lambda = col1.equiZip(col2, "x, y => x + '_' + y");
+
+            assertArrayEquals("basic", basic.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+            assertArrayEquals("on array", onArray.toArray(), ['a_11', 'b_22', 'c_33', 'd_44']);
+            assertArrayEquals("lambda", lambda.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+
+            assertException("result selector is not function", function () { col1.equiZip(col2, notFunction); });
+            assertException("result selector is null", function () { col1.equiZip(col2, null); });
+            assertException("with unequal lengths", function () { col1.equiZip([1, 2, 3, 4, 5, 6], resultSelector); });
+            assertException("on empty", function () { col1.equiZip([], resultSelector); });
+            assertException("on null", function () { col1.equiZip(null, resultSelector); });
+        }
+
+        function test_zipLongest()
+        {
+            var col1 = $linq(['a', 'b', 'c', 'd']);
+            var col2 = $linq(['a', 'b', 'c', 'd', 'e', 'f']);
+            var col3 = $linq([1, 2, 3, 4]);
+
+            var resultSelector = function (x, y) { return x + '_' + y; };
+            var defaultFirst = '*';
+            var defaultSecond = '$';
+
+            var basic = col1.zipLongest(col3, defaultFirst, defaultSecond, resultSelector);
+            var firstShorter = col3.zipLongest(col2, defaultFirst, defaultSecond, resultSelector);
+            var secondShorter = col2.zipLongest(col3, defaultFirst, defaultSecond, resultSelector);
+            var onArray = col1.zipLongest([1, 2, 3, 4, 5, 6, 7, 8], defaultFirst, defaultSecond, resultSelector);
+            var onEmpty = col1.zipLongest([], defaultFirst, defaultSecond, resultSelector);
+            var onNull = col1.zipLongest(null, defaultFirst, defaultSecond, resultSelector);
+            var lambda = col1.zipLongest(col3, defaultFirst, defaultSecond, "x, y => x + '_' + y");
+
+            assertArrayEquals("basic", basic.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+            assertArrayEquals("first shorter", firstShorter.toArray(), ['1_a', '2_b', '3_c', '4_d', '*_e', '*_f']);
+            assertArrayEquals("second shorter", secondShorter.toArray(), ['a_1', 'b_2', 'c_3', 'd_4', 'e_$', 'f_$']);
+            assertArrayEquals("on array", onArray.toArray(), ['a_1', 'b_2', 'c_3', 'd_4', '*_5', '*_6', '*_7', '*_8']);
+            assertArrayEquals("on empty", onEmpty.toArray(), ['a_$', 'b_$', 'c_$', 'd_$']);
+            assertArrayEquals("on null", onNull.toArray(), ['a_$', 'b_$', 'c_$', 'd_$']);
+            assertArrayEquals("lambda", lambda.toArray(), ['a_1', 'b_2', 'c_3', 'd_4']);
+
+            assertException("result selector is not function", function () { col1.zipLongest(col2, defaultFirst, defaultSecond, notFunction); });
+            assertException("result selector is null", function () { col1.zipLongest(col2, defaultFirst, defaultSecond, null); });
+        }
+
+        function test_prepend()
+        {
+            var col1 = $linq([2, 3, 4, 5, 6, 7]);
+
+            var basic = col1.prepend(1);
+            var onEmpty = $linq([]).prepend('a');
+            var withNull = col1.prepend(null);
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4, 5, 6, 7]);
+            assertArrayEquals("on empty", onEmpty.toArray(), ['a']);
+            assertArrayEquals("with null", withNull.toArray(), [null, 2, 3, 4, 5, 6, 7]);
+        }
+
+        function test_pad()
+        {
+            var col = $linq([1, 2, 3, 4]);
+
+            var basic = col.pad(8, 0);
+            var onEmpty = $linq([]).pad(8, 'a');
+            var notNeeded = col.pad(4, '$');
+            var padWithNull = col.pad(6, null);
+
+            assertArrayEquals("basic", basic.toArray(), [1, 2, 3, 4, 0, 0, 0, 0]);
+            assertArrayEquals("on empty", onEmpty.toArray(), ['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a']);
+            assertArrayEquals("not needed", notNeeded.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("pad with null", padWithNull.toArray(), [1, 2, 3, 4, null, null]);
+
+            assertException("width is not number", function () { col.pad("stuff", 0); });
+        }
+
+        function test_padWith()
+        {
+            var col = $linq([0, 1, 2, 3]);
+
+            var padFunc = function (i) { return i * 10 + i; };
+
+            var basic = col.padWith(8, padFunc);
+            var onEmpty = $linq([]).padWith(8, padFunc);
+            var notNeeded = col.padWith(4, '$');
+            var lambda = col.padWith(6, "x => '_' + x + '_'");
+
+            assertArrayEquals("basic", basic.toArray(), [0, 1, 2, 3, 44, 55, 66, 77]);
+            assertArrayEquals("on empty", onEmpty.toArray(), [0, 11, 22, 33, 44, 55, 66, 77]);
+            assertArrayEquals("not needed", notNeeded.toArray(), [0, 1, 2, 3]);
+            assertArrayEquals("lambda", lambda.toArray(), [0, 1, 2, 3, '_4_', '_5_']);
+
+            assertException("padding selector is null", function () { col.padWith(8, null); });
+            assertException("padding selector is not function", function () { col.padWith(8, notFunction); });
+        }
+
+        function test_toJQuery()
+        {
+            var div = $('#divTest');
+            
+            $('<span>').attr('id', 'test_jquery_1').appendTo(div);
+            $('<span>').attr('id', 'test_jquery_2').appendTo(div);
+            $('<span>').attr('id', 'test_jquery_3').appendTo(div);
+            $('<span>').attr('id', 'test_jquery_4').appendTo(div);
+
+            var spans = $('span', div);
+
+            assertEquals("setup correct", spans.length, 4);
+
+            var col = $linq($.makeArray(spans));
+
+            var results = col.toJQuery();
+
+            assertTrue("returns jquery object", results instanceof jQuery);
+            assertEquals("element 1 is 'test_jquery_1'", results[0].id, 'test_jquery_1');
+            assertEquals("element 2 is 'test_jquery_2'", results[1].id, 'test_jquery_2');
+            assertEquals("element 3 is 'test_jquery_3'", results[2].id, 'test_jquery_3');
+            assertEquals("element 4 is 'test_jquery_4'", results[3].id, 'test_jquery_4');
+
+            div.empty();
+        }
+
+        function test_pipe()
+        {
+            var col1 = $linq([1, 2, 3, 4]);
+
+            var obj1 = { val: 1, result: 0 },
+                obj2 = { val: 2, result: 0 },
+                obj3 = { val: 3, result: 0 };
+
+            var col2 = $linq([obj1, obj2, obj3]);
+            var arr1 = [],
+                arr2 = [],
+                arr3 = [];
+            
+
+            var basic = col1.pipe(function (x) { arr1.push(x); });
+            var withIndex = col1.pipe(function (x, i) { arr2.push(i); });
+            var withEmpty = $linq([]).pipe(function (x) { arr3.push(x); });
+            var lambda = col2.pipe("x => x.result = x.val").select("x => x.val");
+
+            assertArrayEquals("basic test #1", basic.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("basic test #2", arr1, [1, 2, 3, 4]);
+            assertArrayEquals("with index test #1", withIndex.toArray(), [1, 2, 3, 4]);
+            assertArrayEquals("with index test #2", arr2, [0, 1, 2, 3]);
+            assertArrayEquals("with empty test #1", withEmpty.toArray(), []);
+            assertArrayEquals("with empty test #2", arr3, []);
+            assertArrayEquals("lambda test #1", lambda.toArray(), [1, 2, 3]);
+            assertEquals("lambda test #2", obj1.result, 1);
+            assertEquals("lambda test #3", obj2.result, 2);
+            assertEquals("lambda test #4", obj3.result, 3);
+        }
+
+        function test_singleOrFallback()
+        {
+            var col1 = $linq([1]);
+            var col2 = $linq([1, 2, 3, 4]);
+
+            var fallback = function () { return 99; };
+
+            var basic = col1.singleOrFallback(fallback);
+            var useFallback = $linq([]).singleOrFallback(fallback);
+            var lambda = $linq([]).singleOrFallback("() => 111");
+
+            assertEquals("basic", basic, 1);
+            assertEquals("use fallback", useFallback, 99);
+            assertEquals("lambda", lambda, 111);
+
+            assertException("fallback is not function", function () { col1.singleOrFallback(notFunction); });
+            assertException("with multiple", function () { col2.singleOrFallback(fallback); });
+        }
+
+        function test_indexOf()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+
+            var basic = col.indexOf(function (x) { return x == 3; });
+            var withEmpty = $linq([]).indexOf(function (x) { return x == 2; });
+            var notFound = col.indexOf(function (x) { return x == 99; });
+            var lambda = col.indexOf("x => x == 6");
+
+            assertEquals("basic", basic, 2);
+            assertEquals("with empty", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("lambda", lambda, 5);
+
+            assertException("predicate is null", function () { col.indexOf(null); });
+            assertException("predicate is not function", function () { col.indexOf(notFunction); });
+        }
+
+        function test_indexOfElement()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+            var col2 = $linq(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
+
+            var basic = col1.indexOfElement(3);
+            var withEmpty = $linq([]).indexOfElement(2);
+            var notFound = col1.indexOfElement(99);
+            var withComparer = col2.indexOfElement('B', function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambdaComparer = col2.indexOfElement('C', "(x, y) => x.toLowerCase() == y.toLowerCase()");
+
+            assertEquals("basic", basic, 2);
+            assertEquals("with emtpy", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("with comparer", withComparer, 1);
+            assertEquals("with lambda comparer", lambdaComparer, 2);
+
+            assertException("comparer not function", function () { col2.indexOfElement('D', notFunction); });
+        }
+
+        function test_lastIndexOf()
+        {
+            var col = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+
+            var basic = col.lastIndexOf(function (x) { return x == 3; });
+            var withEmpty = $linq([]).lastIndexOf(function (x) { return x == 2; });
+            var notFound = col.lastIndexOf(function (x) { return x == 99; });
+            var lambda = col.lastIndexOf("x => x == 6");
+
+            assertEquals("basic", basic, 8);
+            assertEquals("with empty", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("lambda", lambda, 11);
+
+            assertException("predicate is null", function () { col.lastIndexOf(null); });
+            assertException("predicate is not function", function () { col.lastIndexOf(notFunction); });
+        }
+
+        function test_lastIndexOfElement()
+        {
+            var col1 = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+            var col2 = $linq(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
+
+            var basic = col1.lastIndexOfElement(3);
+            var withEmpty = $linq([]).lastIndexOfElement(2);
+            var notFound = col1.lastIndexOfElement(99);
+            var withComparer = col2.lastIndexOfElement('B', function (x, y) { return x.toLowerCase() == y.toLowerCase(); });
+            var lambdaComparer = col2.lastIndexOfElement('C', "(x, y) => x.toLowerCase() == y.toLowerCase()");
+
+            assertEquals("basic", basic, 8);
+            assertEquals("with emtpy", withEmpty, -1);
+            assertEquals("not found", notFound, -1);
+            assertEquals("with comparer", withComparer, 5);
+            assertEquals("with lambda comparer", lambdaComparer, 6);
+
+            assertException("comparer not function", function () { col2.lastIndexOfElement('D', notFunction); });
+        }
+
+        function test_scan()
+        {
+            var arr1 = [1, 2, 3, 4, 5, 6, 7];
+            var arr2 = ['a', 'b', 'c', 'd', 'e'];
+
+            var addition = function (x, y) { return x + y; };
+
+            var basic = $linq(arr1).scan(addition);
+            var concat = $linq(arr2).scan(addition);
+            var lambda = $linq(arr1).scan("(x, y) => x * y");
+
+            assertArrayEquals("basic", basic.toArray(), [1, 3, 6, 10, 15, 21, 28]);
+            assertArrayEquals("concat", concat.toArray(), ['a', 'ab', 'abc', 'abcd', 'abcde']);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 2, 6, 24, 120, 720, 5040]);
+
+            assertException("with empty", function () { $linq([]).scan(addition); });
+            assertException("operation is null", function () { $linq(arr1).scan(null); });
+            assertException("operation is not function", function () { $linq(arr1).scan(notFunction); });
+
+        }
+
+        function test_prescan()
+        {
+            var arr1 = [1, 2, 3, 4, 5, 6, 7];
+            var arr2 = ['a', 'b', 'c', 'd', 'e'];
+
+            var addition = function (x, y) { return x + y; };
+
+            var basic = $linq(arr1).prescan(addition, 0);
+            var concat = $linq(arr2).prescan(addition, '');
+            var onEmpty = $linq([]).prescan(addition, 0);
+            var lambda = $linq(arr1).prescan("(x, y) => x * y", 1);
+
+            var extra1 = $linq(arr1).prescan(addition, 0);
+            var extra2 = $linq(arr1).zip(extra1, addition);
+            var extra3 = $linq(arr1).scan(addition);
+
+            assertArrayEquals("basic", basic.toArray(), [0, 1, 3, 6, 10, 15, 21]);
+            assertArrayEquals("concat", concat.toArray(), ['', 'a', 'ab', 'abc', 'abcd']);
+            assertArrayEquals("on empty", onEmpty.toArray(), []);
+            assertArrayEquals("lambda", lambda.toArray(), [1, 1, 2, 6, 24, 120, 720]);
+
+            assertArrayEquals("extra", extra2.toArray(), extra3.toArray());
+
+            assertException("operation is null", function () { $linq(arr1).prescan(null, 0); });
+            assertException("operation is not function", function () { $linq(arr1).prescan(notFunction, 1); });
+        }
+
+        function test_aggregate()
+        {
+            var arr1 = [1, 4, 5];
+            var arr2 = ['a', 'b', 'c', 'd', 'e'];
+
+            var sampleAggregate = function (current, value) { return current * 2 + value; };
+
+            var basic = $linq(arr1).aggregate(5, sampleAggregate);
+            var withResultSelector = $linq(arr1).aggregate(5, sampleAggregate, function (x) { return 'value: ' + x; });
+            var noSeed = $linq(arr1).aggregate(null, sampleAggregate);
+            var onEmptyWithSeed = $linq([]).aggregate(99, sampleAggregate);
+            var lambda = $linq(arr2).aggregate('', "(x, y) => x + y");
+
+            assertEquals("basic", basic, 57);
+            assertEquals("with result selector", withResultSelector, 'value: 57');
+            assertEquals("no seed", noSeed, 25);
+            assertEquals("on empty with seed", onEmptyWithSeed, 99);
+            assertEquals("lambda", lambda, 'abcde');
+
+            assertException("on empty without seed", function () { $linq([]).aggregate(null, sampleAggregate); });
+            assertException("operation is null", function () { $linq(arr1).aggregate(1, null); });
+            assertException("operation is not function", function () { $linq(arr1).aggregate(1, notFunction); });
+            assertException("result selector is not function", function () { $linq(arr1).aggregate(1, sampleAggregate, notFunction); });
+        }
+    </script>
+</body>
+</html>

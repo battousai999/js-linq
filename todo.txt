@@ -1,0 +1,23 @@
+Functions to implement in the future: (most from MoreLinq)
+-------------------------------------
+????
+
+
+operators to document:
+----------------------
+batch
+equiZip
+zipLongest
+prepend
+pad
+padWith
+toJQuery
+pipe
+singleOrFallback
+indexOf
+indexOfElement
+lastIndexOf
+lastIndexOfElement
+scan
+prescan
+aggregate
