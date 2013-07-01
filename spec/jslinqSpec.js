@@ -1127,4 +1127,205 @@ describe('jslinq', function ()
             expect(function () { col1.groupBy(stateProjection, null, 99); }).toThrow();
         });
     });
+
+    describe("groupJoin", function ()
+    {
+        var col1 = $linq([{ id: 1, name: 'steve', color: 'blue' },
+            { id: 2, name: 'paul', color: 'red' },
+            { id: 3, name: 'eve', color: 'pink' },
+            { id: 4, name: 'zoe', color: 'grey' }]);
+        var col2 = $linq([{ personId: 1, make: 'Honda', model: 'Civic' },
+            { personId: 2, make: 'Toyota', model: 'Camry' },
+            { personId: 2, make: 'Acura', model: 'TL' },
+            { personId: 3, make: 'Ford', model: 'Focus' }]);
+        var col3 = $linq([{ color: 'blue', trait: 'reliable' }, { color: 'BLUE', trait: 'sincere' },
+            { color: 'red', trait: 'courageous' }, { color: 'RED', trait: 'confident' },
+            { color: 'green', trait: 'practical' }, { color: 'GREEN', trait: 'intelligent' },
+            { color: 'pink', trait: 'friendly' }, { color: 'PINK', trait: 'sensitive' },
+            { color: 'yellow', trait: 'happy' }, { color: 'YELLOW', trait: 'impulsive' }]);
+
+        var carFunc = function (outer, inner)
+        {
+            if (inner.length == 0)
+                return outer.name + ': <none>';
+            else
+                return outer.name + ': ' + $linq(inner).select(function (x) { return x.make + ' ' + x.model; }).toArray().join(', ');
+        };
+
+        var idProjection = function (x) { return x.id; };
+        var personIdProjection = function (x) { return x.personId; };
+
+        it('works on a join that should return results', function ()
+        {
+            var value = col1.groupJoin(col2, idProjection, personIdProjection, carFunc).toArray();
+
+            expect(value).toEqual(["steve: Honda Civic", "paul: Toyota Camry, Acura TL", "eve: Ford Focus", "zoe: <none>"]);
+        });
+
+        it('works with an array', function ()
+        {
+            var value = col1.groupJoin([{ personId: 2, make: 'Lexus', model: 'LS' }], idProjection, personIdProjection, carFunc).toArray();
+
+            expect(value).toEqual(["steve: <none>", "paul: Lexus LS", "eve: <none>", "zoe: <none>"]);
+        });
+
+        it('works with empty sources', function ()
+        {
+            var onEmpty = $linq([]).groupJoin(col2, idProjection, personIdProjection, carFunc).toArray();
+            var withEmpty = col1.groupJoin([], idProjection, personIdProjection, carFunc).toArray();
+
+            expect(onEmpty).toEqual([]);
+            expect(withEmpty).toEqual(["steve: <none>", "paul: <none>", "eve: <none>", "zoe: <none>"]);
+        });
+
+        it('works with a comparer', function ()
+        {
+            var colorProjection = function (x) { return x.color; };
+
+            var value = col1.groupJoin(col3,
+                colorProjection,
+                colorProjection,
+                function (outer, inner)
+                {
+                    if (inner.length == 0)
+                        return outer.name + ': <none>';
+                    else
+                        return outer.name + ': ' + $linq(inner).select(function (x) { return x.trait; }).toArray().join(', ');
+                },
+                function (x, y) { return x.toLowerCase() == y.toLowerCase(); })
+                .toArray();
+
+            expect(value).toEqual(["steve: reliable, sincere", "paul: courageous, confident", "eve: friendly, sensitive", "zoe: <none>"]);
+        });
+
+        it('works with a lambda comparer', function ()
+        {
+            var value = col1.groupJoin(col2, "x => x.id", "x => x.personId", carFunc).toArray();
+
+            expect(value).toEqual(["steve: Honda Civic", "paul: Toyota Camry, Acura TL", "eve: Ford Focus", "zoe: <none>"]);
+        });
+
+        it('throws an exception on a null "inner" parameter', function ()
+        {
+            expect(function () { col1.groupJoin(null, idProjection, personIdProjection, carFunc); }).toThrow();
+        });
+
+        it('throws an exception on a non-function "key comparer" parameter', function ()
+        {
+            expect(function () { col1.groupJoin(col2, idProjection, personIdProjection, carFunc, 99); }).toThrow();
+        });
+
+        it('throws an exception on a null "outer selector" parameter', function ()
+        {
+            expect(function () { col1.groupJoin(col2, null, personIdProjection, carFunc); }).toThrow();
+        });
+
+        it('throws an exception on a null "inner selector" parameter', function ()
+        {
+            expect(function () { col1.groupJoin(col2, idProjection, null, carFunc); }).toThrow();
+        });
+
+        it('throws an exception on a null "result selector" parameter', function ()
+        {
+            expect(function () { col1.groupJoin(col2, idProjection, personIdProjection, null); }).toThrow();
+        });
+    });
+
+    describe('take', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('works when taking fewer elements than in the collection', function ()
+        {
+            var value = col1.take(4).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works when taking more elements than in the collection', function ()
+        {
+            var value = col1.take(20).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works when taking the same number of elements as in the collection', function ()
+        {
+            var value = col1.take(8).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            var value = $linq([]).take(4).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works when taking no elements', function ()
+        {
+            var value = col1.take(0).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('throws an exception on a null "count" parameter', function ()
+        {
+            expect(function () { col1.take(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-number "count" parameter', function ()
+        {
+            expect(function () { col1.take("stuff"); }).toThrow();
+        });
+    });
+
+    describe('takeWhile', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+        var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        it('works when taking some of the elements of the collection', function ()
+        {
+            var value1 = col1.takeWhile(function (x) { return x < 5; }).toArray();
+            var value2 = col2.takeWhile(function (x) { return x < 5; }).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works when taking all of the elements of the collection', function ()
+        {
+            var value = col1.takeWhile(function (x) { return x < 100; }).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works when taking none of the elements of the collection', function ()
+        {
+            var value = col1.takeWhile(function (x) { return x < 0; }).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            var value = $linq([]).takeWhile(function (x) { return x < 5; }).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            var value = col2.takeWhile("x => x < 5").toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+
+        it('throws an exception on a null "predicate" parameter', function ()
+        {
+            expect(function () { col1.takeWhile(null); }).toThrow();
+        });
+    });
 });
