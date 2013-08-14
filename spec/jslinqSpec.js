@@ -1328,4 +1328,81 @@ describe('jslinq', function ()
             expect(function () { col1.takeWhile(null); }).toThrow();
         });
     });
+
+    describe('skip', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('skips some of the elements', function ()
+        {
+            expect(col.skip(4).toArray()).toEqual([5, 6, 7, 8]);
+        });
+
+        it('skips all of the elements', function ()
+        {
+            expect(col.skip(8).toArray()).toEqual([]);
+            expect(col.skip(100).toArray()).toEqual([]);
+        });
+
+        it('skips none of the elements', function ()
+        {
+            expect(col.skip(0).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).skip(4).toArray()).toEqual([]);
+        });
+
+        it('throws an exception on a null "count" parameter', function ()
+        {
+            expect(function () { col.skip(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-number "count" parameter', function ()
+        {
+            expect(function () { col.skip("stuff"); }).toThrow();
+        });
+    });
+
+    describe('skipWhile', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+        var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        it('skips some of the elements', function ()
+        {
+            expect(col1.skipWhile(function (x) { return x < 5; }).toArray()).toEqual([5, 6, 7, 8]);
+            expect(col2.skipWhile(function (x) { return x < 5; }).toArray()).toEqual([5, 1, 2, 3, 4, 5]);
+        });
+
+        it('skips all of the elements', function ()
+        {
+            expect(col1.skipWhile(function (x) { return x < 1000; }).toArray()).toEqual([]);
+        });
+
+        it('skips none of the elements', function ()
+        {
+            expect(col1.skipWhile(function (x) { return x < 0; }).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            var value = $linq([]).skipWhile(function (x) { return x < 4; }).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            var value = col2.skipWhile("x => x < 5").toArray();
+
+            expect(value).toEqual([5, 1, 2, 3, 4, 5]);
+        });
+
+        it('throws an exception on a null "predicate" parameter', function ()
+        {
+            expect(function () { col1.skipWhile(null); }).toThrow();
+        });
+    });
 });
