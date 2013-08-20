@@ -1198,7 +1198,7 @@ describe('jslinq', function ()
             expect(value).toEqual(["steve: reliable, sincere", "paul: courageous, confident", "eve: friendly, sensitive", "zoe: <none>"]);
         });
 
-        it('works with a lambda comparer', function ()
+        it('works with a lambda functions', function ()
         {
             var value = col1.groupJoin(col2, "x => x.id", "x => x.personId", carFunc).toArray();
 
@@ -1403,6 +1403,233 @@ describe('jslinq', function ()
         it('throws an exception on a null "predicate" parameter', function ()
         {
             expect(function () { col1.skipWhile(null); }).toThrow();
+        });
+    });
+
+    describe('toDictionary', function ()
+    {
+        var col1 = $linq([{ prop: 'color', value: 'red' }, { prop: 'align', value: 'center' }, { prop: 'text', value: 'nicole' }]);
+        var col2 = $linq(['a_blue', 'b_red', 'c_green', 'd_purple']);
+        var col3 = $linq(['1_one', '1_uno', '2_two', '3_three']);
+
+        it('works with a key selector and an element selector', function ()
+        {
+            var value = col1.toDictionary(function (x) { return x.prop; }, function (x) { return x.value; });
+
+            expect(value).toEqual({ color: 'red', align: 'center', text: 'nicole' });
+        });
+
+        it('works with just a key selector', function ()
+        {
+            var value = col2.toDictionary(function (x) { return x[0]; });
+
+            expect(value).toEqual({ a: 'a_blue', b: 'b_red', c: 'c_green', d: 'd_purple' });
+        });
+
+        it('works on an empty collection', function ()
+        {
+            var value = $linq([]).toDictionary(function (x) { return x.prop; });
+
+            expect(value).toEqual({});
+        });
+
+        it('works with lambda functions', function ()
+        {
+            var value = col1.toDictionary("x => x.prop", "x => x.value");
+
+            expect(value).toEqual({ color: 'red', align: 'center', text: 'nicole' });
+        });
+
+        it('throws an exception on a null "key selector" parameter', function ()
+        {
+            expect(function () { col1.toDictionary(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function "element selector" parameter', function ()
+        {
+            expect(function () { col1.toDictionary("x => x.prop", 99); }).toThrow();
+        });
+
+        it('throws an exception when there is a duplicate key', function ()
+        {
+            expect(function () { col3.toDictionary("x => x[0]", "x => x.slice(2)"); }).toThrow();
+        });
+    });
+
+    describe('reverse', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6]);
+
+        it('reverses a non-empty collection', function ()
+        {
+            expect(col1.reverse().toArray()).toEqual([6, 5, 4, 3, 2, 1]);
+        });
+
+        it('works with a single-element collection', function ()
+        {
+            var value = $linq([111]).reverse();
+
+            expect(value.toArray()).toEqual([111]);
+        });
+
+        it('works with an empty collection', function ()
+        {
+            expect($linq([]).reverse().toArray()).toEqual([]);
+        });
+    });
+
+    describe('sum', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6]);
+        var col2 = $linq([{ id: 1, value: 100 }, { id: 2, value: 200 }, { id: 3, value: 300 }, { id: 4, value: 400 }]);
+
+        it('works without a projection', function ()
+        {
+            expect(col1.sum()).toEqual(21);
+        });
+
+        it('works with an empty collection', function ()
+        {
+            expect($linq([]).sum()).toEqual(0);
+        });
+
+        it('works with a projection', function ()
+        {
+            var value = col2.sum(function (x) { return x.value; });
+
+            expect(value).toEqual(1000);
+        });
+
+        it('works with a lambda projection', function ()
+        {
+            var value = col2.sum("x => 2 * x.value");
+
+            expect(value).toEqual(2000);
+        });
+
+        it('throws an exception on a non-function "selector" parameter', function ()
+        {
+            expect(function () { col2.sum(99); }).toThrow();
+        });
+    });
+
+    describe('min', function ()
+    {
+        var col1 = $linq([15, 42, 98, 6, 475, 3, 333]);
+        var col2 = $linq([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works without a selector', function ()
+        {
+            expect(col1.min()).toEqual(3);
+        });
+
+        it('works with a selector', function ()
+        {
+            var value = col2.min(function (x) { return x.value; });
+
+            expect(value).toEqual(17);
+        });
+
+        it('works with a lambda selector', function ()
+        {
+            expect(col2.min("x => x.value")).toEqual(17);
+        });
+
+        it('throws an exception on a non-function "selector" parameter', function ()
+        {
+            expect(function () { col2.min(99); }).toThrow();
+        });
+
+        it('throws an exception on an empty collection', function ()
+        {
+            expect(function () { $linq([]).min(); }).toThrow();
+        });
+    });
+
+    describe('minBy', function ()
+    {
+        var col = $linq([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works with a non-empty collection', function ()
+        {
+            var value = col.minBy(function (x) { return x.value; });
+
+            expect(value).toEqual({ id: 3, value: 17 });
+        });
+
+        it('works with a lambda selector', function ()
+        {
+            expect(col.minBy("x => x.value")).toEqual({ id: 3, value: 17 });
+        });
+
+        it('throws an exception on a null "selector" function', function ()
+        {
+            expect(function () { col.minBy(null); }).toThrow();
+        });
+
+        it('throws an exception on an empty collection', function ()
+        {
+            expect(function () { $linq([]).minBy("x => x.value"); }).toThrow();
+        });
+    });
+
+    describe('max', function ()
+    {
+        var col1 = $linq([15, 42, 98, 6, 475, 3, 333]);
+        var col2 = $linq([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works without a selector', function ()
+        {
+            expect(col1.max()).toEqual(475);
+        });
+
+        it('works with a selector', function ()
+        {
+            var value = col2.max(function (x) { return x.value; });
+
+            expect(value).toEqual(9000);
+        });
+
+        it('works with a lambda selector', function ()
+        {
+            expect(col2.max("x => x.value")).toEqual(9000);
+        });
+
+        it('throws an exception on a non-function "selector" parameter', function ()
+        {
+            expect(function () { col2.max(99); }).toThrow();
+        });
+
+        it('throws an exception on an empty collection', function ()
+        {
+            expect(function () { $linq([]).max(); }).toThrow();
+        });
+    });
+
+    describe('maxBy', function ()
+    {
+        var col = $linq([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works with a non-empty collection', function ()
+        {
+            var value = col.maxBy(function (x) { return x.value; });
+
+            expect(value).toEqual({ id: 1, value: 9000 });
+        });
+
+        it('works with a lambda selector', function ()
+        {
+            expect(col.maxBy("x => x.value")).toEqual({ id: 1, value: 9000 });
+        });
+
+        it('throws an exception on a null "selector" function', function ()
+        {
+            expect(function () { col.maxBy(null); }).toThrow();
+        });
+
+        it('throws an exception on an empty collection', function ()
+        {
+            expect(function () { $linq([]).maxBy("x => x.value"); }).toThrow();
         });
     });
 });
