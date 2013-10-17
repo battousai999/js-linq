@@ -1632,4 +1632,139 @@ describe('jslinq', function ()
             expect(function () { $linq([]).maxBy("x => x.value"); }).toThrow();
         });
     });
+
+    describe('average', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+        var col2 = $linq([{ id: 1, value: 100 }, { id: 2, value: 200 }, { id: 3, value: 300 }, { id: 4, value: 400 }]);
+
+        it('works with a non-empty collection', function ()
+        {
+            expect(col1.average()).toEqual(4.5);
+        });
+
+        it('works with a selector', function ()
+        {
+            expect(col2.average(function (x) { return x.value; })).toEqual(250);
+        });
+
+        it('works with a lambda selector', function ()
+        {
+            expect(col2.average("x => x.value * 2")).toEqual(500);
+        });
+
+        it('throws an exception on a non-function "selector" function', function ()
+        {
+            expect(function () { col1.average(99); }).toThrow();
+        });
+
+        it('throws an exception on a collection containing a non-number', function ()
+        {
+            expect(function () { $linq([1, 2, 'a']).average(); }).toThrow();
+        });
+    });
+
+    describe('contains', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6]);
+        var col2 = $linq(["one", "two", "three", "four", "five", "six"]);
+        var comparer = function (x, y) { return x.toLowerCase() == y.toLowerCase(); };
+
+        it('works with a collection that contains the item', function ()
+        {
+            expect(col1.contains(3)).toBeTruthy();
+        });
+
+        it('works with a collection that does not contain the item', function ()
+        {
+            expect(col1.contains(77)).toBeFalsy();
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).contains('test')).toBeFalsy();
+        });
+
+        it('works with a comparer', function ()
+        {
+            expect(col2.contains('FOUR', comparer)).toBeTruthy();
+            expect(col2.contains('TEN', comparer)).toBeFalsy();
+        });
+
+        it('works with a lambda comparer', function ()
+        {
+            var comparer2 = "x, y => x.toLowerCase() == y.toLowerCase()";
+
+            expect(col2.contains('FIVE', comparer2)).toBeTruthy();
+            expect(col2.contains('twenty', comparer2)).toBeFalsy();
+        });
+
+        it('throws an exception on a non-function "comparer" function', function ()
+        {
+            expect(function () { col2.contains("test", 99); }).toThrow();
+        });
+    });
+
+    describe('sequenceEqual', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5]);
+        var col2 = $linq([1, 2, 3, 4, 5]);
+        var col3 = $linq([1, 2, 2, 3, 4, 5]);
+        var col4 = $linq([1, 2, 7, 4, 5]);
+        var col5 = $linq(["one", "two", "three", "four"]);
+        var col6 = $linq(["ONE", "TWO", "THREE", "FOUR"]);
+        var col7 = $linq(["ONE", "TWO", "THREE"]);
+        var col8 = $linq(["ONE", "SEVEN", "THREE", "FOUR"]);
+
+        var comparer = function (x, y) { return x.toLowerCase() == y.toLowerCase(); };
+
+        it('works when the collections are equal', function ()
+        {
+            expect(col1.sequenceEqual(col2)).toBeTruthy();
+        });
+
+        it('works when the collections are not equal', function ()
+        {
+            expect(col1.sequenceEqual(col3)).toBeFalsy();
+            expect(col1.sequenceEqual(col4)).toBeFalsy();
+        });
+
+        it('works when conducted against an array', function ()
+        {
+            expect(col1.sequenceEqual([1, 2, 3, 4, 5])).toBeTruthy();
+            expect(col1.sequenceEqual([1, 2, 3])).toBeFalsy();
+            expect(col1.sequenceEqual([1, 2, 7, 4, 5])).toBeFalsy();
+        });
+
+        it('works when conducted against null', function ()
+        {
+            expect(col1.sequenceEqual(null)).toBeFalsy();
+        });
+
+        it('works when conducted against an empty collection', function ()
+        {
+            expect(col1.sequenceEqual([])).toBeFalsy();
+        });
+
+        it('works with a comparer function', function ()
+        {
+            expect(col5.sequenceEqual(col6, comparer)).toBeTruthy();
+            expect(col5.sequenceEqual(col7, comparer)).toBeFalsy();
+            expect(col5.sequenceEqual(col8, comparer)).toBeFalsy();
+        });
+
+        it('works with a lambda comparer function', function ()
+        {
+            var comparer2 = "x, y => x.toLowerCase() == y.toLowerCase()";
+
+            expect(col5.sequenceEqual(col6, comparer2)).toBeTruthy();
+            expect(col5.sequenceEqual(col7, comparer2)).toBeFalsy();
+            expect(col5.sequenceEqual(col8, comparer2)).toBeFalsy();
+        });
+
+        it('throws an exception on a non-function "comparer" function', function ()
+        {
+            expect(function () { col1.sequenceEqual(col1, 99); }).toThrow();
+        });
+    });
 });
