@@ -1376,10 +1376,10 @@
         /**
             Returns the elements of 'this' collection sorted in ascending order of the projected value
             given by the 'keySelector' function, using the 'comparer' function to compare the projected
-            values.  If the 'comparer' function is not given, the "===" operator will be used to compare
-            the projected values.  Note that subsequent, immediate calls to either thenBy or thenByDescending 
-            will provide subsequent "levels" of sorting (that is, sorting when two elements are determined to 
-            be equal by this orderBy call).
+            values.  If the 'comparer' function is not given, a comparer that uses the natural ordering 
+            of the values will be used to compare the projected values.  Note that subsequent, immediate 
+            calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
+            is, sorting when two elements are determined to be equal by this orderBy call).
             @param keySelector The function that projects the value used to sort the elements
             @param comparer Optional, the function that compares projected values
         */
@@ -1395,7 +1395,7 @@
                 throw new Error("Invalid comparer.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x - y); };
+                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
 
             linq_helper.processDeferredSort(this);
 
@@ -1409,10 +1409,10 @@
         /**
             Returns the elements of 'this' collection sorted in descending order of the projected value
             given by the 'keySelector' function, using the 'comparer' function to compare the projected
-            values.  If the 'comparer' function is not given, the "===" operator will be used to compare
-            the projected values.  Note that subsequent, immediate calls to either thenBy or thenByDescending 
-            will provide subsequent "levels" of sorting (that is, sorting when two elements are determined to 
-            be equal by this orderBy call).
+            values.  If the 'comparer' function is not given, a comparer that uses the natural ordering 
+            of the values will be used to compare the projected values.  Note that subsequent, immediate 
+            calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
+            is, sorting when two elements are determined to be equal by this orderBy call).
             @param keySelector The function that projects the value used to sort the elements
             @param comparer Optional, the function that compares projected values
         */
@@ -1428,7 +1428,7 @@
                 throw new Error("Invalid comparer.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x - y); };
+                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
 
             linq_helper.processDeferredSort(this);
 
@@ -2101,9 +2101,9 @@
             Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
             call) in ascending order of the projected value given by the 'keySelector' function, using the
             'comparer' function to compare the projected values.  If the 'comparer' function is not given,
-            the "===" operator will be used to compare the projected values.  Note that this thenBy call 
-            must be immediately preceeded by either an orderBy, orderByDescending, thenBy, or thenByDescending
-            call.
+            a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+            Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+            thenBy, or thenByDescending call.
             @param keySelector The function that projects the value used to sort elements
             @param comparer Optional, the function that compares projected values
         */
@@ -2122,7 +2122,7 @@
                 throw new Error("ThenBy can only be called following an OrderBy/OrderByDescending.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x - y); };
+                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
 
             var results = new linq(this.array);
 
@@ -2135,9 +2135,9 @@
             Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
             call) in descending order of the projected value given by the 'keySelector' function, using the
             'comparer' function to compare the projected values.  If the 'comparer' function is not given,
-            the "===" operator will be used to compare the projected values.  Note that this thenBy call 
-            must be immediately preceeded by either an orderBy, orderByDescending, thenBy, or thenByDescending
-            call.
+            a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+            Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+            thenBy, or thenByDescending call.
             @param keySelector The function that projects the value used to sort elements
             @param comparer Optional, the function that compares projected values
         */
@@ -2156,7 +2156,7 @@
                 throw new Error("ThenByDescending can only be called following an OrderBy/OrderByDescending.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x - y); };
+                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
 
             var results = new linq(this.array);
 
