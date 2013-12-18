@@ -170,6 +170,8 @@
     linq_helper.identity = function (x) { return x; };
     
     linq_helper.isString = function (x) { return (typeof x === 'string' || x instanceof String); }
+    linq_helper.isBoolean = function (x) { return (typeof x === 'boolean' || x instanceof Boolean); }
+    linq_helper.isNumber = function (x) { return (typeof x === 'number' || x instanceof Number); }
     
     linq_helper.caseInsensitiveComparer = function (x, y)
     {
@@ -181,6 +183,24 @@
     
     linq_helper.caseSensitiveComparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
     linq_helper.defaultComparer = linq_helper.caseSensitiveComparer;
+    linq_helper.strictComparer = function (x, y) { return (x === y); };
+    
+    // Allows "-1/0/1"-returning comparers (used for ordered comparisons) to be used where
+    // "true/false"-returning comparers are expected.
+    linq_helper.normalizeComparer = function (func)
+    {
+        return function (x, y)
+        {
+            var tempValue = func(x, y);
+            
+            if (linq_helper.isBoolean(tempValue))
+                return tempValue;
+            else if (linq_helper.isNumber(tempValue))
+                return (tempValue == 0);
+            else
+                throw new Error("Invalid value from comparer function.");
+        };
+    };
     
     /**
         Creates a new linq object.
@@ -206,9 +226,12 @@
     // Add helper functions to linq class
     linq.identity = linq_helper.identity;
     linq.isString = linq_helper.isString;
+    linq.isBoolean = linq_helper.isBoolean;
+    linq.isNumber = linq_helper.isNumber;
     linq.caseInsensitiveComparer = linq_helper.caseInsensitiveComparer;
     linq.caseSensitiveComparer = linq_helper.caseSensitiveComparer;
     linq.defaultComparer = linq_helper.defaultComparer;
+    linq.strictComparer = linq_helper.strictComparer;
 
     /**
         Creates a new linq object from either another linq object, an array, a jQuery object, or otherwise an array with 'collection'
@@ -525,6 +548,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer.");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -698,6 +724,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer.");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -840,6 +869,9 @@
 
             if ((keyComparer != null) && !linq_helper.isFunction(keyComparer))
                 throw new Error("Invalid key comparer.");
+                
+            if (keyComparer != null)
+                keyComparer = linq_helper.normalizeComparer(keyComparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -906,6 +938,9 @@
 
             if ((keyComparer != null) && !linq_helper.isFunction(keyComparer))
                 throw new Error("Invalid key comparer.");
+                
+            if (keyComparer != null)
+                keyComparer = linq_helper.normalizeComparer(keyComparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -993,6 +1028,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer.");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -1033,6 +1071,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer.");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -1099,6 +1140,9 @@
 
             if ((keyComparer != null) && !linq_helper.isFunction(keyComparer))
                 throw new Error("Invalid key comparer.");
+                
+            if (keyComparer != null)
+                keyComparer = linq_helper.normalizeComparer(keyComparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -1201,6 +1245,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer.");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -1717,6 +1764,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -1760,6 +1810,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer.");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -2271,6 +2324,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 
@@ -2318,6 +2374,9 @@
 
             if ((comparer != null) && !linq_helper.isFunction(comparer))
                 throw new Error("Invalid comparer.");
+                
+            if (comparer != null)
+                comparer = linq_helper.normalizeComparer(comparer);
 
             linq_helper.processDeferredSort(this);
 

@@ -1698,6 +1698,20 @@ describe('jslinq', function ()
             expect(col2.contains('FIVE', comparer2)).toBeTruthy();
             expect(col2.contains('twenty', comparer2)).toBeFalsy();
         });
+        
+        it('works with a "-1/0/1"-returning comparer', function ()
+        {
+            var comparer2 = function (x, y) 
+            { 
+                x = x.toLowerCase();
+                y = y.toLowerCase();
+                
+                return (x < y ? -1 : x > y ? 1 : 0); 
+            };
+            
+            expect(col2.contains('THREE', comparer2)).toBeTruthy();
+            expect(col2.contains('fifty', comparer2)).toBeFalsy();
+        });
 
         it('throws an exception on a non-function "comparer" function', function ()
         {
