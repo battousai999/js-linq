@@ -5,19 +5,10 @@ Functions to implement in the future: (most from MoreLinq)
 
 operators to document:
 ----------------------
-batch
-equiZip
-zipLongest
-prepend
-pad
-padWith
-toJQuery
-pipe
-singleOrFallback
-indexOf
-indexOfElement
-lastIndexOf
-lastIndexOfElement
-scan
-prescan
 aggregate
+
+
+add unit tests for:
+-------------------
+helper functions (e.g., isString, caseInsensitiveComparer, etc.)
+on strings and with no comparer passed to orderBy/orderByDescending/thenBy/thenByDescending (i.e., using the default comparer)
