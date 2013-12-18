@@ -168,7 +168,20 @@
     };
 
     linq_helper.identity = function (x) { return x; };
-
+    
+    linq_helper.isString = function (x) { return (typeof x === 'string' || x instanceof String); }
+    
+    linq_helper.caseInsensitiveComparer = function (x, y)
+    {
+        var tempX = (linq_helper.isString(x) ? x.toLowerCase() : x);
+        var tempY = (linq_helper.isString(x) ? y.toLowerCase() : y);
+        
+        return (tempX < tempY ? -1 : tempX > tempY ? 1 : 0);
+    };
+    
+    linq_helper.caseSensitiveComparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
+    linq_helper.defaultComparer = linq_helper.caseSensitiveComparer;
+    
     /**
         Creates a new linq object.
         @constructor
@@ -189,6 +202,13 @@
 
         this.deferredSort = null;
     };
+
+    // Add helper functions to linq class
+    linq.identity = linq_helper.identity;
+    linq.isString = linq_helper.isString;
+    linq.caseInsensitiveComparer = linq_helper.caseInsensitiveComparer;
+    linq.caseSensitiveComparer = linq_helper.caseSensitiveComparer;
+    linq.defaultComparer = linq_helper.defaultComparer;
 
     /**
         Creates a new linq object from either another linq object, an array, a jQuery object, or otherwise an array with 'collection'
@@ -1395,7 +1415,7 @@
                 throw new Error("Invalid comparer.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
+                comparer = linq_helper.defaultComparer;
 
             linq_helper.processDeferredSort(this);
 
@@ -1428,7 +1448,7 @@
                 throw new Error("Invalid comparer.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
+                comparer = linq_helper.defaultComparer;
 
             linq_helper.processDeferredSort(this);
 
@@ -2122,7 +2142,7 @@
                 throw new Error("ThenBy can only be called following an OrderBy/OrderByDescending.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
+                comparer = linq_helper.defaultComparer;
 
             var results = new linq(this.array);
 
@@ -2156,7 +2176,7 @@
                 throw new Error("ThenByDescending can only be called following an OrderBy/OrderByDescending.");
 
             if (comparer == null)
-                comparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
+                comparer = linq_helper.defaultComparer;
 
             var results = new linq(this.array);
 
