@@ -1,5 +1,5 @@
 /*
-    $linq Version 1.2 (by Kurtis Jones @ jscriptlinq.codeplex.com)
+    $linq Version 1.3 (by Kurtis Jones @ jscriptlinq.codeplex.com)
 */
 
 (function (window, undefined)
