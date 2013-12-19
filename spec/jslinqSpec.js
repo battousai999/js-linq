@@ -1781,4 +1781,1341 @@ describe('jslinq', function ()
             expect(function () { col1.sequenceEqual(col1, 99); }).toThrow();
         });
     });
+
+    describe('sequenceEquivalent', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5]);
+        var col2 = $linq([5, 4, 3, 2, 1]);
+        var col3 = $linq([1, 7, 3, 4, 5]);
+        var col4 = $linq(["one", "two", "three", "four"]);
+        var col5 = $linq(["FOUR", "THREE", "TWO", "ONE"]);
+        var col6 = $linq(["three", "two", "one"]);
+        var col7 = $linq([1, 1, 2, 2, 3, 4]);
+        var col8 = $linq([1, 1, 2, 2, 3, 4]);
+        var col9 = $linq([1, 2, 2, 3, 3, 4]);
+
+        var comparer = function (x, y) { return x.toLowerCase() == y.toLowerCase(); };
+
+        it('works when the collections are equivalent', function ()
+        {
+            expect(col1.sequenceEquivalent(col2)).toBeTruthy();
+            expect(col7.sequenceEquivalent(col8)).toBeTruthy();
+        });
+
+        it('works when the collections are not equivalent', function ()
+        {
+            expect(col1.sequenceEquivalent(col3)).toBeFalsy();
+            expect(col1.sequenceEquivalent(col7)).toBeFalsy();
+            expect(col7.sequenceEquivalent(col9)).toBeFalsy();
+        });
+
+        it('works when conducted against an array', function ()
+        {
+            expect(col1.sequenceEquivalent([5, 4, 3, 2, 1])).toBeTruthy();
+            expect(col1.sequenceEquivalent([1, 2, 3, 4, 5])).toBeTruthy();
+            expect(col1.sequenceEquivalent([1, 2, 3])).toBeFalsy();
+            expect(col1.sequenceEquivalent([1, 7, 3, 4, 5])).toBeFalsy();
+        });
+
+        it('works when conducted against null', function ()
+        {
+            expect(col1.sequenceEquivalent(null)).toBeFalsy();
+        });
+
+        it('works when conducted against an empty collection', function ()
+        {
+            expect(col1.sequenceEquivalent([])).toBeFalsy();
+        });
+
+        it('works with a comparer function', function ()
+        {
+            expect(col4.sequenceEquivalent(col5, comparer)).toBeTruthy();
+            expect(col4.sequenceEquivalent(col5, linq.caseInsensitiveComparer)).toBeTruthy();
+            expect(col4.sequenceEquivalent(col6, comparer)).toBeFalsy();
+        });
+
+        it('works with a lambda comparer function', function ()
+        {
+            var comparer2 = "(x, y) => x.toLowerCase() == y.toLowerCase()";
+
+            expect(col4.sequenceEquivalent(col5, comparer2)).toBeTruthy();
+            expect(col4.sequenceEquivalent(col6, comparer2)).toBeFalsy();
+        });
+
+        it('throws an exception on a non-function "comparer" function', function ()
+        {
+            expect(function () { col1.sequenceEquivalent(col1, 99); }).toThrow();
+        });
+    });
+
+    describe('zip', function ()
+    {
+        var col1 = $linq(['a', 'b', 'c', 'd']);
+        var col2 = $linq(['a', 'b', 'c', 'd', 'e', 'f']);
+        var col3 = $linq([1, 2, 3, 4]);
+
+        var resultSelector = function (x, y) { return x + '_' + y; };
+
+        it('works on collections of equal length', function ()
+        {
+            expect(col1.zip(col3, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
+        });
+
+        it('works on collections of unequal length', function ()
+        {
+            expect(col2.zip(col3, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
+        });
+
+        it('works with an array', function ()
+        {
+            expect(col1.zip([1, 2, 3, 4, 5, 6, 7, 8], resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
+        });
+
+        it('works with an empty array', function ()
+        {
+            expect(col1.zip([], resultSelector).toArray()).toEqual([]);
+        });
+
+        it('works with a null array', function ()
+        {
+            expect(col1.zip(null, resultSelector).toArray()).toEqual([]);
+        });
+
+        it('works with a lambda result selector', function ()
+        {
+            expect(col1.zip(col3, "(x, y) => x + '_' + y").toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
+        });
+
+        it('throws an exception on a non-function result selector', function ()
+        {
+            expect(function () { col1.zip(col2, 99); }).toThrow();
+        });
+
+        it('throws an exception on a null result selector', function ()
+        {
+            expect(function () { col1.zip(col2, null); }).toThrow();
+        });
+    });
+
+    describe('orderBy', function ()
+    {
+        var col1 = $linq([2, 5, 1, 3, 4, 6]);
+        var col2 = $linq([{ id: 3, value: 543 }, { id: 4, value: 956 }, { id: 1, value: 112 }, { id: 2, value: 456 }]);
+        var col3 = $linq([{ id: 3, value: "c" }, { id: 4, value: "D" }, { id: 1, value: "a" }, { id: 2, value: "B" }]);
+
+        var identityKeySelector = function (x) { return x; };
+        var keySelector = function (x) { return x.value; };
+        var selector = function (x) { return x.id; };
+
+        var comparer = function (x, y)
+        {
+            var tempX = x.toLowerCase();
+            var tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', function ()
+        {
+            expect(col1.orderBy(identityKeySelector).toArray()).toEqual([1, 2, 3, 4, 5, 6]);
+            expect(col1.orderBy(linq.identity).toArray()).toEqual([1, 2, 3, 4, 5, 6]);
+            expect(col2.orderBy(keySelector).select(selector).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works with string keys and no comparer passed', function ()
+        {
+            expect(col3.orderBy(keySelector).select(selector).toArray()).toEqual([2, 4, 1, 3]);
+        });
+
+        it('works with a comparer', function ()
+        {
+            expect(col3.orderBy(keySelector, comparer).select(selector).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works with a lambda key selector and a lambda comparer', function ()
+        {
+            var comparer2 = 'x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))';
+            expect(col3.orderBy('x => x.value', comparer2).select(selector).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('throws an exception on a null key selector', function ()
+        {
+            expect(function () { col1.orderBy(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function key selector', function ()
+        {
+            expect(function () { col1.orderBy(99); }).toThrow();
+        });
+
+        it('throws an exception on a non-function comparer', function ()
+        {
+            expect(function () { col1.orderBy(identityKeySelector, 99); }).toThrow();
+        });
+    });
+
+    describe('orderByDescending', function ()
+    {
+        var col1 = $linq([2, 5, 1, 3, 4, 6]);
+        var col2 = $linq([{ id: 3, value: 543 }, { id: 4, value: 956 }, { id: 1, value: 112 }, { id: 2, value: 456 }]);
+        var col3 = $linq([{ id: 3, value: "c" }, { id: 4, value: "D" }, { id: 1, value: "a" }, { id: 2, value: "B" }]);
+
+        var identityKeySelector = function (x) { return x; };
+        var keySelector = function (x) { return x.value; };
+        var selector = function (x) { return x.id; };
+
+        var comparer = function (x, y)
+        {
+            var tempX = x.toLowerCase();
+            var tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', function ()
+        {
+            expect(col1.orderByDescending(identityKeySelector).toArray()).toEqual([6, 5, 4, 3, 2, 1]);
+            expect(col1.orderByDescending(linq.identity).toArray()).toEqual([6, 5, 4, 3, 2, 1]);
+            expect(col2.orderByDescending(keySelector).select(selector).toArray()).toEqual([4, 3, 2, 1]);
+        });
+
+        it('works with string keys and no comparer passed', function ()
+        {
+            expect(col3.orderByDescending(keySelector).select(selector).toArray()).toEqual([3, 1, 4, 2]);
+        });
+
+        it('works with a comparer', function ()
+        {
+            expect(col3.orderByDescending(keySelector, comparer).select(selector).toArray()).toEqual([4, 3, 2, 1]);
+        });
+
+        it('works with a lambda key selector and a lambda comparer', function ()
+        {
+            var comparer2 = 'x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))';
+            expect(col3.orderByDescending('x => x.value', comparer2).select(selector).toArray()).toEqual([4, 3, 2, 1]);
+        });
+
+        it('throws an exception on a null key selector', function ()
+        {
+            expect(function () { col1.orderByDescending(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function key selector', function ()
+        {
+            expect(function () { col1.orderByDescending(99); }).toThrow();
+        });
+
+        it('throws an exception on a non-function comparer', function ()
+        {
+            expect(function () { col1.orderByDescending(identityKeySelector, 99); }).toThrow();
+        });
+    });
+
+    describe('thenBy', function ()
+    {
+        var col1 = $linq([{ id: 3, level1: 222, level2: 99 }, { id: 7, level1: 444, level2: 44 }, { id: 1, level1: 111, level2: 10 }, { id: 4, level1: 333, level2: 44 }, { id: 8, level1: 555, level2: 99 }, { id: 5, level1: 333, level2: 66 }, { id: 6, level1: 444, level2: 22 }, { id: 2, level1: 111, level2: 20 }]);
+        var col2 = $linq([{ id: 3, level1: 222, level2: 'a' }, { id: 7, level1: 444, level2: 'B' }, { id: 1, level1: 111, level2: 'A' }, { id: 4, level1: 333, level2: 'a' }, { id: 8, level1: 555, level2: 'a' }, { id: 5, level1: 333, level2: 'C' }, { id: 6, level1: 444, level2: 'a' }, { id: 2, level1: 111, level2: 'b' }]);
+
+        var level1Selector = function (x) { return x.level1; };
+        var level2Selector = function (x) { return x.level2; };
+        var resultSelector = function (x) { return x.id; };
+
+        var comparer = function (x, y)
+        {
+            var tempX = x.toLowerCase();
+            var tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', function ()
+        {
+            expect(col1.orderBy(level1Selector).thenBy(level2Selector).select(resultSelector).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works with string keys and no comparer passed', function ()
+        {
+            expect(col2.orderBy(level1Selector).thenBy(level2Selector).select(resultSelector).toArray()).toEqual([1, 2, 3, 5, 4, 7, 6, 8]);
+        });
+
+        it('works with a comparer', function ()
+        {
+            expect(col2.orderBy(level1Selector).thenBy(level2Selector, comparer).select(resultSelector).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works with a lambda key selector and a lambda comparer', function ()
+        {
+            var comparer2 = 'x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))';
+            expect(col2.orderBy(level1Selector).thenBy('x => x.level2', comparer2).select(resultSelector).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('throws an exception on a null key selector', function ()
+        {
+            expect(function () { col1.orderBy(level1Selector).thenBy(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function key selector', function ()
+        {
+            expect(function () { col1.orderBy(level1Selector).thenBy(99); }).toThrow();
+        });
+
+        it('throws an exception on a non-function comparer', function ()
+        {
+            expect(function () { col1.orderBy(level1Selector).thenBy(level2Selector, 99); }).toThrow();
+        });
+    });
+
+    describe('thenByDescending', function ()
+    {
+        var col1 = $linq([{ id: 3, level1: 222, level2: 99 }, { id: 7, level1: 444, level2: 44 }, { id: 1, level1: 111, level2: 10 }, { id: 4, level1: 333, level2: 44 }, { id: 8, level1: 555, level2: 99 }, { id: 5, level1: 333, level2: 66 }, { id: 6, level1: 444, level2: 22 }, { id: 2, level1: 111, level2: 20 }]);
+        var col2 = $linq([{ id: 3, level1: 222, level2: 'a' }, { id: 7, level1: 444, level2: 'B' }, { id: 1, level1: 111, level2: 'A' }, { id: 4, level1: 333, level2: 'a' }, { id: 8, level1: 555, level2: 'a' }, { id: 5, level1: 333, level2: 'C' }, { id: 6, level1: 444, level2: 'a' }, { id: 2, level1: 111, level2: 'b' }]);
+
+        var level1Selector = function (x) { return x.level1; };
+        var level2Selector = function (x) { return x.level2; };
+        var resultSelector = function (x) { return x.id; };
+
+        var comparer = function (x, y)
+        {
+            var tempX = x.toLowerCase();
+            var tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', function ()
+        {
+            expect(col1.orderBy(level1Selector).thenByDescending(level2Selector).select(resultSelector).toArray()).toEqual([2, 1, 3, 5, 4, 7, 6, 8]);
+        });
+
+        it('works with string keys and no comparer passed', function ()
+        {
+            expect(col2.orderBy(level1Selector).thenByDescending(level2Selector).select(resultSelector).toArray()).toEqual([2, 1, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works with a comparer', function ()
+        {
+            expect(col2.orderBy(level1Selector).thenByDescending(level2Selector, comparer).select(resultSelector).toArray()).toEqual([2, 1, 3, 5, 4, 7, 6, 8]);
+        });
+
+        it('works with a lambda key selector and a lambda comparer', function ()
+        {
+            var comparer2 = 'x, y => ((x.toLowerCase() < y.toLowerCase()) ? -1 : ((x.toLowerCase() > y.toLowerCase()) ? 1 : 0))';
+            expect(col2.orderBy(level1Selector).thenByDescending('x => x.level2', comparer2).select(resultSelector).toArray()).toEqual([2, 1, 3, 5, 4, 7, 6, 8]);
+        });
+
+        it('throws an exception on a null key selector', function ()
+        {
+            expect(function () { col1.orderBy(level1Selector).thenByDescending(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function key selector', function ()
+        {
+            expect(function () { col1.orderBy(level1Selector).thenByDescending(99); }).toThrow();
+        });
+
+        it('throws an exception on a non-function comparer', function ()
+        {
+            expect(function () { col1.orderBy(level1Selector).thenByDescending(level2Selector, 99); }).toThrow();
+        });
+    });
+
+    describe('elementAt', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('works with indexes that fall within the range of the collection', function ()
+        {
+            expect(col1.elementAt(0)).toEqual(1);
+            expect(col1.elementAt(5)).toEqual(6);
+            expect(col1.elementAt(7)).toEqual(8);
+        });
+
+        it('throws an exception on a null index', function ()
+        {
+            expect(function () { col1.elementAt(null); }).toThrow();
+        });
+
+        it('throws an exception on a NaN index', function ()
+        {
+            expect(function () { col1.elementAt("stuff"); }).toThrow();
+        });
+
+        it('throws an exception on an index outside of the range of the collection', function ()
+        {
+            expect(function () { col1.elementAt(-11); }).toThrow();
+            expect(function () { col1.elementAt(9999); }).toThrow();
+        });
+    });
+
+    describe('elementAtOrDefault', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('works with indexes that fall within the range of the collection', function ()
+        {
+            expect(col1.elementAtOrDefault(0, 99)).toEqual(1);
+            expect(col1.elementAtOrDefault(5, 99)).toEqual(6);
+            expect(col1.elementAtOrDefault(7, 99)).toEqual(8);
+        });
+
+        it('works with indexes that fall outside the range of the collection', function ()
+        {
+            expect(col1.elementAtOrDefault(-11, 99)).toEqual(99);
+            expect(col1.elementAtOrDefault(9999, 99)).toEqual(99);
+        });
+
+        it('works with a NaN index', function ()
+        {
+            expect(col1.elementAtOrDefault("stuff", 99)).toEqual(99);
+        });
+
+        it('works with a null index', function ()
+        {
+            expect(col1.elementAtOrDefault(null, 99)).toEqual(99);
+        });
+    });
+
+    describe('concat', function ()
+    {
+        var col1 = $linq([1, 2, 3]);
+        var col2 = $linq([4, 5, 6]);
+
+        it('works on non-empty collections', function ()
+        {
+            expect(col1.concat(col2).toArray()).toEqual([1, 2, 3, 4, 5, 6]);
+        });
+
+        it('works with an array', function ()
+        {
+            expect(col1.concat([7, 8, 9]).toArray()).toEqual([1, 2, 3, 7, 8, 9]);
+        });
+
+        it('works on empty collections', function ()
+        {
+            expect($linq([]).concat([2, 4, 6]).toArray()).toEqual([2, 4, 6]);
+            expect(col1.concat([]).toArray()).toEqual([1, 2, 3]);
+        });
+
+        it('works with a null collection', function ()
+        {
+            expect(col1.concat(null).toArray()).toEqual([1, 2, 3]);
+        });
+    });
+
+    describe('skipUntil', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+        var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        var predicate = function (x) { return x > 4; };
+
+        it('works to skip some of the elements of the collection', function ()
+        {
+            expect(col1.skipUntil(predicate).toArray()).toEqual([5, 6, 7, 8]);
+            expect(col2.skipUntil(predicate).toArray()).toEqual([5, 1, 2, 3, 4, 5]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).skipUntil(predicate).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should skip no elements', function ()
+        {
+            expect(col1.skipUntil(function (x) { return x > 0; }).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            expect(col2.skipUntil('x => x > 4').toArray()).toEqual([5, 1, 2, 3, 4, 5]);
+        });
+
+        it('throws an exception on a null predicate', function ()
+        {
+            expect(function () { col1.skipUntil(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function predicate', function ()
+        {
+            expect(function () { col1.skipUntil(99); }).toThrow();
+        });
+    });
+
+    describe('takeUntil', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+        var col2 = $linq([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        var predicate = function (x) { return x > 4; };
+
+        it('works in a situation where it should take some of the elements', function ()
+        {
+            expect(col1.takeUntil(predicate).toArray()).toEqual([1, 2, 3, 4]);
+            expect(col2.takeUntil(predicate).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).takeUntil(predicate).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take none of the elements', function ()
+        {
+            expect(col1.takeUntil(function (x) { return x > 0; }).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take all of the elements', function () 
+        {
+            expect(col1.takeUntil(function (x) { return x > 9999; }).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            expect(col2.takeUntil('x => x > 4').toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('throws an exception on a null predicate', function ()
+        {
+            expect(function () { col1.takeUntil(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function predicate', function ()
+        {
+            expect(function () { col1.takeUntil(99); }).toThrow();
+        });
+    });
+
+    describe('takeLast', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('works in a situation where it should take some of the elements', function ()
+        {
+            expect(col1.takeLast(3).toArray()).toEqual([6, 7, 8]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).takeLast(3).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take all of the elements', function ()
+        {
+            expect(col1.takeLast(8).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+            expect(col1.takeLast(20).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works in a situation where it should take none of the elements', function ()
+        {
+            expect(col1.takeLast(0).toArray()).toEqual([]);
+        });
+
+        it('throws an exception on a null count', function ()
+        {
+            expect(function () { col1.takeLast(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-number count', function ()
+        {
+            expect(function () { col1.takeLast("stuff"); }).toThrow();
+        });
+    });
+
+    describe('takeEvery', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+        it('works in a situation where it should take some of the elements', function ()
+        {
+            expect(col.takeEvery(3).toArray()).toEqual([1, 4, 7]);
+        });
+
+        it('works with a count larger that the size of the collection', function ()
+        {
+            expect(col.takeEvery(20).toArray()).toEqual([1]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).takeEvery(3).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take all of the elements', function ()
+        {
+            expect(col.takeEvery(1).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        });
+
+        it('throws an exception on a null count', function ()
+        {
+            expect(function () { col.takeEvery(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-number count', function ()
+        {
+            expect(function () { col.takeEvery("stuff"); }).toThrow();
+        });
+    });
+
+    describe('foreach', function ()
+    {
+        var arr1 = [1, 2, 3, 4, 5, 6];
+        var arr2 = ['a', 'b', 'c', 'd', 'e', 'f'];
+        var testValue = '';
+
+        it('works on a non-empty collection', function ()
+        {
+            $linq(arr1).foreach(function (x, i) { arr2[i] = arr2[i] + x; });
+            expect(arr2).toEqual(['a1', 'b2', 'c3', 'd4', 'e5', 'f6']);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            $linq([]).foreach(function (x) { testValue += '*'; });
+            expect(testValue).toEqual('');
+        });
+
+        it('throws an exception on a null action', function ()
+        {
+            expect(function () { $linq(arr1).foreach(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function action', function ()
+        {
+            expect(function () { $linq(arr1).foreach("stuff"); }).toThrow();
+            expect(function () { $linq(arr1).foreach(99); }).toThrow();
+        });
+    });
+
+    describe('toDelimitedString', function ()
+    {
+        var col = $linq(['a', 'b', 'c', 'd', 'e']);
+
+        it('works with a single-character delimiter', function ()
+        {
+            expect(col.toDelimitedString('|')).toEqual('a|b|c|d|e');
+        });
+
+        it('works with a multi-character delimiter', function ()
+        {
+            expect(col.toDelimitedString(', ')).toEqual('a, b, c, d, e');
+        });
+
+        it('works with an implied delimiter', function ()
+        {
+            expect(col.toDelimitedString()).toEqual('a,b,c,d,e');
+        });
+
+        it('works with an empty delimiter', function ()
+        {
+            expect(col.toDelimitedString('')).toEqual('abcde');
+        });
+    });
+
+    describe('index', function ()
+    {
+        var col = $linq(['a', 'b', 'c', 'd', 'e']);
+
+        it('works with a starting index', function ()
+        {
+            expect(col.index(5).toArray()).toEqual([{ key: 5, value: 'a' }, { key: 6, value: 'b' }, { key: 7, value: 'c' }, { key: 8, value: 'd' }, { key: 9, value: 'e' }]);
+        });
+
+        it('works without a starting index', function ()
+        {
+            expect(col.index().toArray()).toEqual([{ key: 0, value: 'a' }, { key: 1, value: 'b' }, { key: 2, value: 'c' }, { key: 3, value: 'd' }, { key: 4, value: 'e' }]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).index(0).toArray()).toEqual([]);
+        });
+
+        it('throws an exception on a non-number index', function ()
+        {
+            expect(function () { col.index("stuff"); }).toThrow();
+        });
+    });
+
+    describe('batch', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+        it('works without a result selector', function ()
+        {
+            expect(col.batch(5).toArray()).toEqual([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12]]);
+        });
+
+        it('works with a result selector', function ()
+        {
+            expect(col.batch(4, function (x) { return x * 2; }).toArray()).toEqual([[2, 4, 6, 8], [10, 12, 14, 16], [18, 20, 22, 24]]);
+        });
+
+        it('works with a batch size larger than the size of the collection', function ()
+        {
+            expect(col.batch(10000).toArray()).toEqual([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]]);
+        });
+
+        it('works with a batch size of "1"', function ()
+        {
+            expect(col.batch(1).toArray()).toEqual([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12]]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).batch(10).toArray()).toEqual([]);
+        });
+
+        it('works with a lambda result selector', function ()
+        {
+            expect(col.batch(8, 'x => x + 1').toArray()).toEqual([[2, 3, 4, 5, 6, 7, 8, 9], [10, 11, 12, 13]]);
+        });
+
+        it('throws an exception on a non-function result selector', function ()
+        {
+            expect(function () { col.batch(10, 99); }).toThrow();
+        });
+
+        it('throws an exception on a non-number batch size', function ()
+        {
+            expect(function () { col.batch("stuff"); }).toThrow();
+        });
+
+        it('throws an exception on a batch size less than "1"', function ()
+        {
+            expect(function () { col.batch(0); }).toThrow();
+        });
+    });
+
+    describe('equiZip', function ()
+    {
+        var col1 = $linq(['a', 'b', 'c', 'd']);
+        var col2 = $linq([1, 2, 3, 4]);
+
+        var resultSelector = function (x, y) { return x + '_' + y; };
+
+        it('works on collections of the same size', function ()
+        {
+            expect(col1.equiZip(col2, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
+            expect($linq([]).equiZip([], resultSelector).toArray()).toEqual([]);
+            expect($linq([]).equiZip(null, resultSelector).toArray()).toEqual([]);
+        });
+
+        it('works on an array', function ()
+        {
+            expect(col1.equiZip([11, 22, 33, 44], resultSelector).toArray()).toEqual(['a_11', 'b_22', 'c_33', 'd_44']);
+        });
+
+        it('works with a lambda result selector', function ()
+        {
+            expect(col1.equiZip(col2, '(x, y) => x + "=" + y').toArray()).toEqual(['a=1', 'b=2', 'c=3', 'd=4']);
+        });
+
+        it('throws an exception on a non-function result selector', function ()
+        {
+            expect(function () { col1.equiZip(col2, 99); }).toThrow();
+        });
+
+        it('throws an exception on a null result selector', function ()
+        {
+            expect(function () { col1.equiZip(col2, null); }).toThrow();
+        });
+
+        it('throws an exception when called on collections of unequal lengths', function ()
+        {
+            expect(function () { col1.equiZip([1, 2, 3, 4, 5, 6], resultSelector); }).toThrow();
+            expect(function () { col1.equiZip([], resultSelector); }).toThrow();
+            expect(function () { col1.equiZip(null, resultSelector); }).toThrow();
+        });
+    });
+
+    describe('zipLongest', function ()
+    {
+        var col1 = $linq(['a', 'b', 'c', 'd']);
+        var col2 = $linq(['a', 'b', 'c', 'd', 'e', 'f']);
+        var col3 = $linq([1, 2, 3, 4]);
+
+        var resultSelector = function (x, y) { return x + '_' + y; };
+        var defaultFirst = '*';
+        var defaultSecond = '$';
+
+        it('works on collections of the same length', function ()
+        {
+            expect(col1.zipLongest(col3, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
+        });
+
+        it('works on collections that are not of the same length', function ()
+        {
+            expect(col3.zipLongest(col2, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['1_a', '2_b', '3_c', '4_d', '*_e', '*_f']);
+            expect(col2.zipLongest(col3, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4', 'e_$', 'f_$']);
+        });
+
+        it('works on arrays', function ()
+        {
+            expect(col1.zipLongest([1, 2, 3, 4, 5, 6, 7, 8], defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4', '*_5', '*_6', '*_7', '*_8']);
+        });
+
+        it('works on empty collections', function ()
+        {
+            expect(col1.zipLongest([], defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_$', 'b_$', 'c_$', 'd_$']);
+            expect($linq([]).zipLongest(col1, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['*_a', '*_b', '*_c', '*_d']);
+        });
+
+        it('works on null collections', function ()
+        {
+            expect(col1.zipLongest(null, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_$', 'b_$', 'c_$', 'd_$']);
+        });
+
+        it('works with a lambda result selector', function ()
+        {
+            expect(col1.zipLongest(col3, defaultFirst, defaultSecond, '(x, y) => x + "=" + y').toArray()).toEqual(['a=1', 'b=2', 'c=3', 'd=4']);
+        });
+
+        it('works with null default values', function ()
+        {
+            var resultSelector2 = function (x, y)
+            {
+                return (x == null ? '<null>' : x) + '=' + (y == null ? '<null>' : y);
+            };
+
+            expect(col2.zipLongest(col3, null, null, resultSelector2).toArray()).toEqual(['a=1', 'b=2', 'c=3', 'd=4', 'e=<null>', 'f=<null>']);
+            expect(col3.zipLongest(col2, null, null, resultSelector2).toArray()).toEqual(['1=a', '2=b', '3=c', '4=d', '<null>=e', '<null>=f']);
+        });
+
+        it('throws an exception on a non-function result selector', function ()
+        {
+            expect(function () { col1.zipLongest(col2, defaultFirst, defaultSecond, 99); }).toThrow();
+        });
+
+        it('throws an exception on a null result selector', function ()
+        {
+            expect(function () { col1.zipLongest(col2, defaultFirst, defaultSecond, null); }).toThrow();
+        });
+    });
+
+    describe('prepend', function ()
+    {
+        var col = $linq([2, 3, 4, 5, 6, 7]);
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col.prepend(1).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).prepend('a').toArray()).toEqual(['a']);
+        });
+
+        it('works with a null value to prepend', function ()
+        {
+            expect(col.prepend(null).toArray()).toEqual([null, 2, 3, 4, 5, 6, 7]);
+        });
+    });
+
+    describe('pad', function ()
+    {
+        var col = $linq([1, 2, 3, 4]);
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col.pad(8, 0).toArray()).toEqual([1, 2, 3, 4, 0, 0, 0, 0]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).pad(8, 'a').toArray()).toEqual(['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a']);
+        });
+
+        it('works in a situation when no padding needs to occur', function ()
+        {
+            expect(col.pad(4, '$').toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works with a null padding value', function ()
+        {
+            expect(col.pad(6, null).toArray()).toEqual([1, 2, 3, 4, null, null]);
+        });
+
+        it('throws an exception on a non-number padding width', function ()
+        {
+            expect(function () { col.pad("stuff", 0); }).toThrow();
+        });
+    });
+
+    describe('padWith', function ()
+    {
+        var col = $linq([0, 1, 2, 3]);
+
+        var padFunc = function (i) { return i * 10 + i; };
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col.padWith(8, padFunc).toArray()).toEqual([0, 1, 2, 3, 44, 55, 66, 77]);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).padWith(8, padFunc).toArray()).toEqual([0, 11, 22, 33, 44, 55, 66, 77]);
+        });
+
+        it('works in a situation where no padding needs to occur', function ()
+        {
+            expect(col.padWith(4, padFunc).toArray()).toEqual([0, 1, 2, 3]);
+        });
+
+        it('works with a lambda padding selector', function ()
+        {
+            expect(col.padWith(6, 'x => "_" + x + "_"').toArray()).toEqual([0, 1, 2, 3, '_4_', '_5_']);
+        });
+
+        it('throws an exception on a null padding selector', function ()
+        {
+            expect(function () { col.padWith(8, null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function padding selector', function ()
+        {
+            expect(function () { col.padWith(8, 99); }).toThrow();
+        });
+    });
+
+    describe('toJQuery', function ()
+    {
+        // TODO: Figure out how to test with jQuery.  The following is the original unit test code:
+
+        //var div = $('#divTest');
+
+        //$('<span>').attr('id', 'test_jquery_1').appendTo(div);
+        //$('<span>').attr('id', 'test_jquery_2').appendTo(div);
+        //$('<span>').attr('id', 'test_jquery_3').appendTo(div);
+        //$('<span>').attr('id', 'test_jquery_4').appendTo(div);
+
+        //var spans = $('span', div);
+
+        //assertEquals("setup correct", spans.length, 4);
+
+        //var col = $linq($.makeArray(spans));
+
+        //var results = col.toJQuery();
+
+        //assertTrue("returns jquery object", results instanceof jQuery);
+        //assertEquals("element 1 is 'test_jquery_1'", results[0].id, 'test_jquery_1');
+        //assertEquals("element 2 is 'test_jquery_2'", results[1].id, 'test_jquery_2');
+        //assertEquals("element 3 is 'test_jquery_3'", results[2].id, 'test_jquery_3');
+        //assertEquals("element 4 is 'test_jquery_4'", results[3].id, 'test_jquery_4');
+
+        //div.empty();
+    });
+
+    describe('pipe', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4]);
+
+        var obj1 = { val: 1, result: 0 },
+            obj2 = { val: 2, result: 0 },
+            obj3 = { val: 3, result: 0 };
+
+        var col2 = $linq([obj1, obj2, obj3]);
+        var arr1 = [],
+            arr2 = [],
+            arr3 = [];
+
+        it('works with a non-empty collection', function ()
+        {
+            expect(col1.pipe(function (x) { arr1.push(x); }).toArray()).toEqual([1, 2, 3, 4]);
+            expect(arr1, [1, 2, 3, 4]);
+
+            expect(col1.pipe(function (x, i) { arr2.push(i); }).toArray()).toEqual([1, 2, 3, 4]);
+            expect(arr2, [0, 1, 2, 3]);
+        });
+
+        it('works with an empty collection', function ()
+        {
+            expect($linq([]).pipe(function (x) { arr3.push(x); }).toArray()).toEqual([]);
+            expect(arr3, []);
+        });
+
+        it('works with a lambda action', function ()
+        {
+            expect(col2.pipe('x => x.result = x.val').select('x => x.val').toArray()).toEqual([1, 2, 3]);
+            expect(obj1.result).toEqual(1);
+            expect(obj2.result).toEqual(2);
+            expect(obj3.result).toEqual(3);
+        });
+    });
+
+    describe('singleOrFallback', function ()
+    {
+        var col1 = $linq([1]);
+        var col2 = $linq([1, 2, 3, 4]);
+
+        var fallback = function () { return 99; };
+
+        it('works in a situation where it does not need the fallback value', function ()
+        {
+            expect(col1.singleOrFallback(fallback)).toEqual(1);
+        });
+
+        it('works in a situation where it does need the fallback value', function ()
+        {
+            expect($linq([]).singleOrFallback(fallback)).toEqual(99);
+        });
+
+        it('works with a lambda fallback function', function ()
+        {
+            expect($linq([]).singleOrFallback('() => 111')).toEqual(111);
+        });
+
+        it('throws an exception on a non-function fallback', function ()
+        {
+            expect(function () { col1.singleOrFallback(99); }).toThrow();
+        });
+
+        it('throws an exception on a collection with multiple elements', function ()
+        {
+            expect(function () { col2.singleOrFallback(fallback); }).toThrow();
+        });
+    });
+
+    describe('indexOf', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col.indexOf(function (x) { return x == 3 })).toEqual(2);
+            expect(col.indexOf(function (x) { return x == 99; })).toEqual(-1);
+        });
+
+        it('works with an empty collection', function ()
+        {
+            expect($linq([]).indexOf(function (x) { return x == 2; })).toEqual(-1);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            expect(col.indexOf('x => x == 6')).toEqual(5);
+        });
+
+        it('throws an exception on a null predicate', function ()
+        {
+            expect(function () { col.indexOf(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function predicate', function ()
+        {
+            expect(function () { col.indexOf(99); }).toThrow();
+        });
+    });
+
+    describe('indexOfElement', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+        var col2 = $linq(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col1.indexOfElement(3)).toEqual(2);
+            expect(col1.indexOfElement(99)).toEqual(-1);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).indexOfElement(2)).toEqual(-1);
+        });
+
+        it('works with a comparer', function ()
+        {
+            var comparer = function (x, y) { return x.toLowerCase() == y.toLowerCase(); };
+            expect(col2.indexOfElement('B', comparer)).toEqual(1);
+        });
+
+        it('works with a lambda comparer', function ()
+        {
+            expect(col2.indexOfElement('C', '(x, y) => x.toLowerCase() == y.toLowerCase()')).toEqual(2);
+        });
+
+        it('throws an exception on a non-function comparer', function ()
+        {
+            expect(function () { col2.indexOfElement('D', 99); }).toThrow();
+        });
+    });
+
+    describe('lastIndexOf', function ()
+    {
+        var col = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col.lastIndexOf(function (x) { return x == 3; })).toEqual(8);
+            expect(col.lastIndexOf(function (x) { return x == 99; })).toEqual(-1);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).lastIndexOf(function (x) { return x == 2; })).toEqual(-1);
+        });
+
+        it('works with a lambda predicate', function ()
+        {
+            expect(col.lastIndexOf('x => x == 6')).toEqual(11);
+        });
+
+        it('throws an exception on a null predicate', function ()
+        {
+            expect(function () { col.lastIndexOf(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function predicate', function ()
+        {
+            expect(function () { col.lastIndexOf(99); }).toThrow();
+        });
+    });
+
+    describe('lastIndexOfElement', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+        var col2 = $linq(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col1.lastIndexOfElement(3)).toEqual(8);
+            expect(col1.lastIndexOfElement(99)).toEqual(-1);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).lastIndexOfElement(2)).toEqual(-1);
+        });
+
+        it('works with a comparer', function ()
+        {
+            var comparer = function (x, y) { return x.toLowerCase() == y.toLowerCase(); };
+            expect(col2.lastIndexOfElement('B', comparer)).toEqual(5);
+        });
+
+        it('works with a lambda comparer', function ()
+        {
+            expect(col2.lastIndexOfElement('C', '(x, y) => x.toLowerCase() == y.toLowerCase()')).toEqual(6);
+        });
+
+        it('throws an exception on a non-function comparer', function ()
+        {
+            expect(function () { col2.lastIndexOfElement('D', 99); }).toThrow();
+        });
+    });
+
+    describe('scan', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7]);
+        var col2 = $linq(['a', 'b', 'c', 'd', 'e']);
+
+        var addition = function (x, y) { return x + y; };
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col1.scan(addition).toArray()).toEqual([1, 3, 6, 10, 15, 21, 28]);
+            expect(col2.scan(addition).toArray()).toEqual(['a', 'ab', 'abc', 'abcd', 'abcde']);
+        });
+
+        it('works with a lambda operation', function ()
+        {
+            expect(col1.scan('(x, y) => x * y').toArray()).toEqual([1, 2, 6, 24, 120, 720, 5040]);
+        });
+
+        it('throws an exception on an empty collection', function ()
+        {
+            expect(function () { $linq([]).scan(addition); }).toThrow();
+        });
+
+        it('throws an exception on a null operation', function ()
+        {
+            expect(function () { col1.scan(null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function operation', function ()
+        {
+            expect(function () { col1.scan(99); }).toThrow();
+        });
+    });
+
+    describe('prescan', function ()
+    {
+        var col1 = $linq([1, 2, 3, 4, 5, 6, 7]);
+        var col2 = $linq(['a', 'b', 'c', 'd', 'e']);
+
+        var addition = function (x, y) { return x + y; };
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col1.prescan(addition, 0).toArray()).toEqual([0, 1, 3, 6, 10, 15, 21]);
+            expect(col2.prescan(addition, '').toArray()).toEqual(['', 'a', 'ab', 'abc', 'abcd']);
+        });
+
+        it('works on an empty collection', function ()
+        {
+            expect($linq([]).prescan(addition, 0).toArray()).toEqual([]);
+        });
+
+        it('works with a lamdba operation', function ()
+        {
+            expect(col1.prescan('(x, y) => x * y', 1).toArray()).toEqual([1, 1, 2, 6, 24, 120, 720]);
+        });
+
+        it('combines with zip to implement scan', function ()
+        {
+            var list1 = col1.prescan(addition, 0);
+            var list2 = col1.zip(list1, addition);
+            var list3 = col1.scan(addition);
+
+            expect(list2.toArray()).toEqual(list3.toArray());
+        });
+
+        it('throws an exception on a null operation', function ()
+        {
+            expect(function () { col1.prescan(null, 0); }).toThrow();
+        });
+
+        it('throws an exception on a non-function operation', function ()
+        {
+            expect(function () { col1.prescan(99, 1); }).toThrow();
+        });
+    });
+
+    describe('aggregate', function ()
+    {
+        var col1 = $linq([1, 4, 5]);
+        var col2 = $linq(['a', 'b', 'c', 'd', 'e']);
+
+        var sampleAggregate = function (current, value) { return current * 2 + value; };
+
+        it('works on a non-empty collection', function ()
+        {
+            expect(col1.aggregate(5, sampleAggregate)).toEqual(57);
+            expect(col1.aggregate(null, sampleAggregate)).toEqual(25);
+        });
+
+        it('works on an empty collection with a seed', function ()
+        {
+            expect($linq([]).aggregate(99, sampleAggregate)).toEqual(99);
+        });
+
+        it('works with a result selector', function ()
+        {
+            expect(col1.aggregate(5, sampleAggregate, function (x) { return 'value: ' + x; })).toEqual('value: 57');
+        });
+
+        it('works with a lambda aggregate function', function ()
+        {
+            expect(col2.aggregate('', '(x, y) => x + y')).toEqual('abcde');
+        });
+
+        it('works with a lambda result selector', function ()
+        {
+            expect(col1.aggregate(5, sampleAggregate, 'x => "value: " + x')).toEqual('value: 57');
+        });
+
+        it('throws an exception on an empty collection without a seed', function ()
+        {
+            expect(function () { $linq([]).aggregate(null, sampleAggregate); }).toThrow();
+        });
+
+        it('throws an exception on a null operation', function ()
+        {
+            expect(function () { col1.aggregate(1, null); }).toThrow();
+        });
+
+        it('throws an exception on a non-function operation', function ()
+        {
+            expect(function () { col1.aggregate(1, 99); }).toThrow();
+        });
+
+        it('throws an exception on a non-function result selector', function ()
+        {
+            expect(function () { col1.aggregate(1, sampleAggregate, 99); }).toThrow();
+        });
+    });
+
+    describe('helper functions', function ()
+    {
+        var isFunction = function (x) { return (typeof x == 'function'); };
+
+        it('exposes "identity"', function ()
+        {
+            expect(linq.identity != null && isFunction(linq.identity)).toBeTruthy();
+            expect(linq.identity(99) == 99).toBeTruthy();
+        });
+
+        it('exposes "isString"', function ()
+        {
+            expect(linq.isString != null && isFunction(linq.isString)).toBeTruthy();
+            expect(linq.isString("test")).toBeTruthy();
+            expect(linq.isString(99)).toBeFalsy();
+        });
+
+        it('exposes "isBoolean"', function ()
+        {
+            expect(linq.isBoolean != null && isFunction(linq.isBoolean)).toBeTruthy();
+            expect(linq.isBoolean(true)).toBeTruthy();
+            expect(linq.isBoolean(99)).toBeFalsy();
+        });
+
+        it('exposes "isNumber"', function ()
+        {
+            expect(linq.isNumber != null && isFunction(linq.isNumber)).toBeTruthy();
+            expect(linq.isNumber(99)).toBeTruthy();
+            expect(linq.isNumber("test")).toBeFalsy();
+        });
+
+        it('exposes "caseInsensitiveComparer"', function ()
+        {
+            expect(linq.caseInsensitiveComparer != null && isFunction(linq.caseInsensitiveComparer)).toBeTruthy();
+            expect(linq.caseInsensitiveComparer('abc', 'ABC')).toEqual(0);
+            expect(linq.caseInsensitiveComparer('abc', 'abc')).toEqual(0);
+            expect(linq.caseInsensitiveComparer('abc', 'def')).toEqual(-1);
+            expect(linq.caseInsensitiveComparer('def', 'abe')).toEqual(1);
+        });
+
+        it('exposes "caseSensitiveComparer"', function ()
+        {
+            expect(linq.caseSensitiveComparer != null && isFunction(linq.caseSensitiveComparer)).toBeTruthy();
+            expect(linq.caseSensitiveComparer('abc', 'abc')).toEqual(0);
+            expect(linq.caseSensitiveComparer('abc', 'ABC')).toEqual(1);
+            expect(linq.caseSensitiveComparer('abc', 'def')).toEqual(-1);
+        });
+
+        it('exposes "defaultStringComparer"', function ()
+        {
+            expect(linq.defaultStringComparer != null && isFunction(linq.defaultStringComparer)).toBeTruthy();
+            expect(linq.defaultStringComparer('abc', 'abc')).toEqual(0);
+        });
+
+        it('exposes "strictComparer"', function ()
+        {
+            expect(linq.strictComparer != null && isFunction(linq.strictComparer)).toBeTruthy();
+            expect(linq.strictComparer('abc', 'abc')).toBeTruthy();
+            expect(linq.strictComparer('abc', 'ABC')).toBeFalsy();
+            expect(linq.strictComparer('1', 1)).toBeFalsy();
+        });
+    });
 });

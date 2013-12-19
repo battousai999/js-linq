@@ -182,7 +182,7 @@
     };
     
     linq_helper.caseSensitiveComparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
-    linq_helper.defaultComparer = linq_helper.caseSensitiveComparer;
+    linq_helper.defaultStringComparer = linq_helper.caseSensitiveComparer;
     linq_helper.strictComparer = function (x, y) { return (x === y); };
     
     // Allows "-1/0/1"-returning comparers (used for ordered comparisons) to be used where
@@ -230,7 +230,7 @@
     linq.isNumber = linq_helper.isNumber;
     linq.caseInsensitiveComparer = linq_helper.caseInsensitiveComparer;
     linq.caseSensitiveComparer = linq_helper.caseSensitiveComparer;
-    linq.defaultComparer = linq_helper.defaultComparer;
+    linq.defaultStringComparer = linq_helper.defaultStringComparer;
     linq.strictComparer = linq_helper.strictComparer;
 
     /**
@@ -695,7 +695,7 @@
 
             var secondLinq = linq.from(second);
 
-            linq_helper.processDeferredSort(second);
+            linq_helper.processDeferredSort(secondLinq);
 
             if (this.array.length != secondLinq.array.length)
                 throw new Error("The two collections being equi-zipped are not of equal lengths.");
@@ -1462,7 +1462,7 @@
                 throw new Error("Invalid comparer.");
 
             if (comparer == null)
-                comparer = linq_helper.defaultComparer;
+                comparer = linq_helper.defaultStringComparer;
 
             linq_helper.processDeferredSort(this);
 
@@ -1495,7 +1495,7 @@
                 throw new Error("Invalid comparer.");
 
             if (comparer == null)
-                comparer = linq_helper.defaultComparer;
+                comparer = linq_helper.defaultStringComparer;
 
             linq_helper.processDeferredSort(this);
 
@@ -2195,7 +2195,7 @@
                 throw new Error("ThenBy can only be called following an OrderBy/OrderByDescending.");
 
             if (comparer == null)
-                comparer = linq_helper.defaultComparer;
+                comparer = linq_helper.defaultStringComparer;
 
             var results = new linq(this.array);
 
@@ -2229,7 +2229,7 @@
                 throw new Error("ThenByDescending can only be called following an OrderBy/OrderByDescending.");
 
             if (comparer == null)
-                comparer = linq_helper.defaultComparer;
+                comparer = linq_helper.defaultStringComparer;
 
             var results = new linq(this.array);
 

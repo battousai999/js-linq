@@ -10,5 +10,3 @@ aggregate
 
 add unit tests for:
 -------------------
-helper functions (e.g., isString, caseInsensitiveComparer, etc.)
-on strings and with no comparer passed to orderBy/orderByDescending/thenBy/thenByDescending (i.e., using the default comparer)
