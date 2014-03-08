@@ -713,8 +713,8 @@
 
         /**
             Returns elements in 'this' collection that do not also exist in the 'second' collection, using 'comparer'
-            (if it is given) to determine whether two items are equal.  If 'comparer' is not given, the "===" operator
-            is used to compare elements.
+            (if it is given) to determine whether two items are equal.  Also, the returned elements will not include
+            duplicates from 'this' collection. If 'comparer' is not given, the "===" operator is used to compare elements.
             @param second The collection to use to exclude elements
             @param comparer Optional, the function used to compare elements
         */
@@ -731,7 +731,7 @@
             linq_helper.processDeferredSort(this);
 
             if (second == null)
-                return new linq(this.array);
+                second = [];
 
             var secondLinq = linq.from(second);
 

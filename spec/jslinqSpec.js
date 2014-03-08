@@ -905,6 +905,14 @@ describe('jslinq', function ()
         var col3 = $linq(["one", "two", "two", "three", "four"]);
         var col4 = $linq(["three", "three", "four", "five", "six"]);
         var col5 = $linq(["THREE", "FOUR", "FIVE", "SIX"]);
+        var col6 = $linq([1, 2, 3, 4, 1, 2, 3]);
+
+        it('works when there are duplicates within the first set', function ()
+        {
+            var value = col6.except(col2).toArray();
+
+            expect(value).toEqual([1, 2]);
+        });
 
         it('works when there are duplicates between the sets', function ()
         {
