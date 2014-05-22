@@ -224,6 +224,8 @@
     };
 
     // Add helper functions to linq class
+    linq.isFunction = linq_helper.isFunction;
+    linq.isArray = linq_helper.isArray;
     linq.identity = linq_helper.identity;
     linq.isString = linq_helper.isString;
     linq.isBoolean = linq_helper.isBoolean;
