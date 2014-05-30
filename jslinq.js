@@ -168,6 +168,7 @@
     };
 
     linq_helper.identity = function (x) { return x; };
+    linq_helper.merge = function (x, y) { return [x, y]; };
     
     linq_helper.isString = function (x) { return (typeof x === 'string' || x instanceof String); }
     linq_helper.isBoolean = function (x) { return (typeof x === 'boolean' || x instanceof Boolean); }
@@ -684,14 +685,17 @@
             collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
             collection are not equal, then an exception will be thrown.
             @param second The collection to zip with 'this' collection
-            @param resultSelector The function to use to project the result values
+            @param resultSelector Optional, the function to use to project the result values
         */
         equiZip: function (second, resultSelector)
         {
             resultSelector = linq_helper.createLambda(resultSelector);
 
-            if ((resultSelector == null) || !linq_helper.isFunction(resultSelector))
+            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
                 throw new Error("Invalid result selector.");
+                
+            if (resultSelector == null)
+                resultSelector = linq_helper.merge;
 
             linq_helper.processDeferredSort(this);
 
@@ -2455,14 +2459,17 @@
             collection are not equal, the size of the returned collection will equal the minimum of the
             sizes of 'this' collection and the 'second' collection.
             @param second The collection to zip with 'this' collection
-            @param resultSelector The function to use to project the result values
+            @param resultSelector Optional, the function to use to project the result values
         */
         zip: function (second, resultSelector)
         {
             resultSelector = linq_helper.createLambda(resultSelector);
 
-            if ((resultSelector == null) || !linq_helper.isFunction(resultSelector))
+            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
                 throw new Error("Invalid result selector.");
+                
+            if (resultSelector == null)
+                resultSelector = linq_helper.merge;
 
             linq_helper.processDeferredSort(this);
 
@@ -2493,14 +2500,17 @@
             values given by the 'defaultForFirst' and 'defaultForSecond' parameters (corresponding with
             which corresponding list is shorter).
             @param second The collection to zip with 'this' collection
-            @param resultSelector The function to use to project the result values
+            @param resultSelector Optional, the function to use to project the result values
         */
         zipLongest: function (second, defaultForFirst, defaultForSecond, resultSelector)
         {
             resultSelector = linq_helper.createLambda(resultSelector);
 
-            if ((resultSelector == null) || !linq_helper.isFunction(resultSelector))
+            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
                 throw new Error("Invalid result selector.");
+                
+            if (resultSelector == null)
+                resultSelector = linq_helper.merge;
 
             linq_helper.processDeferredSort(this);
 

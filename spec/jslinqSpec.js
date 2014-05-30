@@ -1878,6 +1878,11 @@ describe('jslinq', function ()
         {
             expect(col1.zip([1, 2, 3, 4, 5, 6, 7, 8], resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
         });
+        
+        it('works with a null result selector', function ()
+        {
+            expect(col1.zip(col3).toArray()).toEqual([['a', 1], ['b', 2], ['c', 3], ['d', 4]]);
+        });
 
         it('works with an empty array', function ()
         {
@@ -1897,11 +1902,6 @@ describe('jslinq', function ()
         it('throws an exception on a non-function result selector', function ()
         {
             expect(function () { col1.zip(col2, 99); }).toThrow();
-        });
-
-        it('throws an exception on a null result selector', function ()
-        {
-            expect(function () { col1.zip(col2, null); }).toThrow();
         });
     });
 
@@ -2537,15 +2537,15 @@ describe('jslinq', function ()
         {
             expect(col1.equiZip(col2, '(x, y) => x + "=" + y').toArray()).toEqual(['a=1', 'b=2', 'c=3', 'd=4']);
         });
+        
+        it('works with a null result selector', function ()
+        {
+            expect(col1.equiZip(col2).toArray()).toEqual([['a', 1], ['b', 2], ['c', 3], ['d', 4]]);
+        });
 
         it('throws an exception on a non-function result selector', function ()
         {
             expect(function () { col1.equiZip(col2, 99); }).toThrow();
-        });
-
-        it('throws an exception on a null result selector', function ()
-        {
-            expect(function () { col1.equiZip(col2, null); }).toThrow();
         });
 
         it('throws an exception when called on collections of unequal lengths', function ()
@@ -2581,6 +2581,11 @@ describe('jslinq', function ()
         {
             expect(col1.zipLongest([1, 2, 3, 4, 5, 6, 7, 8], defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4', '*_5', '*_6', '*_7', '*_8']);
         });
+        
+        it('works on a null result selector', function ()
+        {
+            expect(col1.zipLongest(col3, defaultFirst, defaultSecond).toArray()).toEqual([['a', 1], ['b', 2], ['c', 3], ['d', 4]]);
+        });
 
         it('works on empty collections', function ()
         {
@@ -2612,11 +2617,6 @@ describe('jslinq', function ()
         it('throws an exception on a non-function result selector', function ()
         {
             expect(function () { col1.zipLongest(col2, defaultFirst, defaultSecond, 99); }).toThrow();
-        });
-
-        it('throws an exception on a null result selector', function ()
-        {
-            expect(function () { col1.zipLongest(col2, defaultFirst, defaultSecond, null); }).toThrow();
         });
     });
 
