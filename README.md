@@ -5,7 +5,7 @@
 $linq is a Javascript version of .NET's Linq to Objects, with some query operations inspired by MoreLinq (an extension to Linq to Objects).
 
 ### What is $linq?
-$linq is an implementation of .NET Linq to Objects for Javascript.  It implements most of the corresponding .NET Linq to Objects methods.  It also implements some methods inspired by MoreLinq ([url:http://code.google.com/p/morelinq]).  $linq will work with arrays and jQuery collections.  $linq can also generate values from a numerical range, as an item repeated a given number of times, and from RegExp match results.
+$linq is an implementation of .NET Linq to Objects for Javascript.  It implements most of the corresponding .NET Linq to Objects methods.  It also implements some methods inspired by MoreLinq (http://code.google.com/p/morelinq).  $linq will work with arrays and jQuery collections.  $linq can also generate values from a numerical range, as an item repeated a given number of times, and from RegExp match results.
 
 ### NuGet package page
 http://www.nuget.org/packages/jscriptlinq/
