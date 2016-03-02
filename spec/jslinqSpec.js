@@ -2,33 +2,36 @@ describe('jslinq', function ()
 {
     beforeEach(function ()
     {
-        this.addMatchers({
-            toEqualIgnoringOrder: function (arr)
-            {
-                var result = this.actual;
-
-                if (arr == null || result == null || arr.length != result.length)
-                    return false;
-
-                var length = arr.length;
-
-                for (var i = 0; i < length; i++)
-                {
-                    var found = false;
-
-                    for (var j = 0; j < length; j++)
-                    {
-                        if (arr[i] == result[j])
-                            found = true;
-                    }
-
-                    if (!found)
-                        return false;
-                }
-
-                return true;
-            }
-        });
+		jasmine.addMatchers({
+			toEqualIgnoringOrder: function (util, customEqualityTesters)
+			{
+				return {
+					compare: function (actual, expected)
+					{
+						if (expected == null || actual == null || expected.length != actual.length)
+							return false;
+						
+						var length = expected.length;
+						
+						for (var i = 0; i < length; i++)
+						{
+							var found = false;
+							
+							for (var j = 0; j < length; j++)
+							{
+								if (expected[i] == actual[j])
+									found = true;
+							}
+							
+							if (!found)
+								return { pass: false };
+						}
+						
+						return { pass: true };
+					}
+				};
+			}
+		});
     });
 
     describe('from (constructor)', function ()
@@ -431,12 +434,21 @@ describe('jslinq', function ()
         it('works with a predicate', function ()
         {
             var defaultFirst1 = col.firstOrDefault(99, function (x) { return x > 3; });
-            var defaultFirst2 = col.firstOrDefault(99, function (x) { x > 100; });
+            var defaultFirst2 = col.firstOrDefault(99, function (x) { return x > 100; });
 
             expect(defaultFirst1).toEqual(4);
             expect(defaultFirst2).toEqual(99);
         });
+		
+		it('works with only a predicate', function ()
+		{
+			var defaultFirst3 = col.firstOrDefault(function (x) { return x > 4; });
+			var defaultFirst4 = col.firstOrDefault(function (x) { return x > 100; });
 
+			expect(defaultFirst3).toEqual(5);
+			expect(defaultFirst4).toBeNull();
+		});
+		
         it('works without a predicate', function ()
         {
             var defaultFirst1 = col.firstOrDefault(99);
