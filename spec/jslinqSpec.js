@@ -2,36 +2,36 @@ describe('jslinq', function ()
 {
     beforeEach(function ()
     {
-		jasmine.addMatchers({
-			toEqualIgnoringOrder: function (util, customEqualityTesters)
-			{
-				return {
-					compare: function (actual, expected)
-					{
-						if (expected == null || actual == null || expected.length != actual.length)
-							return false;
-						
-						var length = expected.length;
-						
-						for (var i = 0; i < length; i++)
-						{
-							var found = false;
-							
-							for (var j = 0; j < length; j++)
-							{
-								if (expected[i] == actual[j])
-									found = true;
-							}
-							
-							if (!found)
-								return { pass: false };
-						}
-						
-						return { pass: true };
-					}
-				};
-			}
-		});
+        jasmine.addMatchers({
+            toEqualIgnoringOrder: function (util, customEqualityTesters)
+            {
+                return {
+                    compare: function (actual, expected)
+                    {
+                        if (expected == null || actual == null || expected.length != actual.length)
+                            return false;
+                        
+                        var length = expected.length;
+                        
+                        for (var i = 0; i < length; i++)
+                        {
+                            var found = false;
+                            
+                            for (var j = 0; j < length; j++)
+                            {
+                                if (expected[i] == actual[j])
+                                    found = true;
+                            }
+                            
+                            if (!found)
+                                return { pass: false };
+                        }
+                        
+                        return { pass: true };
+                    }
+                };
+            }
+        });
     });
 
     describe('from (constructor)', function ()
@@ -439,16 +439,16 @@ describe('jslinq', function ()
             expect(defaultFirst1).toEqual(4);
             expect(defaultFirst2).toEqual(99);
         });
-		
-		it('works with only a predicate', function ()
-		{
-			var defaultFirst3 = col.firstOrDefault(function (x) { return x > 4; });
-			var defaultFirst4 = col.firstOrDefault(function (x) { return x > 100; });
+        
+        it('works with only a predicate', function ()
+        {
+            var defaultFirst3 = col.firstOrDefault(function (x) { return x > 4; });
+            var defaultFirst4 = col.firstOrDefault(function (x) { return x > 100; });
 
-			expect(defaultFirst3).toEqual(5);
-			expect(defaultFirst4).toBeNull();
-		});
-		
+            expect(defaultFirst3).toEqual(5);
+            expect(defaultFirst4).toBeNull();
+        });
+        
         it('works without a predicate', function ()
         {
             var defaultFirst1 = col.firstOrDefault(99);
