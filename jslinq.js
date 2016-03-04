@@ -1,5 +1,5 @@
 /*
-    $linq Version 1.3 (by Kurtis Jones @ jscriptlinq.codeplex.com)
+    $linq Version 1.4.1 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
 */
 
 (function (window, undefined)
@@ -1291,11 +1291,23 @@
             last element of 'this' collection that satisfies the 'predicate' (if 'predicate is given).
             If there is no "last" element to return (either because 'this' collection is empty or no element
             satisfies the 'predicate'), the 'defaultValue' is returned.
+            
+            Alternately, if only one parameter is passed to this function and that single parameter is a
+            function, then it will be treated as the 'predicate' and the 'defaultValue' will be considered
+            to be null.
             @param defaultValue the value to return if no "last" element is found
             @param predicate Optional, the predicate function used to determine the element to return
         */
         lastOrDefault: function (defaultValue, predicate)
         {
+            // If there is only one parameter, and it is a function, then assume that it is
+            // the predicate and that the defaultValue is null
+            if (arguments.length == 1 && linq_helper.isFunction(defaultValue))
+            {
+                predicate = defaultValue;
+                defaultValue = null;
+            }
+            
             predicate = linq_helper.createLambda(predicate);
 
             if ((predicate != null) && !linq_helper.isFunction(predicate))

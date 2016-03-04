@@ -608,30 +608,48 @@ describe('jslinq', function ()
 
     describe('lastOrDefault', function ()
     {
-        var col = $linq([1, 2, 3, 4, 5, 6]);
+        var col1 = $linq([1, 2, 3, 4, 5, 6]);
+        var col2 = $linq([6, 5, 4, 3, 2, 1]);
 
         it('works with a predicate', function ()
         {
-            var defaultFirst1 = col.lastOrDefault(99, function (x) { return x < 4; });
-            var defaultFirst2 = col.lastOrDefault(99, function (x) { x > 100; });
+            var defaultLast1 = col1.lastOrDefault(99, function (x) { return x < 4; });
+            var defaultLast2 = col1.lastOrDefault(99, function (x) { return x > 100; });
+            var defaultLast3 = col2.lastOrDefault(99, function (x) { return x < 4; });
+            var defaultLast4 = col2.lastOrDefault(99, function (x) { return x > 100; });
 
-            expect(defaultFirst1).toEqual(3);
-            expect(defaultFirst2).toEqual(99);
+            expect(defaultLast1).toEqual(3);
+            expect(defaultLast2).toEqual(99);
+            expect(defaultLast3).toEqual(1);
+            expect(defaultLast4).toEqual(99);
+        });
+        
+        it('works with only a predicate', function ()
+        {
+            var defaultLast1 = col1.lastOrDefault(function (x) { return x < 4; });
+            var defaultLast2 = col1.lastOrDefault(function (x) { return x > 100; });
+            var defaultLast3 = col2.lastOrDefault(function (x) { return x < 4; });
+            var defaultLast4 = col2.lastOrDefault(function (x) { return x > 100; });
+
+            expect(defaultLast1).toEqual(3);
+            expect(defaultLast2).toBeNull();
+            expect(defaultLast3).toEqual(1);
+            expect(defaultLast4).toBeNull();
         });
 
         it('works without a predicate', function ()
         {
-            var defaultFirst1 = col.lastOrDefault(99);
-            var defaultFirst2 = $linq([]).lastOrDefault(99);
+            var defaultLast1 = col1.lastOrDefault(99);
+            var defaultLast2 = $linq([]).lastOrDefault(99);
 
-            expect(defaultFirst1).toEqual(6);
-            expect(defaultFirst2).toEqual(99);
+            expect(defaultLast1).toEqual(6);
+            expect(defaultLast2).toEqual(99);
         });
 
         it('works with a lambda predicate', function ()
         {
-            var value1 = col.lastOrDefault(99, "x => x < 4");
-            var value2 = col.lastOrDefault(99, "x => x > 100");
+            var value1 = col1.lastOrDefault(99, "x => x < 4");
+            var value2 = col1.lastOrDefault(99, "x => x > 100");
 
             expect(value1).toEqual(3);
             expect(value2).toEqual(99);
@@ -639,7 +657,7 @@ describe('jslinq', function ()
 
         it('throws an exception on a non-function "predicate" parameter', function ()
         {
-            expect(function () { col.lastOrDefault(99, 99); }).toThrow();
+            expect(function () { col1.lastOrDefault(99, 99); }).toThrow();
         });
     });
 

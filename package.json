@@ -1,8 +1,8 @@
 {
   "name": "js-linq",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A Javascript version of .NET's LINQ to Objects, with some query operations inspired by MoreLinq.",
-  "main": "jquery-1.8.0.min.js",
+  "main": "jslinq.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

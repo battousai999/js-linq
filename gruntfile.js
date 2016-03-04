@@ -21,7 +21,7 @@ module.exports = function (grunt)
                     plugins: ['karma-chrome-launcher', 'karma-jasmine', 'karma-phantomjs-launcher']
                 },
                 singleRun: true,
-                browsers: ['PhantomJS']
+                browsers: ['Chrome']
             },
             unitMin: {
                 options: {
@@ -30,7 +30,7 @@ module.exports = function (grunt)
                     plugins: ['karma-chrome-launcher', 'karma-jasmine', 'karma-phantomjs-launcher']
                 },
                 singleRun: true,
-                browsers: ['PhantomJS']
+                browsers: ['Chrome']
             }
         }
     });
