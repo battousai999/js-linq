@@ -1,5 +1,5 @@
 /*
-    $linq Version 1.4.1 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
+    $linq Version 1.4.2 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
 */
 
 (function (window, undefined)
@@ -93,6 +93,25 @@
         }
 
         return false;
+    };
+    
+    linq_helper.object_keys = function (obj)
+    {
+        if (Object.keys !== undefined)
+            return Object.keys(obj);
+        
+        if (obj !== Object(obj))
+            throw new TypeError('object_keys called on a non-object.');
+            
+        var arr = [], property;
+        
+        for (property in obj)
+        {
+            if (Object.prototype.hasOwnProperty.call(obj, property))
+                arr.push(property);
+        }
+        
+        return arr;
     };
 
     linq_helper.isFunction = function (func)
@@ -352,6 +371,43 @@
         var matches = text.match(regex);
 
         return new linq((matches == null ? [] : matches), false);
+    };
+
+    /**
+        Create a new linq object that contains an element for each property of the 'object' passed
+        to the method.  Each element will have a property named by the 'keyPropertyName' parameter
+        whose value will equal the name of the property and a property named by the 'valuePropertyName'
+        parameter whose value will equal the value of the property.  If the 'keyPropertyName'
+        parameter is not given, then it will default to "key"; if the 'valuePropertyName' parameter 
+        is not given, then it will default to "value".
+        @param obj The object from which to enumerate properties
+        @param keyPropertyName Optional, the name of the property in the resultant elements containing
+            the property's key
+        @param valuePropertyName Optional, the name of the property in the resultant elements containing
+            the property's value           
+     */
+    linq.properties = function (obj, keyPropertyName, valuePropertyName)
+    {
+        if (obj == null)
+            return new linq([]);
+            
+        if (keyPropertyName == null)
+            keyPropertyName = 'key';
+            
+        if (valuePropertyName == null)
+            valuePropertyName = 'value';
+            
+        var selector = function (key)
+        {
+            var result = {};
+            
+            result[keyPropertyName] = key;
+            result[valuePropertyName] = obj[key];
+            
+            return result;
+        };       
+            
+        return new linq(linq_helper.map(linq_helper.object_keys(obj), selector), false);
     };
 
     linq.prototype = {

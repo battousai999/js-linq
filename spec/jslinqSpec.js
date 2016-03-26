@@ -129,6 +129,53 @@ describe('jslinq', function ()
         it('throws an exception on a non-string "text" parameter', function () { expect(function () { linq.matches(99, '\\w+'); }).toThrow(); });
     });
     
+    describe('properties (constructor)', function ()
+    {
+        var obj1 = { prop1: 'value1', prop2: 100 };
+        var arr1 = [ 'aaa', 'bbb', 'ccc' ];
+        
+        var col1 = linq.properties(obj1);
+        var col2 = linq.properties(arr1);
+        var col3 = linq.properties({});
+        var col4 = linq.properties(null);
+        var col5 = linq.properties(obj1, 'name', 'result');
+        var col6 = linq.properties(obj1, 'Name', null);
+        var col7 = linq.properties(obj1, null, 'Value');
+        
+        it('returns an object', function ()
+        {
+            expect(col1).not.toBeNull();
+            expect(col2).not.toBeNull();
+            expect(col3).not.toBeNull();
+            expect(col4).not.toBeNull();
+            expect(col5).not.toBeNull();
+            expect(col6).not.toBeNull();
+            expect(col7).not.toBeNull();
+        });
+        
+        it('has the correct number of elements', function ()
+        {
+            expect(col1.array.length).toEqual(2);
+            expect(col2.array.length).toEqual(3);
+            expect(col3.array.length).toEqual(0);
+            expect(col4.array.length).toEqual(0);
+            expect(col5.array.length).toEqual(2);
+            expect(col6.array.length).toEqual(2);
+            expect(col7.array.length).toEqual(2);
+        });
+        
+        it('returns elements with the correct property names and values', function ()
+        {
+            expect(col1.array).toEqual([{ key: 'prop1', value: 'value1' }, { key: 'prop2', value: 100 }]);
+            expect(col2.array).toEqual([{ key: '0', value: 'aaa' }, { key: '1', value: 'bbb' }, { key: '2', value: 'ccc' }]);
+            expect(col3.array).toEqual([]);
+            expect(col4.array).toEqual([]);
+            expect(col5.array).toEqual([{ name: 'prop1', result: 'value1' }, { name: 'prop2', result: 100 }]);
+            expect(col6.array).toEqual([{ Name: 'prop1', value: 'value1' }, { Name: 'prop2', value: 100 }]);
+            expect(col7.array).toEqual([{ key: 'prop1', Value: 'value1' }, { key: 'prop2', Value: 100 }]);
+        });
+    });
+    
     describe('$linq (constructor)', function ()
     {
         var col1 = $linq([1, 2, 3, 4, 5]);
