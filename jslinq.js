@@ -391,10 +391,10 @@
         if (obj == null)
             return new linq([]);
             
-        if (keyPropertyName == null)
+        if (keyPropertyName == null || keyPropertyName == '')
             keyPropertyName = 'key';
             
-        if (valuePropertyName == null)
+        if (valuePropertyName == null || keyPropertyName == '')
             valuePropertyName = 'value';
             
         var selector = function (key)
