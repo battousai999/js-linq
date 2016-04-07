@@ -10,6 +10,9 @@ $linq is an implementation of .NET Linq to Objects for Javascript.  It implement
 ### NuGet package page
 http://www.nuget.org/packages/jscriptlinq/
 
+### Documentation
+https://github.com/battousai999/js-linq/wiki
+
 ### Some of the Linq to Objects methods implemented
 * select
 * selectMany
