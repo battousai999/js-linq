@@ -1,5 +1,5 @@
 /*
-    $linq Version 1.4.2 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
+    $linq Version 1.5.0 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
 */
 
 (function (window, undefined)

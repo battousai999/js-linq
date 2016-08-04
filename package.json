@@ -1,6 +1,6 @@
 {
   "name": "js-linq",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "A Javascript version of .NET's LINQ to Objects, with some query operations inspired by MoreLinq.",
   "main": "jslinq.js",
   "scripts": {
