@@ -440,8 +440,9 @@
                 throw new Error("Cannot aggregate on empty collection when seed is not given.");
 
             var current = (seed == null ? this.array[0] : seed);
+            var startingIndex = (seed == null ? 1 : 0);
 
-            for (var i = 0; i < len; i++)
+            for (var i = startingIndex; i < len; i++)
             {
                 if (i in this.array)
                     current = operation(current, this.array[i]);

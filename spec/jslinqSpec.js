@@ -3091,13 +3091,15 @@ describe('jslinq', function ()
     {
         var col1 = $linq([1, 4, 5]);
         var col2 = $linq(['a', 'b', 'c', 'd', 'e']);
+        var col3 = $linq([1, 2, 3, 4, 5, 6]);
 
         var sampleAggregate = function (current, value) { return current * 2 + value; };
+        var addition = function (x, y) { return x + y; };
 
         it('works on a non-empty collection', function ()
         {
             expect(col1.aggregate(5, sampleAggregate)).toEqual(57);
-            expect(col1.aggregate(null, sampleAggregate)).toEqual(25);
+            expect(col1.aggregate(null, sampleAggregate)).toEqual(17);
         });
 
         it('works on an empty collection with a seed', function ()
@@ -3118,6 +3120,11 @@ describe('jslinq', function ()
         it('works with a lambda result selector', function ()
         {
             expect(col1.aggregate(5, sampleAggregate, 'x => "value: " + x')).toEqual('value: 57');
+        });
+
+        it('works with a non-empty collection without a seed', function ()
+        {
+            expect(col3.aggregate(null, addition)).toEqual(21);
         });
 
         it('throws an exception on an empty collection without a seed', function ()
