@@ -587,6 +587,15 @@ describe('jslinq', function ()
             expect(value1).toEqual(5);
             expect(value2).toEqual(99);
         });
+        
+        it('works with only a predicate', function ()
+        {
+            var defaultFirst3 = col.singleOrDefault(function (x) { return x > 4; });
+            var defaultFirst4 = col.singleOrDefault(function (x) { return x > 100; });
+
+            expect(defaultFirst3).toEqual(5);
+            expect(defaultFirst4).toBeNull();
+        });
 
         it('works without a predicate', function ()
         {
