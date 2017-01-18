@@ -28,7 +28,7 @@ interface Linq
 {
     constructor(arr: any[]);
 
-    aggregate<T, Accum, Res>(seed: Accum, operation: ((acc: Accum, item: T) => Accum) | string, resultSelector?: ((item: Accum) => Res) | string): Accum | Res;
+    aggregate(seed: any, operation: ((acc: any, item: any) => any) | string, resultSelector?: Selector<any>): any;
     all(predicate?: Predicate): boolean;
     any(predicate?: Predicate): boolean;
     average(selector?: Selector<number>): number;
@@ -41,11 +41,11 @@ interface Linq
     distinctBy<T>(keySelector: Selector<T>, comparer?: Comparer<T>): Linq;
     elementAt(index: number): any;
     elementAtOrDefault(index: number, defaultValue: any): any;
-    equiZip(second: LinqCompatible, resultSelector?: Selector<any>): Linq;
+    equiZip(second: LinqCompatible, resultSelector?: ((outer: any, inner: any) => any) | string): Linq;
     except(second: LinqCompatible, comparer?: Comparer<any>): Linq;
     first(predicate?: Predicate): any;
     firstOrDefault(defaultValueOrPredicate: any | Predicate, predicate?: Predicate): any;
-    foreach(action: (item: any) => void): void;
+    foreach(action: ((item: any) => void) | string): void;
     groupBy<Key>(keySelector: Selector<Key>, elementSelector?: Selector<any>, keyComparer?: Comparer<Key>): Linq;
     groupJoin<Key>(inner: LinqCompatible, outerKeySelector: Selector<Key>, innerKeySelector: Selector<Key>, resultSelector: ((outer: any, inner: any) => any) | string, keyComparer?: Comparer<Key>): Linq;
     index(startIndex?: number): Linq;
@@ -65,7 +65,7 @@ interface Linq
     orderByDescending<Key>(keySelector: Selector<Key>, comparer?: Comparer<Key>): Linq;
     pad(width: number, padding: any): Linq;
     padWith(width: number, paddingSelector: ((index: number) => any) | string): Linq;
-    pipe(action: (item: any) => void): Linq;
+    pipe(action: ((item: any) => void) | string): Linq;
     prepend(value: any): Linq;
     prescan(operation: ((acc: any, item: any) => any) | string, identity: any): Linq;
     reverse(): Linq;
@@ -94,8 +94,8 @@ interface Linq
     toLookup<Key>(keySelector: Selector<Key>, comparer?: Comparer<Key>): Linq;
     union(second: LinqCompatible, comparer?: Comparer<any>): Linq;
     where(predicate: Predicate): Linq;
-    zip(second: LinqCompatible, resultSelector?: Selector<any>): Linq;
-    zipLongest(second: LinqCompatible, defaultForFirst: any, defaultForSecond: any, resultSelector?: Selector<any>): Linq;
+    zip(second: LinqCompatible, resultSelector?: ((outer: any, inner: any) => any) | string): Linq;
+    zipLongest(second: LinqCompatible, defaultForFirst: any, defaultForSecond: any, resultSelector?: ((outer: any, inner: any) => any) | string): Linq;
     toArray(): any[];
 }
 
