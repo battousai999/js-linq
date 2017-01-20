@@ -1,4 +1,9 @@
-type LinqCompatible = any[] | Linq | any;
+// Type definitions for js-linq 1.5.2
+// Project: https://github.com/battousai999/js-linq
+// Definitions by: Kurtis Jones <https://github.com/battousai999>
+// Definitions: https://github.com/battousai999/DefinitelyTyped
+
+type LinqCompatible = Array<any> | Linq | any;
 type ComparerResult = number | boolean;
 type Predicate = ((item: any) => boolean) | string;
 type Selector<T> = ((item: any) => T) | string;
@@ -26,7 +31,7 @@ interface LinqStatic
 
 interface Linq
 {
-    constructor(arr: any[]);
+    constructor(arr: Array<any>);
 
     aggregate(seed: any, operation: ((acc: any, item: any) => any) | string, resultSelector?: Selector<any>): any;
     all(predicate?: Predicate): boolean;
@@ -96,7 +101,7 @@ interface Linq
     where(predicate: Predicate): Linq;
     zip(second: LinqCompatible, resultSelector?: ((outer: any, inner: any) => any) | string): Linq;
     zipLongest(second: LinqCompatible, defaultForFirst: any, defaultForSecond: any, resultSelector?: ((outer: any, inner: any) => any) | string): Linq;
-    toArray(): any[];
+    toArray(): Array<any>;
 }
 
 declare module "js-line" {

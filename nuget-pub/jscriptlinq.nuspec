@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>jscriptlinq</id>
+    <version>1.5.2</version>
+    <title>$linq - A Javascript LINQ Library</title>
+    <authors>Kurtis Jones</authors>
+    <owners>Kurtis Jones</owners>
+    <projectUrl>https://github.com/battousai999/js-linq</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$linq is a Javascript version of .NET's Linq to Objects, with some query operations inspired by MoreLinq (an extension to Linq to Objects).</description>
+    <tags>javascript linq</tags>
+  </metadata>
+</package>
