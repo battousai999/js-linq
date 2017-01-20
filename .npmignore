@@ -1,1 +1,6 @@
 nuget-pub/
+node_modules/
+testing/
+spec/
+todo.txt
+gruntfile.js
