@@ -17,7 +17,7 @@ module.exports = function (grunt)
             unit: {
                 options: {
                     frameworks: ['jasmine'],
-                    files: ['jquery-1.8.0.min.js', 'jslinq.js', 'spec/jslinqSpec.js'],
+                    files: ['testing/lib/jquery-1.8.0.min.js', 'jslinq.js', 'spec/jslinqSpec.js'],
                     plugins: ['karma-chrome-launcher', 'karma-jasmine', 'karma-phantomjs-launcher']
                 },
                 singleRun: true,
@@ -26,7 +26,7 @@ module.exports = function (grunt)
             unitMin: {
                 options: {
                     frameworks: ['jasmine'],
-                    files: ['jquery-1.8.0.min.js', 'jslinq.min.js', 'spec/jslinqSpec.js'],
+                    files: ['testing/lib/jquery-1.8.0.min.js', 'jslinq.min.js', 'spec/jslinqSpec.js'],
                     plugins: ['karma-chrome-launcher', 'karma-jasmine', 'karma-phantomjs-launcher']
                 },
                 singleRun: true,
