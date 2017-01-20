@@ -1,8 +1,8 @@
 /*
-    $linq Version 1.5.1 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
+    $linq Version 1.5.2 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
 */
 
-(function (window, undefined)
+(function (root, undefined)
 {
     var linq_helper = {};
 
@@ -272,7 +272,7 @@
         if (linq_helper.isArray(collection))
             return new linq(collection);
 
-        if (jQuery && (collection instanceof jQuery))
+        if (typeof jQuery !== 'undefined' && (collection instanceof jQuery))
             return new linq(collection.get());
 
         // Create an array with 'collection' as the only element
@@ -1994,11 +1994,23 @@
             or there are multiple elements that satisfy the 'predicate' (if 'predicate' is given), then an
             error is thrown.  If there is no "single" element (either because 'this' collection is empty or
             no element satisfies the 'predicate'), the 'defaultValue' is returned.
+            
+            Alternately, if only one parameter is passed to this function and that single parameter is a
+            function, then it will be treated as the 'predicate' and the 'defaultValue' will be considered
+            to be null.
             @param defaultValue The default value that is returned if no "single" element is found
             @param predicate Optional, the predicate function used to determine the element to return
         */
         singleOrDefault: function (defaultValue, predicate)
         {
+            // If there is only one parameter, and it is a function, then assume that it is
+            // the predicate and that the defaultValue is null
+            if (arguments.length == 1 && linq_helper.isFunction(defaultValue))
+            {
+                predicate = defaultValue;
+                defaultValue = null;
+            }
+            
             predicate = linq_helper.createLambda(predicate);
 
             if (predicate == null)
@@ -2624,6 +2636,11 @@
         }
     };
 
-    window.linq = linq;
-    window.$linq = linq.from;
-})(window);
+    if (typeof module !== 'undefined' && module.exports)
+        module.exports = linq;
+    else
+    {
+        root.linq = linq;
+        root.$linq = linq.from;
+    }
+})(this);
