@@ -24,45 +24,45 @@ col = linq.matches("test_1 TEST_2 test_3 TeSt_4", "test_\\d", "i");
 col = linq.properties({ prop1: 'value1', prop2: 100 });
 col = linq.properties(['aaa', 'bbb', 'ccc']);
 col = linq.properties({ prop1: 'value1', prop2: 100 }, 'name', 'result');
-col = linq.properties({ prop1: 'value1', prop2: 100 }, null, 'result');
-col = linq.properties({ prop1: 'value1', prop2: 100 }, 'name', null);
+col = linq.properties({ prop1: 'value1', prop2: 100 }, undefined, 'result');
+col = linq.properties({ prop1: 'value1', prop2: 100 }, 'name', undefined);
 
 // where
 col = linq.from([1, 2, 3, 4]);
-col2 = col.where(function (x) { return x < 4; });
+col2 = col.where(function (x: any) { return x < 4; });
 col2 = col.where(x => x < 4);
 col2 = col.where("x => x < 4");
 
 // select 
-col2 = col.select(function (x) { return x * 2; });
+col2 = col.select(function (x: any) { return x * 2; });
 col2 = col.select(x => x * 2);
 col2 = col.select("x => x * 2");
 
 // count
 let val: number;
 val = col.count();
-val = col.count(function (x) { return x % 2 == 0; });
+val = col.count(function (x: any) { return x % 2 == 0; });
 val = col.count(x => x % 2 == 0);
 val = col.count("x => x % 2 == 0");
 
 // selectMany
 col = linq.from([{ str: "test", list: [1, 2, 3] }, { str: "part", list: [4, 5, 6] }, { str: "time", list: [7, 8, 9] }]);
-col2 = col.selectMany(function (x) { return x.list; }, function (x) { return "a" + x; });
-col2 = col.selectMany(function (x) { return x.list; });
+col2 = col.selectMany(function (x: any) { return x.list; }, function (x: any) { return "a" + x; });
+col2 = col.selectMany(function (x: any) { return x.list; });
 
 col2 = col.selectMany(
-    function (x, i) { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
-    function (x) { return "b" + x; });
+    function (x: any, i: number) { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
+    function (x: any) { return "b" + x; });
 
 col2 = col.selectMany(
-    function (x, i) { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
-    function (x, parent) { return parent.str + "-" + "b" + x; });
+    function (x: any, i: number) { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
+    function (x: any, parent) { return parent.str + "-" + "b" + x; });
 
 col2 = col.selectMany(
-    function (x) { return linq.from(x.list).where(function (x) { return x % 2 == 0; }); },
-    function (x) { return "c" + x; });
+    function (x: any) { return linq.from(x.list).where(function (x) { return x % 2 == 0; }); },
+    function (x: any) { return "c" + x; });
 
-col2 = col.selectMany(x => x.list, x => 'a' + x);
+col2 = col.selectMany((x: any) => x.list, x => 'a' + x);
 col2 = col.selectMany("x => x.list", "x => 'a' + x");
 
 // any
@@ -89,8 +89,8 @@ val = col.first("x => x > 3");
 val = col.firstOrDefault(99, function (x) { return x > 3; });
 val = col.firstOrDefault(99, x => x > 3);
 val = col.firstOrDefault(99, "x => x > 3");
-val = col.firstOrDefault(function (x) { return x > 3; });
-val = col.firstOrDefault(x => x > 3);
+val = col.firstOrDefault(function (x: number) { return x > 3; });
+val = col.firstOrDefault((x: number) => x > 3);
 val = col.firstOrDefault("x => x > 3");
 val = col.firstOrDefault(99);
 
@@ -104,8 +104,8 @@ val = col.single("x => x > 3");
 val = col.singleOrDefault(99, function (x) { return x > 3; });
 val = col.singleOrDefault(99, x => x > 3);
 val = col.singleOrDefault(99, "x => x > 3");
-val = col.singleOrDefault(function (x) { return x > 3; });
-val = col.singleOrDefault(x => x > 3);
+val = col.singleOrDefault(function (x: number) { return x > 3; });
+val = col.singleOrDefault((x: number) => x > 3);
 val = col.singleOrDefault("x => x > 3");
 val = col.singleOrDefault(99);
 
@@ -119,8 +119,8 @@ val = col.last("x => x > 3");
 val = col.lastOrDefault(99, function (x) { return x > 3; });
 val = col.lastOrDefault(99, x => x > 3);
 val = col.lastOrDefault(99, "x => x > 3");
-val = col.lastOrDefault(function (x) { return x > 3; });
-val = col.lastOrDefault(x => x > 3);
+val = col.lastOrDefault(function (x: number) { return x > 3; });
+val = col.lastOrDefault((x: number) => x > 3);
 val = col.lastOrDefault("x => x > 3");
 val = col.lastOrDefault(99);
 
@@ -323,7 +323,6 @@ val = col.elementAt(1);
 
 // elementAtOrDefault
 val = col.elementAtOrDefault(1, 99);
-val = col.elementAtOrDefault(null, 99);
 
 // concat
 col2 = col.concat(col);
@@ -446,7 +445,7 @@ val = col.aggregate(0, "(x, y) => x + y", "x => x + 1");
 val = col.aggregate(0, (x, y) => x + y);
 
 // linq.identity
-val = linq.indentity(1);
+val = linq.identity(1);
 
 // linq.isString
 val2 = linq.isString("test");

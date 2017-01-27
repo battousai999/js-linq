@@ -11,6 +11,8 @@ type Comparer<T> = ((x: T, y: T) => ComparerResult) | string;
 
 interface LinqStatic 
 {
+    new(arr: Array<any>): Linq;
+
     isFunction(func: any): boolean;
     isArray(obj: any): boolean;
     identity(x: any): any;
@@ -31,8 +33,6 @@ interface LinqStatic
 
 interface Linq
 {
-    constructor(arr: Array<any>);
-
     aggregate(seed: any, operation: ((acc: any, item: any) => any) | string, resultSelector?: Selector<any>): any;
     all(predicate?: Predicate): boolean;
     any(predicate?: Predicate): boolean;
@@ -104,7 +104,7 @@ interface Linq
     toArray(): Array<any>;
 }
 
-declare module "js-line" {
+declare module "js-linq" {
     export = linq;
 }
 
