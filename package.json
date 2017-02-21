@@ -4,7 +4,7 @@
   "description": "A Javascript version of .NET's LINQ to Objects, with some query operations inspired by MoreLinq.",
   "main": "jslinq.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "karma start karma_ts.conf.js --single-run"
   },
   "repository": {
     "type": "git",
@@ -17,14 +17,17 @@
   },
   "homepage": "https://github.com/battousai999/js-linq",
   "devDependencies": {
+    "@types/jasmine": "^2.5.35",
     "grunt": "^0.4.5",
     "grunt-contrib-uglify": "^0.11.1",
     "grunt-karma": "^0.12.1",
     "jasmine-core": "^2.4.1",
-    "karma": "^0.13.21",
-    "karma-chrome-launcher": "^0.2.2",
-    "karma-jasmine": "^0.3.7",
-    "karma-phantomjs-launcher": "^1.0.0",
+    "karma": "^1.2.0",
+    "karma-cli": "^1.0.1",
+    "karma-chrome-launcher": "^2.0.0",
+    "karma-jasmine": "^1.0.2",
+    "karma-phantomjs-launcher": "^1.0.2",
+    "karma-typescript": "^2.1.7",
     "load-grunt-tasks": "^3.4.1",
     "phantomjs-prebuilt": "^2.1.4"
   }
