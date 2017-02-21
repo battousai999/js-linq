@@ -470,7 +470,7 @@
 
         /**
             Returns a boolean value indicating whether any of the elements of the collection satisfy the 
-            predicate.  Returns 'true' if the collection is empty.
+            predicate.  Returns 'false' if the collection is empty.
             @param predicate The predicate applied to the collection
         */
         any: function (predicate)
