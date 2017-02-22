@@ -296,4 +296,176 @@ describe('Linq', () => {
             expect(Linq.from([]).any(null)).toBeFalsy();
         });
     });
+
+    describe('average', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+        let col2 = Linq.from([{ id: 1, value: 100 }, { id: 2, value: 200 }, { id: 3, value: 300 }, { id: 4, value: 400 }]);
+
+        it('works with a non-empty collection', () =>
+        {
+            expect(col1.average()).toEqual(4.5);
+        });
+
+        it('works with a selector', () =>
+        {
+            expect(col2.average(x => x.value)).toEqual(250);
+        });
+
+        it('throws an exception on a collection containing a non-number', () =>
+        {
+            expect(function () { Linq.from([1, 2, 'a']).average(); }).toThrow();
+        });
+    });
+
+    describe('batch', () =>
+    {
+        var col = Linq.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+        it('works without a result selector', () =>
+        {
+            expect(col.batch(5).toArray()).toEqual([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12]]);
+        });
+
+        it('works with a result selector', () =>
+        {
+            expect(col.batch(4, x => x * 2).toArray()).toEqual([[2, 4, 6, 8], [10, 12, 14, 16], [18, 20, 22, 24]]);
+        });
+
+        it('works with a batch size larger than the size of the collection', () =>
+        {
+            expect(col.batch(10000).toArray()).toEqual([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]]);
+        });
+
+        it('works with a batch size of "1"', () =>
+        {
+            expect(col.batch(1).toArray()).toEqual([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12]]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).batch(10).toArray()).toEqual([]);
+        });
+
+        it('throws an exception on a batch size less than or equal to "0"', function ()
+        {
+            expect(function () { col.batch(0); }).toThrow();
+            expect(function () { col.batch(-1); }).toThrow();
+        });
+    });
+
+    describe('concat', () =>
+    {
+        let col1 = Linq.from([1, 2, 3]);
+        let col2 = Linq.from([4, 5, 6]);
+
+        it('works on non-empty collections', () =>
+        {
+            expect(col1.concat(col2).toArray()).toEqual([1, 2, 3, 4, 5, 6]);
+        });
+
+        it('works with an array', () =>
+        {
+            expect(col1.concat([7, 8, 9]).toArray()).toEqual([1, 2, 3, 7, 8, 9]);
+        });
+
+        it('works on empty collections', () =>
+        {
+            expect(Linq.from([]).concat([2, 4, 6]).toArray()).toEqual([2, 4, 6]);
+            expect(col1.concat([]).toArray()).toEqual([1, 2, 3]);
+        });
+
+        it('works with a null collection', () =>
+        {
+            expect(col1.concat(null).toArray()).toEqual([1, 2, 3]);
+        });
+
+        it('resolves deferred ordering in the "left-hand side" of the concatenation', () =>
+        {
+            let col3 = col1.orderBy(x => -x);
+
+            expect(col3.concat(col2).toArray()).toEqual([3, 2, 1, 4, 5, 6]);
+        });
+
+        it('resolves deferred ordering in the "right-had side" of the concatenation', () =>
+        {
+            let col3 = col2.orderBy(x => -x);
+
+            expect(col1.concat(col3).toArray()).toEqual([1, 2, 3, 6, 5, 4]);
+        });
+    });
+
+
+
+    describe('orderBy', () =>
+    {
+        let col1 = Linq.from([2, 5, 1, 3, 4, 6]);
+        let col2 = Linq.from([{ id: 3, value: 543 }, { id: 4, value: 956 }, { id: 1, value: 112 }, { id: 2, value: 456 }]);
+        let col3 = Linq.from([{ id: 3, value: "c" }, { id: 4, value: "D" }, { id: 1, value: "a" }, { id: 2, value: "B" }]);
+
+        var identityKeySelector = (x: any) => x;
+        var keySelector = (x: any) => x.value;
+        var selector = (x: any) => x.id;
+
+        var comparer = (x: string, y: string) =>
+        {
+            var tempX = x.toLowerCase();
+            var tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', () =>
+        {
+            expect(col1.orderBy(identityKeySelector).toArray()).toEqual([1, 2, 3, 4, 5, 6]);
+            expect(col1.orderBy(Linq.identity).toArray()).toEqual([1, 2, 3, 4, 5, 6]);
+            expect(col2.orderBy(keySelector).select(selector).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works with string keys and no comparer passed', () =>
+        {
+            expect(col3.orderBy(keySelector).select(selector).toArray()).toEqual([2, 4, 1, 3]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            expect(col3.orderBy(keySelector, comparer).select(selector).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('throws an exception on a null key selector', () =>
+        {
+            expect(function () { col1.orderBy(null); }).toThrow();
+        });
+    });
+
+    describe('select', () =>
+    {
+        var col = Linq.from([1, 2, 3, 4, 5]);
+
+        it('works by itself', () =>
+        { 
+            var doubleCol = col.select(x => x * 2);
+
+            expect(doubleCol.toArray()).toEqual([2, 4, 6, 8, 10]); 
+        });
+
+        it('works in conjunction with "where"', function ()
+        {
+            var whereAndDouble = col.where((x: number) => x < 4).select((x: number) => x * 2);
+            var whereAndDouble2 = col.where((x: number) => x < 4).select((x: number) => "a" + x);
+
+            expect(whereAndDouble.toArray()).toEqual([2, 4, 6]);
+            expect(whereAndDouble2.toArray()).toEqual(["a1", "a2", "a3"]);
+        });
+
+        it('throws an exception on null "selector" parameter', function ()
+        {
+            expect(function () { col.select(null); }).toThrow();
+        });
+    });
 });
