@@ -226,9 +226,17 @@ export class Linq<T>
         return (x < y ? -1 : (x > y ? 1 : 0));
     }
 
-    public static normalizeComparer<U>(comparer: Comparer<U>): EqualityComparer<U>
+    public static normalizeComparer<U>(comparer: Comparer<U> | EqualityComparer<U>): EqualityComparer<U>
     {
-        return (x: U, y: U) => comparer(x, y) == 0;
+        return (x: U, y: U): boolean => 
+        {
+            let value: any = comparer(x, y);
+
+            if (this.isBoolean(value))
+                return value;
+            else
+                return (value == 0);
+        };
     }
 
     private static convertToString(value: any) : string
@@ -246,7 +254,7 @@ export class Linq<T>
     public static isArray(value: any): boolean { return (Object.prototype.toString.call(value) === '[object Array]'); }
 
     public static identity(value: any): any { return value; }
-    public static merge<U, V>(x: U, y: V): Array<U | V>  { return [x, y]; }
+    public static merge<U, V>(x: U, y: V): any { return [x, y]; }
 
 
     // Linq operators
@@ -417,7 +425,250 @@ export class Linq<T>
         return new Linq(this.array.concat(secondLinq.array), false);
     }
 
+    /**
+     * Returns a boolean value indicating whether 'this' collection contains the given 'item'.  The
+     * 'comparer' function can be used to specify how the 'item' is compared to the elements of 'this' 
+     * collection.  If 'comparer' is not given, the "===" operator is used to compare elements.
+     * @param item The item to search for in 'this' collection
+     * @param comparer Optional, the function to use to compare elements to the 'item'
+     */
+    public contains(item: T, comparer?: Comparer<T> | EqualityComparer<T>): boolean
+    {
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
 
+        this.processDeferredSort();
+
+        return this.array.some(x => normalizedComparer == null ? x === item : normalizedComparer(x, item));
+    }
+
+    /**
+     * Returns the number of items in 'this' collection (if no 'predicate' is given) or the number of
+     * items in 'this' collection that satisfy the 'predicate'.
+     * @param predicate Optional, the predicate used to count elements in 'this' collection
+     */
+    public count(predicate?: Predicate<T>): number
+    {
+        this.processDeferredSort();
+
+        if (predicate == null)
+            return this.array.length;
+
+        let length = this.array.length;
+        let counter = 0;
+
+        for (let i = 0; i < length; i++)
+        {
+            if ((i in this.array) && predicate(this.array[i]))
+                counter += 1;
+        }
+
+        return counter;
+    }
+
+    /**
+     * Returns either 'this' collection, if 'this' collection is empty, or a collection containing
+     * only the 'defaultValue' as an element.  In other words, this function always returns a collection 
+     * containing at least one element.
+     * @param defaultValue The value for the resulting collection to contain if 'this' collection is empty
+     */
+    public defaultIfEmpty(defaultValue: T): Linq<T>
+    {
+        this.processDeferredSort();
+
+        if (this.array.length == 0)
+            return new Linq([defaultValue], false);
+        else
+            return new Linq(this.array);
+    }
+
+    /**
+     * Returns a collection of all of the distinct elements of 'this' collection, using 'comparer' (if it
+     * is given) to determine whether two elements are equal.  If 'comparer' is not given, the "===" operator
+     * is used to compare elements.
+     * @param comparer Optional, the function used to compare elements
+     */
+    public distinct(comparer?: Comparer<T> | EqualityComparer<T>): Linq<T>
+    {
+        return this.distinctBy(Linq.identity, comparer);
+    }    
+
+    /**
+     * Returns a collection of all of the elements that are considered distinct relative to the key value returned
+     * by the 'keySelector' projection, using 'comparer' (if it is given) to determine whether to keys are equal.
+     * If 'comparer' is not given, the "===" operator is used to compare keys.
+     * @param keySelector The projection function to return keys for the elements
+     * @param comparer Optional, the function used to compare keys
+     */
+    public distinctBy<U>(keySelector: Selector<T, U>, comparer?: Comparer<U> | EqualityComparer<U>): Linq<T>
+    {
+        if (keySelector == null)
+            throw new Error('Invalid key selector.');
+
+        this.processDeferredSort();
+
+        return this
+            .groupBy(keySelector, null, comparer)
+            .select((x: Grouping<U, T>) => (new Linq(x.values, false))
+            .first());
+    }
+
+    /**
+     * Returns the element of 'this' collection located at the ordinal position given by 'index' (a zero-based 
+     * index).  If that position is either less than zero or greater than or equal to the size of 'this' 
+     * collection, then an error will be thrown.
+     * @param index The zero-based index of the element to return
+     */
+    public elementAt(index: number): T
+    {
+        if (index == null || index < 0 || index >= this.array.length)
+            throw new Error('Invalid index.');
+
+        this.processDeferredSort();
+
+        return this.array[index];
+    }
+
+    /**
+     * Returns either the element of 'this' collection located at the ordinal position given by 'index' (a
+     * zero-based index), if the 'index' is contained within the bounds of 'this' collection, or the 'defaultValue',
+     * if the 'index' is not contained within the bounds of 'this' collection.
+     * @param index The zero-based index of the element to return
+     * @param defaultValue The value to return if the 'index' is outside the bounds of 'this' collection
+     */
+    public elementAtOrDefault(index: number, defaultValue: T): T
+    {
+        if (index == null || index < 0 || index >= this.array.length)
+            return defaultValue;
+
+        this.processDeferredSort();
+
+        return this.array[index];
+    }
+
+    /**
+     * Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
+     * collection are not equal, then an exception will be thrown.
+     * @param second The collection to zip with 'this' collection
+     * @param resultSelector Optional, the function to use to project the result values
+     */
+    public equiZip<U, V>(second: LinqCompatible<U>, resultSelector?: MergeSelector<T, U, V>): Linq<T | V>
+    {
+        let actualResultSelector = (resultSelector == null ? Linq.merge : resultSelector);
+
+        this.processDeferredSort();
+
+        let secondLinq = Linq.from(second);
+
+        secondLinq.processDeferredSort();
+
+        if (this.array.length != secondLinq.array.length)
+            throw new Error("The two collections being equi-zipped are not of equal lengths.");
+
+        let length = this.array.length;
+        let results = new Array<T | V>();
+
+        for (let i = 0; i < length; i++)
+        {
+            results.push(actualResultSelector(this.array[i], secondLinq.array[i]));
+        }
+
+        return new Linq(results, false);
+    }
+
+
+
+    /**
+     * Returns either the first element of 'this' collection (if 'predicate' is not given) or the 
+     * first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
+     * If there is no "first" element to return (either because 'this' collection is empty or no element 
+     * satisfies the 'predicate'), an error is thrown.
+     * @param predicate Optional, the predicate function used to determine the element to return
+     */
+    public first(predicate?: Predicate<T>): T
+    {
+        return this.firstBasedOperator(predicate, null, true);
+    }
+
+    /**
+     * Returns either the first element of 'this' collection (if 'predicate' is not given) or the
+     * first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
+     * If there is no "first" element to return (either because 'this' collection is empty or no element
+     * satisfies the 'predicate'), the 'defaultValue' is returned.
+     */
+    public firstOrDefault(predicate?: Predicate<T>, defaultValue?: T): T
+    {
+        return this.firstBasedOperator(predicate, defaultValue, false);
+    }
+
+    private firstBasedOperator(predicate: Predicate<T>, defaultValue: T, throwIfNotFound: boolean): T
+    {
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        for (let i = 0; i < length; i++)
+        {
+            if ((i in this.array) && ((predicate == null) || predicate(this.array[i])))
+                return this.array[i];
+        }
+
+        if (throwIfNotFound)
+            throw new Error('No first item was found in collection.');
+        else
+            return defaultValue;
+    }
+
+    /**
+     * Return a collection of groupings (i.e., objects with a property called 'key' that
+     * contains the grouping key and a property called 'values' that contains an array
+     * of elements that are grouped under the grouping key).  The array of elements grouped
+     * under the grouping key will be elements of 'this' collection (if no 'elementSelector' 
+     * is given) or projected elements given by 'elementSelector'.  The grouping key for 
+     * each element in 'this' collection is given by the 'keySelector' function.  If a
+     * 'keyComparer' function is given, it will be used to determine equality among the
+     * grouping keys (if 'comparer' is not given, it the "===" operator will be used).
+     * @param keySelector The function that returns the grouping key for an element
+     * @param elementSelector Optional, the function that projects elements to be returned in the results
+     * @param keyComparer Optional, the function used to compare grouping keys
+     */
+    public groupBy<U, V>(keySelector: Selector<T, U>, elementSelector?: Selector<T, V>, keyComparer?: Comparer<U> | EqualityComparer<U>): Linq<Grouping<U, T | V>>
+    {
+        if (keySelector == null)
+            throw new Error('Invalid key selector.');
+
+        let normalizedComparer = (keyComparer == null ? null : Linq.normalizeComparer(keyComparer));
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let groupings = new Linq<Grouping<U, T | V>>([], false);
+
+        for (let i = 0; i < length; i++)
+        {
+            let value = this.array[i];
+            let key = keySelector(value);
+            let element = (elementSelector == null ? value : elementSelector(value));
+
+            let foundGroup = groupings
+                .firstOrDefault(x =>
+                {
+                    if (normalizedComparer == null)
+                        return (x.key === key);
+                    else
+                        return normalizedComparer(x.key, key);
+                },
+                null);
+
+            if (foundGroup == null)
+                groupings.array.push(new Grouping<U, T | V>(key, [element]));
+            else
+                foundGroup.values.push(element);
+        }
+
+        return groupings;
+    }
 
     /**
      * Returns the elements of 'this' collection sorted in ascending order of the projected value
@@ -458,7 +709,24 @@ export class Linq<T>
 
         return new Linq(this.array.map(selector), false);
     }
+
+    /**
+     * Returns the elements of 'this' collection that satisfy the 'predicate' function.
+     * @param predicate The function that determines which elements to return
+     */
+    public where(predicate: Predicate<T>): Linq<T>
+    {
+        if (predicate == null)
+            throw new Error('Invalid predicate.');
+
+        this.processDeferredSort();
+
+        return new Linq(this.array.filter(predicate), false);
+    }
     
+    /**
+     * Returns an array with the same elements as 'this' collection.
+     */
     public toArray(): Array<T>
     {
         this.processDeferredSort();
@@ -481,7 +749,7 @@ export class Linq<T>
 
         let compare = (x: T, y: T, info: DeferredSort<T, U>): number =>
         {
-            var value: number; 
+            let value: number; 
 
             if (info.reverse)
                 value = info.comparer(info.keySelector(y), info.keySelector(x));
@@ -508,8 +776,24 @@ export class Linq<T>
 export type Comparer<T> = (x: T, y: T) => number;
 export type EqualityComparer<T> = (x: T, y: T) => boolean;
 export type Selector<T, U> = (item: T) => U
+export type MergeSelector<T, U, V> = (item1: T, item2: U) => V;
 export type Predicate<T> = (item: T) => boolean;
 export type LinqCompatible<T> = Linq<T> | Array<T>;
+
+export class Grouping<K, V> 
+{
+    private _key: K;
+    private _values: Array<V>;
+
+    public get key(): K { return this._key; }
+    public get values(): Array<V> { return this._values; }
+
+    constructor(key: K, values?: Array<V>)
+    {
+        this._key = key;
+        this._values = (values == null ? new Array<V>() : values.slice(0));
+    }
+}
 
 class DeferredSort<T, Key>
 {
