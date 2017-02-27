@@ -1,4 +1,4 @@
-import { Linq, LinqCompatible } from "../jslinq"
+import { Linq, LinqCompatible, IKeyValuePair } from "../jslinq"
 
 describe('Linq', () => {
     describe('from', () =>
@@ -600,13 +600,13 @@ describe('Linq', () => {
         let col1 = Linq.from(['a', 'b', 'c', 'd']);
         let col2 = Linq.from([1, 2, 3, 4]);
 
-        let mapToString = (xs: LinqCompatible<number>) => Linq.from(xs).select(x => x.toString()).toArray();
+        let mapToString = (xs: LinqCompatible<number>) => Linq.from(xs).select((x: any) => x.toString()).toArray();
         let resultSelector = (x: string, y: string) => x + '_' + y;
         let mixedSelector = (x: any, y: any) => x + '_' + y;
 
         it('works on collections of the same size', () =>
         {
-            let doubleMapper = (xs: Linq<string>) => xs.select(x => x + x);
+            let doubleMapper = (xs: Linq<string>) => xs.select((x: any) => x + x);
 
             expect(col1.equiZip(col2, mixedSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
             expect(col1.equiZip(doubleMapper(col1), resultSelector).toArray()).toEqual(['a_aa', 'b_bb', 'c_cc', 'd_dd']);
@@ -632,7 +632,65 @@ describe('Linq', () => {
         });
     });
 
+    describe('except', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4]);
+        let col2 = Linq.from([3, 4, 5, 6]);
+        let col3 = Linq.from(["one", "two", "two", "three", "four"]);
+        let col4 = Linq.from(["three", "three", "four", "five", "six"]);
+        let col5 = Linq.from(["THREE", "FOUR", "FIVE", "SIX"]);
+        let col6 = Linq.from([1, 2, 3, 4, 1, 2, 3]);
 
+        it('works when there are duplicates within the first set', () =>
+        {
+            let value = col6.except(col2).toArray();
+
+            expect(value).toEqual([1, 2]);
+        });
+
+        it('works when there are duplicates between the sets', () =>
+        {
+            let value1 = col1.except(col2).toArray();
+            let value2 = col2.except(col1).toArray();
+            let value3 = col1.except([1, 2, 3, 4]).toArray();
+
+            expect(value1).toEqual([1, 2]);
+            expect(value2).toEqual([5, 6]);
+            expect(value3).toEqual([]);
+        });
+
+        it('works when there are no duplicates between the sets', () =>
+        {
+            let value1 = col1.except([10, 11, 12, 13]).toArray();
+            let value2 = col1.except([]).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works with an empty collection', () =>
+        {
+            let value = Linq.from([]).except(col1).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works with a null second collection', () =>
+        {
+            let value = col1.except(null).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            let value1 = col3.except(col4, function (x, y) { return x == y; }).toArray();
+            let value2 = col3.except(col5, function (x, y) { return x.toLowerCase() == y.toLowerCase(); }).toArray();
+
+            expect(value1).toEqual(["one", "two"]);
+            expect(value2).toEqual(["one", "two"]);
+        });
+    });
 
     describe('first', () =>
     {
@@ -687,6 +745,34 @@ describe('Linq', () => {
         });
     });
 
+    describe('foreach', () =>
+    {
+        let arr1 = [1, 2, 3, 4, 5, 6];
+        let arr2 = ['a', 'b', 'c', 'd', 'e', 'f'];
+        let testValue = '';
+
+        it('works on a non-empty collection', () =>
+        {
+            Linq.from(arr1).foreach((x, i) => { arr2[i] = arr2[i] + x; });
+            expect(arr2).toEqual(['a1', 'b2', 'c3', 'd4', 'e5', 'f6']);
+            
+            let results = new Array<string>();
+            Linq.from(arr1).foreach((x: number) => { results.push(x + '*'); });
+            expect(results).toEqual(['1*', '2*', '3*', '4*', '5*', '6*']);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            Linq.from([]).foreach((x: string) => testValue += '*');
+            expect(testValue).toEqual('');
+        });
+
+        it('throws an exception on a null action', () =>
+        {
+            expect(() => { Linq.from(arr1).foreach(null); }).toThrow();
+        });
+    });
+
     describe('groupBy', () =>
     {
         let col1 = Linq.from([{ name: 'steve', state: 'ut' }, { name: 'john', state: 'ut' }, { name: 'kelly', state: 'nv' }, { name: 'abbey', state: 'wa' }]);
@@ -730,6 +816,143 @@ describe('Linq', () => {
             expect(() => { col1.groupBy(null); }).toThrow();
         });
     });
+
+    describe('groupJoin', () =>
+    {
+        let col1 = Linq.from([{ id: 1, name: 'steve', color: 'blue' },
+            { id: 2, name: 'paul', color: 'red' },
+            { id: 3, name: 'eve', color: 'pink' },
+            { id: 4, name: 'zoe', color: 'grey' }]);
+
+        let col2 = Linq.from([{ personId: 1, make: 'Honda', model: 'Civic' },
+            { personId: 2, make: 'Toyota', model: 'Camry' },
+            { personId: 2, make: 'Acura', model: 'TL' },
+            { personId: 3, make: 'Ford', model: 'Focus' }]);
+
+        let col3 = Linq.from([{ color: 'blue', trait: 'reliable' }, { color: 'BLUE', trait: 'sincere' },
+            { color: 'red', trait: 'courageous' }, { color: 'RED', trait: 'confident' },
+            { color: 'green', trait: 'practical' }, { color: 'GREEN', trait: 'intelligent' },
+            { color: 'pink', trait: 'friendly' }, { color: 'PINK', trait: 'sensitive' },
+            { color: 'yellow', trait: 'happy' }, { color: 'YELLOW', trait: 'impulsive' }]);
+
+        let carFunc = (outer: any, inner: any) =>
+        {
+            if (inner.length == 0)
+                return outer.name + ': <none>';
+            else
+                return outer.name + ': ' + Linq.from(inner).select((x: any) => x.make + ' ' + x.model).toArray().join(', ');
+        };
+
+        let idProjection = (x: any) => x.id;
+        let personIdProjection = (x: any) => x.personId;
+
+        it('works on a join that should return results', () =>
+        {
+            let value = col1.groupJoin(col2, idProjection, personIdProjection, carFunc).toArray();
+
+            expect(value).toEqual(["steve: Honda Civic", "paul: Toyota Camry, Acura TL", "eve: Ford Focus", "zoe: <none>"]);
+        });
+
+        it('works with an array', () =>
+        {
+            let value = col1.groupJoin([{ personId: 2, make: 'Lexus', model: 'LS' }], idProjection, personIdProjection, carFunc).toArray();
+
+            expect(value).toEqual(["steve: <none>", "paul: Lexus LS", "eve: <none>", "zoe: <none>"]);
+        });
+
+        it('works with empty sources', () =>
+        {
+            let onEmpty = Linq.from([]).groupJoin(col2, idProjection, personIdProjection, carFunc).toArray();
+            let withEmpty = col1.groupJoin([], idProjection, personIdProjection, carFunc).toArray();
+
+            expect(onEmpty).toEqual([]);
+            expect(withEmpty).toEqual(["steve: <none>", "paul: <none>", "eve: <none>", "zoe: <none>"]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            let colorProjection = (x: any) => x.color;
+
+            let value = col1.groupJoin(col3,
+                colorProjection,
+                colorProjection,
+                (outer, inner) =>
+                {
+                    if (inner.length == 0)
+                        return outer.name + ': <none>';
+                    else
+                        return outer.name + ': ' + Linq.from(inner).select((x: any) => x.trait).toArray().join(', ');
+                },
+                (x, y) => x.toLowerCase() == y.toLowerCase())
+                .toArray();
+
+            expect(value).toEqual(["steve: reliable, sincere", "paul: courageous, confident", "eve: friendly, sensitive", "zoe: <none>"]);
+        });
+
+        it('throws an exception on a null "inner" parameter', () =>
+        {
+            expect(() => { col1.groupJoin(null, idProjection, personIdProjection, carFunc); }).toThrow();
+        });
+
+        it('throws an exception on a null "outer selector" parameter', () =>
+        {
+            expect(() => { col1.groupJoin(col2, null, personIdProjection, carFunc); }).toThrow();
+        });
+
+        it('throws an exception on a null "inner selector" parameter', () =>
+        {
+            expect(() => { col1.groupJoin(col2, idProjection, null, carFunc); }).toThrow();
+        });
+
+        it('throws an exception on a null "result selector" parameter', () =>
+        {
+            expect(() => { col1.groupJoin(col2, idProjection, personIdProjection, null); }).toThrow();
+        });
+    });
+
+    describe('index', () =>
+    {
+        let col = Linq.from(['a', 'b', 'c', 'd', 'e']);
+        let kvpMapper = <T, U>(x: IKeyValuePair<T, U>) => { return { key: x.key, value: x.value }; };
+
+        it('works with a starting index', () =>
+        {
+            expect(col.index(5).select(kvpMapper).toArray()).toEqual([{ key: 5, value: 'a' }, { key: 6, value: 'b' }, { key: 7, value: 'c' }, { key: 8, value: 'd' }, { key: 9, value: 'e' }]);
+        });
+
+        it('works without a starting index', () =>
+        {
+            expect(col.index().select(kvpMapper).toArray()).toEqual([{ key: 0, value: 'a' }, { key: 1, value: 'b' }, { key: 2, value: 'c' }, { key: 3, value: 'd' }, { key: 4, value: 'e' }]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).index(0).toArray()).toEqual([]);
+        });
+    });
+
+    describe('indexOf', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+
+        it('works on a non-empty collection', () =>
+        {
+            expect(col.indexOf(x => x == 3)).toEqual(2);
+            expect(col.indexOf(x => x == 99)).toEqual(-1);
+        });
+
+        it('works with an empty collection', () =>
+        {
+            expect(Linq.from([]).indexOf(x => x == 2)).toEqual(-1);
+        });
+
+        it('throws an exception on a null predicate', () =>
+        {
+            expect(() => { col.indexOf(null); }).toThrow();
+        });
+    });
+
+
 
     describe('orderBy', () =>
     {
@@ -783,7 +1006,7 @@ describe('Linq', () => {
 
         it('works by itself', () =>
         { 
-            let doubleCol = col.select(x => x * 2);
+            let doubleCol = col.select((x: number) => x * 2);
 
             expect(doubleCol.toArray()).toEqual([2, 4, 6, 8, 10]); 
         });

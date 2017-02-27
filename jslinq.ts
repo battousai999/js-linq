@@ -22,8 +22,10 @@ export class Linq<T>
 
         if (collection instanceof Linq)
             return collection;
-        else
+        else if (collection instanceof Array)
             return new Linq<T>(collection);
+        else
+            throw new Error('Invalid collection');
     }
 
     /**
@@ -83,7 +85,7 @@ export class Linq<T>
             throw new Error('Invalid \'pattern\' value.');
 
         if (text == null)
-            return new Linq([]);
+            return new Linq([], false);
 
         if (flags == null)
             flags = '';
@@ -416,7 +418,7 @@ export class Linq<T>
         this.processDeferredSort();
 
         if (second == null)
-            return new Linq(this.array);
+            return new Linq(this.array, true);
 
         let secondLinq = Linq.from(second);
 
@@ -478,7 +480,7 @@ export class Linq<T>
         if (this.array.length == 0)
             return new Linq([defaultValue], false);
         else
-            return new Linq(this.array);
+            return new Linq(this.array, true);
     }
 
     /**
@@ -508,7 +510,7 @@ export class Linq<T>
 
         return this
             .groupBy(keySelector, null, comparer)
-            .select((x: Grouping<U, T>) => (new Linq(x.values, false))
+            .select((x: IGrouping<U, T>) => (new Linq(x.values, false))
             .first());
     }
 
@@ -577,7 +579,53 @@ export class Linq<T>
         return new Linq(results, false);
     }
 
+    /**
+     * Returns elements in 'this' collection that do not also exist in the 'second' collection, using 'comparer'
+     * (if it is given) to determine whether two items are equal.  Also, the returned elements will not include
+     * duplicates from 'this' collection. If 'comparer' is not given, the "===" operator is used to compare elements.
+     * @param second The collection to use to exclude elements
+     * @param comparer Optional, the function used to compare elements
+     */
+    public except(second: LinqCompatible<T>, comparer?: Comparer<T> | EqualityComparer<T>): Linq<T>
+    {
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
 
+        this.processDeferredSort();
+
+        if (second == null)
+            second = [];
+        
+        let secondLinq = Linq.from(second);
+
+        secondLinq.processDeferredSort();
+
+        let length = this.array.length;
+        let results = new Linq([], false);
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+            
+            let value = this.array[i];
+
+            let predicate = (x: T) =>
+            {
+                if (normalizedComparer == null)
+                    return x === value;
+                else
+                    return normalizedComparer(x, value);
+            };
+
+            let inFirst = results.array.some(predicate);
+            let inSecond = secondLinq.array.some(predicate);
+
+            if (!inFirst && !inSecond)
+                results.array.push(value);
+        }
+
+        return results;
+    }
 
     /**
      * Returns either the first element of 'this' collection (if 'predicate' is not given) or the 
@@ -621,6 +669,20 @@ export class Linq<T>
     }
 
     /**
+     * Executes the given 'action' on each element in 'this' collection.
+     * @param action The function that is executed for each element in 'this' collection
+     */
+    public foreach(action: Action<T> | IndexedAction<T>): void
+    {
+        if (action == null)
+            throw new Error('Invalid action');
+
+        this.processDeferredSort();
+
+        this.array.forEach(action);
+    }
+
+    /**
      * Return a collection of groupings (i.e., objects with a property called 'key' that
      * contains the grouping key and a property called 'values' that contains an array
      * of elements that are grouped under the grouping key).  The array of elements grouped
@@ -633,7 +695,7 @@ export class Linq<T>
      * @param elementSelector Optional, the function that projects elements to be returned in the results
      * @param keyComparer Optional, the function used to compare grouping keys
      */
-    public groupBy<U, V>(keySelector: Selector<T, U>, elementSelector?: Selector<T, V>, keyComparer?: Comparer<U> | EqualityComparer<U>): Linq<Grouping<U, T | V>>
+    public groupBy<U, V>(keySelector: Selector<T, U>, elementSelector?: Selector<T, V>, keyComparer?: Comparer<U> | EqualityComparer<U>): Linq<IGrouping<U, T | V>>
     {
         if (keySelector == null)
             throw new Error('Invalid key selector.');
@@ -671,6 +733,112 @@ export class Linq<T>
     }
 
     /**
+     * Returns a "left outer" join of 'this' collection (the "outer" collection) and the 'inner'
+     * collection, using the 'outerKeySelector' and 'innerKeySelector' to project the keys from 
+     * each collection, and using the 'keyComparer' function (if it is given) to compare the
+     * projected keys.  If the 'keyComparer' is not given, the "===" operator will be used to 
+     * compare the projected keys.  The 'resultSelector' function is used to convert the joined 
+     * results into the results that are returned by the groupJoin function.  The 'resultSelector' 
+     * takes as parameters the outer object (of the join) and an array of the joined inner objects 
+     * (this array will be an empty array if there were no inner elements associated with the outer
+     * element).
+     * @param inner The collection that is "left-outer" joined with 'this' collection
+     * @param outerKeySelector The function that projects the key for the outer elements (in 'this' collection)
+     * @param innerKeySelector The function that projects the key for the inner elements
+     * @param resultSelector The function that converts the joined results into the results returned
+     * @param keyComparer Optional, the function used to compare the projected keys
+     */
+    public groupJoin<U, V, W>(inner: LinqCompatible<U>, outerKeySelector: Selector<T, V>, innerKeySelector: Selector<U, V>, resultSelector: GroupJoinResultSelector<T, U, W>, keyComparer?: Comparer<V> | EqualityComparer<V>): Linq<W>
+    {
+        if (inner == null)
+            throw new Error('Invalid inner collection.');
+
+        if (outerKeySelector == null)
+            throw new Error('Invalid outer key selector.');
+
+        if (innerKeySelector == null)
+            throw new Error('Invalid inner key selector.');
+        
+        if (resultSelector == null)
+            throw new Error('Invalid result selector.');
+
+        let normalizedKeyComparer = (keyComparer == null ? null : Linq.normalizeComparer(keyComparer));
+
+        this.processDeferredSort();
+
+        let innerLinq = Linq.from(inner);
+
+        innerLinq.processDeferredSort();
+
+        let groupings = innerLinq.groupBy<V, any>(innerKeySelector, null, normalizedKeyComparer);
+        let length = this.array.length;
+        let results = new Array<W>();
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = this.array[i];
+            let outerKey = outerKeySelector(value);
+
+            let groupValues = groupings
+                .firstOrDefault(x =>
+                {
+                    if (normalizedKeyComparer == null)
+                        return (x.key === outerKey);
+                    else
+                        return normalizedKeyComparer(x.key, outerKey);
+                },
+                null);
+
+            results.push(resultSelector(value, (groupValues == null ? new Array<V>() : groupValues.values)));
+        }
+
+        return new Linq(results, false);
+    }
+
+    /**
+     * Returns a collection of objects with the "key" property of each object equal to either the zero-based
+     * index of the element in 'this' collection (if 'startIndex' is not given) or the index, starting at
+     * 'startIndex', of the element in 'this' collection, and with the "value" property of the object equal to
+     * the element in 'this' collection.
+     * @param startIndex Optional, the starting index for the results (defaults to '0')
+     */
+    public index(startIndex?: number): Linq<IKeyValuePair<number, T>>
+    {
+        if (startIndex == null)
+            startIndex = 0;
+
+        return this.select((x: T, i: number) => new KeyValuePair(startIndex + i, x));
+    }
+
+    /**
+     * Returns the index of the first element that satisfies the 'predicate'.  Returns the value "-1" if
+     * none of the elements satisfy the 'predicate'.
+     * @param predicate The function used to determine which index to return
+     */
+    public indexOf(predicate: Predicate<T>): number
+    {
+        if (predicate == null)
+            throw new Error('Invalid predicate.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (i in this.array && predicate(this.array[i]))
+                return i;
+        }
+
+        return -1;
+    }
+
+
+
+    /**
      * Returns the elements of 'this' collection sorted in ascending order of the projected value
      * given by the 'keySelector' function, using the 'comparer' function to compare the projected
      * values.  If the 'comparer' function is not given, a comparer that uses the natural ordering 
@@ -689,7 +857,7 @@ export class Linq<T>
 
         this.processDeferredSort();
 
-        let results = new Linq(this.array);
+        let results = new Linq(this.array, true);
 
         results.deferredSort = { keySelector: keySelector, comparer: resolvedComparer, reverse: false, next: null };
 
@@ -700,7 +868,7 @@ export class Linq<T>
      * Returns a collection of values projected from the elements of 'this' collection.
      * @param selector The function that projects values from the elements
      */
-    public select<U>(selector: Selector<T, U>): Linq<U>
+    public select<U>(selector: Selector<T, U> | IndexedSelector<T, U>): Linq<U>
     {
         if (selector == null)
             throw new Error('Invalid selector.');
@@ -773,25 +941,56 @@ export class Linq<T>
     }
 }
 
+export type Predicate<T> = (item: T) => boolean;
 export type Comparer<T> = (x: T, y: T) => number;
 export type EqualityComparer<T> = (x: T, y: T) => boolean;
-export type Selector<T, U> = (item: T) => U
+export type Selector<T, U> = (item: T) => U;
+export type IndexedSelector<T, U> = (item: T, index: number) => U;
 export type MergeSelector<T, U, V> = (item1: T, item2: U) => V;
-export type Predicate<T> = (item: T) => boolean;
 export type LinqCompatible<T> = Linq<T> | Array<T>;
+export type Action<T> = (item: T) => void;
+export type IndexedAction<T> = (item: T, index: number) => void;
+export type GroupJoinResultSelector<T, U, V> = (outerValue: T, innerValues: Array<U>) => V;
 
-export class Grouping<K, V> 
+export interface IGrouping<Key, Value>
 {
-    private _key: K;
-    private _values: Array<V>;
+    key: Key;
+    values: Array<Value>;
+}
 
-    public get key(): K { return this._key; }
-    public get values(): Array<V> { return this._values; }
+export class Grouping<Key, Value> implements IGrouping<Key, Value>
+{
+    private _key: Key;
+    private _values: Array<Value>;
 
-    constructor(key: K, values?: Array<V>)
+    public get key(): Key { return this._key; }
+    public get values(): Array<Value> { return this._values; }
+
+    constructor(key: Key, values?: Array<Value>)
     {
         this._key = key;
-        this._values = (values == null ? new Array<V>() : values.slice(0));
+        this._values = (values == null ? new Array<Value>() : values.slice(0));
+    }
+}
+
+export interface IKeyValuePair<Key, Value>
+{
+    key: Key;
+    value: Value;
+}
+
+export class KeyValuePair<Key, Value> implements IKeyValuePair<Key, Value>
+{
+    private _key: Key;
+    private _value: Value;
+
+    public get key(): Key { return this._key; }
+    public get value(): Value { return this._value; }
+
+    constructor(key: Key, value: Value)
+    {
+        this._key = key;
+        this._value = value;
     }
 }
 
