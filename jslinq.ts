@@ -836,6 +836,232 @@ export class Linq<T>
         return -1;
     }
 
+    /**
+     * Returns the index of the first element to be equal to the given 'item'.  If the optional 'comparer' 
+     * function is given, then the 'comparer' function is used to determine equality between the elements 
+     * of 'this' collection and the given 'item'.
+     * @param item The item to find within 'this' collection
+     * @param comparer Optional, the function used to compare the elements of 'this' collection with the given 'item'
+     */
+    public indexOfElement(item: T, comparer?: Comparer<T> | EqualityComparer<T>): number
+    {
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            if ((normalizedComparer == null && this.array[i] === item) ||
+                (normalizedComparer != null && normalizedComparer(this.array[i], item)))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * Returns the index of the last element that satisfies the 'predicate'.  Returns the value "-1" if
+     * none of the elements satisfy the 'predicate'.
+     * @param predicate The function used to determine which index to return
+     */
+    public indexOfLast(predicate: Predicate<T>): number
+    {
+        if (predicate == null)
+            throw new Error('Invalid predicate.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        for (let i = length - 1; i >= 0; i--)
+        {
+            if (i in this.array && predicate(this.array[i]))
+                return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * Returns the intersection of elements in 'this' collection and the 'second' collection, using the
+     * 'comparer' function to determine whether two different elements are equal.  If the 'comparer' 
+     * function is not given, then the "===" operator will be used to compare elements.
+     * @param second The collection of elements to test for intersection
+     * @param comparer Optional, the function used to compare elements
+     */
+    public intersect(second: LinqCompatible<T>, comparer?: Comparer<T> | EqualityComparer<T>): Linq<T>
+    {
+        if (second == null)
+            return new Linq([], false);
+
+        let secondLinq = Linq.from(second);
+
+        secondLinq.processDeferredSort();
+
+        this.processDeferredSort();
+
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+
+        let length = this.array.length;
+        let results = new Linq([], false);
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = this.array[i];
+
+            let predicate = (x: T) =>
+            {
+                if (normalizedComparer == null)
+                    return (x === value);
+                else
+                    return normalizedComparer(x, value);
+            };
+
+            let inFirst = results.array.some(predicate);
+            let inSecond = secondLinq.array.some(predicate);
+
+            if (!inFirst && inSecond)
+                results.array.push(value);
+        }
+
+        return results;
+    }
+
+    /**
+     * Returns an "inner" join of 'this' collection (the "outer" collection) and the 'inner'
+     * collection, using the 'outerKeySelector' and 'innerKeySelector' functions to project the
+     * keys from each collection, and using the 'keyComparer' function (if it is given) to compare
+     * the projected keys.  If the 'keyComparer' is not given, the "===" operator will be used to 
+     * compare the projected keys.  The 'resultSelector' function is used to convert the joined
+     * results into the results that are returned by the join function.  The 'resultSelector' 
+     * function takes as parameters the outer object and the inner object of the join.
+     * @param inner The collection that is "inner" joined with 'this' collection
+     * @param outerKeySelector The function that projects the key for the outer elements (in 'this' collection)
+     * @param innerKeySelector The function that projects the key for the inner elements
+     * @param resultSelector The function that converts the joined results into the results returned
+     * @param keyComparer Optional, the function used to compare the projected keys
+     */
+    public join<U, V, W>(inner: LinqCompatible<U>, outerKeySelector: Selector<T, V>, innerKeySelector: Selector<U, V>,  resultSelector: JoinResultSelector<T, U, W>, keyComparer?: Comparer<V> | EqualityComparer<V>): Linq<W>
+    {
+        if (inner == null)
+            throw new Error('Invalid inner collection.');
+
+        if (outerKeySelector == null)
+            throw new Error('Invalid outer key selector.');
+
+        if (innerKeySelector == null)
+            throw new Error('Invalid inner key selector.');
+
+        if (resultSelector == null)
+            throw new Error('Invalid result selector.');
+
+        let normalizedKeyComparer = (keyComparer == null ? null : Linq.normalizeComparer(keyComparer));
+
+        this.processDeferredSort();
+
+        let innerLinq = Linq.from(inner);
+
+        innerLinq.processDeferredSort();
+
+        let groupings = innerLinq.groupBy<V, any>(innerKeySelector, null, normalizedKeyComparer);
+        let length = this.array.length;
+        let results = new Array<W>();
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = this.array[i];
+            let outerKey = outerKeySelector(value);
+
+            let groupValues = groupings
+                .firstOrDefault(x =>
+                {
+                    if (normalizedKeyComparer == null)
+                        return (x.key === outerKey);
+                    else
+                        return normalizedKeyComparer(x.key, outerKey);
+                },
+                null);
+
+            if (groupValues != null && groupValues.values.length > 0)
+            {
+                let length2 = groupValues.values.length;
+
+                for (let j = 0; j < length2; j++)
+                {
+                    results.push(resultSelector(value, groupValues.values[j]));
+                }
+            }
+        }
+
+        return new Linq(results, false);
+    }
+
+    /**
+     * Returns either the last element of 'this' collection (if 'predicate' is not given) or the
+     * last element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
+     * If there is no "last" element to return (either because 'this' collection is empty or no element
+     * satisfies the 'predicate'), an error is thrown.
+     * @param predicate Optional, the predicate function used to determine the element to return
+     */
+    public last(predicate?: Predicate<T>): T
+    {
+        this.processDeferredSort();
+
+        if (predicate == null)
+            return this.array[this.array.length - 1];
+
+        for (let i = this.array.length - 1; i >= 0; i--)
+        {
+            if (i in this.array && predicate(this.array[i]))
+                return this.array[i];
+        }
+
+        throw new Error('No last element was found in the collection.');
+    }
+
+    /**
+     * Returns the index of the last element to be equal to the given 'item'.  If the optional 'comparer' 
+     * function is given, then the 'comparer' function is used to determine equality between the elements 
+     * of 'this' collection and the given 'item'.
+     * @param item The item to find within 'this' collection
+     * @param comparer Optional, the function used to compare the elements of 'this' collection with the given 'item'
+     */
+    public lastIndexOfElement(item: T, comparer?: Comparer<T> | EqualityComparer<T>): number
+    {
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        for (let i = length - 1; i >= 0; i--)
+        {
+            if (!(i in this.array))
+                continue;
+
+            if ((normalizedComparer == null && this.array[i] === item) ||
+                (normalizedComparer != null && normalizedComparer(this.array[i], item)))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
 
 
     /**
@@ -951,6 +1177,7 @@ export type LinqCompatible<T> = Array<T> | Linq<T>;
 export type Action<T> = (item: T) => void;
 export type IndexedAction<T> = (item: T, index: number) => void;
 export type GroupJoinResultSelector<T, U, V> = (outerValue: T, innerValues: Array<U>) => V;
+export type JoinResultSelector<T, U, V> = (outerValue: T, innerValue: U) => V;
 
 export interface IGrouping<Key, Value>
 {

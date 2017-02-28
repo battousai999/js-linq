@@ -952,6 +952,243 @@ describe('Linq', () => {
         });
     });
 
+    describe('indexOfElement', () =>
+    {        
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+        let col2 = Linq.from(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
+
+        it('works on a non-empty collection', () =>
+        {
+            expect(col1.indexOfElement(3)).toEqual(2);
+            expect(col1.indexOfElement(99)).toEqual(-1);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).indexOfElement(2)).toEqual(-1);
+        });
+
+        it('works with a comparer', () =>
+        {
+            var comparer = (x: string, y: string) => x.toLowerCase() == y.toLowerCase();
+            expect(col2.indexOfElement('B', comparer)).toEqual(1);
+        });
+    });
+
+    describe('indexOfLast', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+
+        it('works on a non-empty collection', () =>
+        {
+            expect(col.indexOfLast(x => x == 3)).toEqual(8);
+            expect(col.indexOfLast(x => x == 99)).toEqual(-1);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).indexOfLast(x => x == 2)).toEqual(-1);
+        });
+
+        it('throws an exception on a null predicate', () =>
+        {
+            expect(() => { col.indexOfLast(null); }).toThrow();
+        });
+    });
+
+    describe('intersect', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4]);
+        let col2 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+        let col3 = Linq.from([5, 6, 7, 8]);
+        let col4 = Linq.from(["one", "two", "three", "three", "four"]);
+        let col5 = Linq.from(["ONE", "TWO", "TWO", "THREE"]);
+
+        it('works when there are duplicates between the sets', () =>
+        {
+            let value1 = col1.intersect(col2).toArray();
+            let value2 = col2.intersect(col3).toArray();
+            let value3 = col2.intersect([2, 4, 6, 100]).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([5, 6, 7, 8]);
+            expect(value3).toEqual([2, 4, 6]);
+        });
+
+        it('works when there are no duplicates between the sets', () =>
+        {
+            let value1 = col1.intersect([5, 6, 7, 8]).toArray();
+            let value2 = col4.intersect(col5).toArray();
+
+            expect(value1).toEqual([]);
+            expect(value2).toEqual([]);
+        });
+
+        it('works with an empty collection', () =>
+        {
+            let empty = Linq.from([]);
+
+            let value1 = col1.intersect(empty).toArray();
+            let value2 = empty.intersect(col2).toArray();
+            let value3 = empty.intersect([]).toArray();
+
+            expect(value1).toEqual([]);
+            expect(value2).toEqual([]);
+            expect(value3).toEqual([]);
+        });
+
+        it('works with a null second collection', () =>
+        {
+            let value = col1.intersect(null).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            let value1 = col4.intersect(col5, (x, y) => x == y).toArray();
+            let value2 = col4.intersect(col5, (x, y) => x.toLowerCase() == y.toLowerCase()).toArray();
+
+            expect(value1).toEqual([]);
+            expect(value2).toEqual(["one", "two", "three"]);
+        });
+    });
+
+    describe('join', () =>
+    {
+        let col1 = Linq.from([{ id: 1, name: 'steve', color: 'blue' }, { id: 2, name: 'paul', color: 'red' }, { id: 3, name: 'eve', color: 'pink' }, { id: 4, name: 'zoe', color: 'yellow' }]);
+        let col2 = Linq.from([{ personId: 1, make: 'Honda', model: 'Civic' },
+            { personId: 2, make: 'Toyota', model: 'Camry' },
+            { personId: 2, make: 'Acura', model: 'TL' },
+            { personId: 3, make: 'Ford', model: 'Focus' }]);
+        let col3 = Linq.from([{ color: 'blue', trait: 'reliable' }, { color: 'BLUE', trait: 'sincere' },
+            { color: 'red', trait: 'courageous' }, { color: 'RED', trait: 'confident' },
+            { color: 'green', trait: 'practical' }, { color: 'GREEN', trait: 'intelligent' },
+            { color: 'pink', trait: 'friendly' }, { color: 'PINK', trait: 'sensitive' },
+            { color: 'yellow', trait: 'happy' }, { color: 'YELLOW', trait: 'impulsive' }]);
+
+        let carFunc = (outer: any, inner: any) => outer.name + ': ' + inner.make + ' ' + inner.model;
+
+        it('works on a join that should return results', () =>
+        {
+            let value = col1.join(col2,
+                x => x.id,
+                x => x.personId,
+                carFunc);
+
+            expect(value.toArray()).toEqual(["steve: Honda Civic", "paul: Toyota Camry", "paul: Acura TL", "eve: Ford Focus"]);
+        });
+
+        it('works on a join that should not return results', () =>
+        {
+            let value = col1.join(col2,
+                x => x.id * 10,
+                x => x.personId,
+                carFunc);
+
+            expect(value.toArray()).toEqual([]);
+        });
+
+        it('works with an array', () =>
+        {
+            let value = col1.join([{ personId: 2, make: 'Lexus', model: 'LS' }],
+                x => x.id,
+                x => x.personId,
+                carFunc);
+
+            expect(value.toArray()).toEqual(["paul: Lexus LS"]);
+        });
+
+        it('works with empty sources', () =>
+        {
+            let onEmpty = Linq.from([]).join(col2,
+                x => x.id,
+                x => x.personId,
+                carFunc);
+
+            let withEmpty = col1.join([],
+                x => x.id,
+                x => x.personId,
+                carFunc);
+
+            expect(onEmpty.toArray()).toEqual([]);
+            expect(withEmpty.toArray()).toEqual([]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            let value = col1.join(col3,
+                x => x.color,
+                x => x.color,
+                (outer, inner) => outer.name + ': ' + inner.trait,
+                (x: string, y: string) => x.toLowerCase() == y.toLowerCase());
+
+            expect(value.toArray()).toEqual(["steve: reliable", "steve: sincere", "paul: courageous", "paul: confident", "eve: friendly", "eve: sensitive", "zoe: happy", "zoe: impulsive"]);
+        });
+
+        it('throws an exception on a null "inner" parameter', () =>
+        {
+            expect(function () { col1.join(null, x => x.id, (x: any) => x.id, (x, y) => null); }).toThrow();
+        });
+
+        it('throws an exception on a null "outer selector" parameter', () =>
+        {
+            expect(function () { col1.join(col2, null, (x: any) => x.personId, (x, y) => null); }).toThrow();
+        });
+
+        it('throws an exception on a null "inner selector" parameter', () =>
+        {
+            expect(function () { col1.join(col2, x => x.id, null, (x, y) => null); }).toThrow();
+        });
+
+        it('throws an exception on a null "result selector" parameter', () =>
+        {
+            expect(function () { col1.join(col2, x => x.id, x => x.personId, null); }).toThrow();
+        });
+    });
+
+    describe('last', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4, 5, 6]);
+
+        it('works with a predicate', () =>
+        {
+            let predicateFirst = col.last(x => x < 4);
+
+            expect(predicateFirst).toEqual(3);
+        });
+
+        it('works without a predicate', () =>
+        {
+            let basicFirst = col.last();
+
+            expect(basicFirst).toEqual(6);
+        });
+    });
+
+    describe('lastIndexOfElement', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
+        let col2 = Linq.from(['a', 'b', 'c', 'd', 'a', 'b', 'c', 'd']);
+
+        it('works on a non-empty collection', () =>
+        {
+            expect(col1.lastIndexOfElement(3)).toEqual(8);
+            expect(col1.lastIndexOfElement(99)).toEqual(-1);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).lastIndexOfElement(2)).toEqual(-1);
+        });
+
+        it('works with a comparer', () =>
+        {
+            var comparer = (x: string, y: string) => x.toLowerCase() == y.toLowerCase();
+            expect(col2.lastIndexOfElement('B', comparer)).toEqual(5);
+        });
+    });
+
 
 
     describe('orderBy', () =>
