@@ -818,7 +818,7 @@ export class Linq<T>
      * none of the elements satisfy the 'predicate'.
      * @param predicate The function used to determine which index to return
      */
-    public indexOf(predicate: Predicate<T>): number
+    public indexOfFirst(predicate: Predicate<T>): number
     {
         if (predicate == null)
             throw new Error('Invalid predicate.');
@@ -947,7 +947,7 @@ export type EqualityComparer<T> = (x: T, y: T) => boolean;
 export type Selector<T, U> = (item: T) => U;
 export type IndexedSelector<T, U> = (item: T, index: number) => U;
 export type MergeSelector<T, U, V> = (item1: T, item2: U) => V;
-export type LinqCompatible<T> = Linq<T> | Array<T>;
+export type LinqCompatible<T> = Array<T> | Linq<T>;
 export type Action<T> = (item: T) => void;
 export type IndexedAction<T> = (item: T, index: number) => void;
 export type GroupJoinResultSelector<T, U, V> = (outerValue: T, innerValues: Array<U>) => V;

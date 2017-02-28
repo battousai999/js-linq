@@ -931,24 +931,24 @@ describe('Linq', () => {
         });
     });
 
-    describe('indexOf', () =>
+    describe('indexOfFirst', () =>
     {
         let col = Linq.from([1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6]);
 
         it('works on a non-empty collection', () =>
         {
-            expect(col.indexOf(x => x == 3)).toEqual(2);
-            expect(col.indexOf(x => x == 99)).toEqual(-1);
+            expect(col.indexOfFirst(x => x == 3)).toEqual(2);
+            expect(col.indexOfFirst(x => x == 99)).toEqual(-1);
         });
 
         it('works with an empty collection', () =>
         {
-            expect(Linq.from([]).indexOf(x => x == 2)).toEqual(-1);
+            expect(Linq.from([]).indexOfFirst(x => x == 2)).toEqual(-1);
         });
 
         it('throws an exception on a null predicate', () =>
         {
-            expect(() => { col.indexOf(null); }).toThrow();
+            expect(() => { col.indexOfFirst(null); }).toThrow();
         });
     });
 
