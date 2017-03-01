@@ -1189,7 +1189,136 @@ describe('Linq', () => {
         });
     });
 
+    describe('lastOrDefault', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6]);
+        let col2 = Linq.from([6, 5, 4, 3, 2, 1]);
 
+        it('works with a predicate', () =>
+        {
+            let defaultLast1 = col1.lastOrDefault(x => x < 4, 99);
+            let defaultLast2 = col1.lastOrDefault(x => x > 100, 99);
+            let defaultLast3 = col2.lastOrDefault(x => x < 4, 99);
+            let defaultLast4 = col2.lastOrDefault(x => x > 100, 99);
+
+            expect(defaultLast1).toEqual(3);
+            expect(defaultLast2).toEqual(99);
+            expect(defaultLast3).toEqual(1);
+            expect(defaultLast4).toEqual(99);
+        });
+        
+        it('works with only a predicate', () =>
+        {
+            let defaultLast1 = col1.lastOrDefault(x => x < 4);
+            let defaultLast2 = col1.lastOrDefault(x => x > 100);
+            let defaultLast3 = col2.lastOrDefault(x => x < 4);
+            let defaultLast4 = col2.lastOrDefault(x => x > 100, null);
+
+            expect(defaultLast1).toEqual(3);
+            expect(defaultLast2).toBeUndefined();
+            expect(defaultLast3).toEqual(1);
+            expect(defaultLast4).toBeNull();
+        });
+
+        it('works without a predicate', () =>
+        {
+            let defaultLast1 = col1.lastOrDefault(null, 99);
+            let defaultLast2 = Linq.from([]).lastOrDefault(null, 99);
+
+            expect(defaultLast1).toEqual(6);
+            expect(defaultLast2).toEqual(99);
+        });
+    });
+
+    describe('min', () =>
+    {
+        let col1 = Linq.from([15, 42, 98, 6, 475, 3, 333]);
+        let col2 = Linq.from([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works without a selector', () =>
+        {
+            expect(col1.min()).toEqual(3);
+        });
+
+        it('works with a selector', () =>
+        {
+            var value = col2.min(x => x.value);
+
+            expect(value).toEqual(17);
+        });
+
+        it('throws an exception on an empty collection', () =>
+        {
+            expect(() => { Linq.from([]).min(); }).toThrow();
+        });
+    });
+
+    describe('minBy', () =>
+    {
+        let col = Linq.from([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works with a non-empty collection', () =>
+        {
+            var value = col.minBy(x => x.value);
+
+            expect(value).toEqual({ id: 3, value: 17 });
+        });
+
+        it('throws an exception on a null "selector" function', () =>
+        {
+            expect(() => { col.minBy(null); }).toThrow();
+        });
+
+        it('throws an exception on an empty collection', () =>
+        {
+            expect(() => { Linq.from([]).minBy(x => x.value); }).toThrow();
+        });
+    });
+
+    describe('max', () =>
+    {
+        let col1 = Linq.from([15, 42, 98, 6, 475, 3, 333]);
+        let col2 = Linq.from([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works without a selector', () =>
+        {
+            expect(col1.max()).toEqual(475);
+        });
+
+        it('works with a selector', () =>
+        {
+            var value = col2.max(x => x.value);
+
+            expect(value).toEqual(9000);
+        });
+
+        it('throws an exception on an empty collection', () =>
+        {
+            expect(() => { Linq.from([]).max(); }).toThrow();
+        });
+    });
+
+    describe('maxBy', () =>
+    {
+        let col = Linq.from([{ id: 1, value: 9000 }, { id: 2, value: 57 }, { id: 3, value: 17 }, { id: 4, value: 23 }, { id: 5, value: 94 }]);
+
+        it('works with a non-empty collection', () =>
+        {
+            var value = col.maxBy(x => x.value);
+
+            expect(value).toEqual({ id: 1, value: 9000 });
+        });
+
+        it('throws an exception on a null "selector" function', () =>
+        {
+            expect(() => { col.maxBy(null); }).toThrow();
+        });
+
+        it('throws an exception on an empty collection', () =>
+        {
+            expect(() => { Linq.from([]).maxBy(x => x.value); }).toThrow();
+        });
+    });
 
     describe('orderBy', () =>
     {
@@ -1236,6 +1365,106 @@ describe('Linq', () => {
             expect(function () { col1.orderBy(null); }).toThrow();
         });
     });
+
+    describe('orderByDescending', () =>
+    {
+        let col1 = Linq.from([2, 5, 1, 3, 4, 6]);
+        let col2 = Linq.from([{ id: 3, value: 543 }, { id: 4, value: 956 }, { id: 1, value: 112 }, { id: 2, value: 456 }]);
+        let col3 = Linq.from([{ id: 3, value: "c" }, { id: 4, value: "D" }, { id: 1, value: "a" }, { id: 2, value: "B" }]);
+
+        let identityKeySelector = (x: any) => x;
+        let keySelector = (x: any) => x.value;
+        let selector = (x: any) => x.id;
+
+        let comparer = function (x: string, y: string)
+        {
+            let tempX = x.toLowerCase();
+            let tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', () =>
+        {
+            expect(col1.orderByDescending(identityKeySelector).toArray()).toEqual([6, 5, 4, 3, 2, 1]);
+            expect(col1.orderByDescending(Linq.identity).toArray()).toEqual([6, 5, 4, 3, 2, 1]);
+            expect(col2.orderByDescending(keySelector).select(selector).toArray()).toEqual([4, 3, 2, 1]);
+        });
+
+        it('works with string keys and no comparer passed', () =>
+        {
+            expect(col3.orderByDescending(keySelector).select(selector).toArray()).toEqual([3, 1, 4, 2]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            expect(col3.orderByDescending(keySelector, comparer).select(selector).toArray()).toEqual([4, 3, 2, 1]);
+        });
+
+        it('throws an exception on a null key selector', () =>
+        {
+            expect(() => { col1.orderByDescending(null); }).toThrow();
+        });
+    });
+
+    describe('pad', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4]);
+
+        it('works on a non-empty collection', () =>
+        {
+            expect(col.pad(8, 0).toArray()).toEqual([1, 2, 3, 4, 0, 0, 0, 0]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).pad(8, 'a').toArray()).toEqual(['a', 'a', 'a', 'a', 'a', 'a', 'a', 'a']);
+        });
+
+        it('works in a situation when no padding needs to occur', () =>
+        {
+            expect(col.pad(4, 99).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works with a null padding value', () =>
+        {
+            expect(col.pad(6, null).toArray()).toEqual([1, 2, 3, 4, null, null]);
+        });
+    });
+
+    describe('padWith', () =>
+    {
+        let col = Linq.from([0, 1, 2, 3]);
+
+        let padFunc = i => i * 10 + i;
+
+        it('works on a non-empty collection', () =>
+        {
+            expect(col.padWith(8, padFunc).toArray()).toEqual([0, 1, 2, 3, 44, 55, 66, 77]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).padWith(8, padFunc).toArray()).toEqual([0, 11, 22, 33, 44, 55, 66, 77]);
+        });
+
+        it('works in a situation where no padding needs to occur', () =>
+        {
+            expect(col.padWith(4, padFunc).toArray()).toEqual([0, 1, 2, 3]);
+        });
+
+        it('throws an exception on a null padding selector', () =>
+        {
+            expect(() => { col.padWith(8, null); }).toThrow();
+        });
+    });
+
+    
 
     describe('select', () =>
     {

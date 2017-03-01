@@ -663,7 +663,7 @@ export class Linq<T>
         }
 
         if (throwIfNotFound)
-            throw new Error('No first item was found in collection.');
+            throw new Error('No first item was found in the collection.');
         else
             return defaultValue;
     }
@@ -1018,19 +1018,40 @@ export class Linq<T>
      */
     public last(predicate?: Predicate<T>): T
     {
+        return this.lastBasedOperator(predicate, null, true);
+    }
+
+    /**
+     * Returns either the last element of 'this' collection (if 'predicate' is not given) or the
+     * last element of 'this' collection that satisfies the 'predicate' (if 'predicate is given).
+     * If there is no "last" element to return (either because 'this' collection is empty or no element
+     * satisfies the 'predicate'), the 'defaultValue' is returned.
+     * @param defaultValue the value to return if no "last" element is found
+     * @param predicate Optional, the predicate function used to determine the element to return
+     */
+    public lastOrDefault(predicate?: Predicate<T>, defaultValue?: T): T
+    {
+        return this.lastBasedOperator(predicate, defaultValue, false);
+    }
+
+    private lastBasedOperator(predicate: Predicate<T>, defaultValue: T, throwIfNotFound: boolean): T
+    {
         this.processDeferredSort();
 
-        if (predicate == null)
-            return this.array[this.array.length - 1];
+        let length = this.array.length;
 
         for (let i = this.array.length - 1; i >= 0; i--)
         {
-            if (i in this.array && predicate(this.array[i]))
+            if (i in this.array && (predicate == null || predicate(this.array[i])))
                 return this.array[i];
         }
 
-        throw new Error('No last element was found in the collection.');
+        if (throwIfNotFound)
+            throw new Error('No last item was found in the collection.');
+        else
+            return defaultValue;
     }
+    
 
     /**
      * Returns the index of the last element to be equal to the given 'item'.  If the optional 'comparer' 
@@ -1062,7 +1083,137 @@ export class Linq<T>
         return -1;
     }
 
+    /**
+     * Returns either the minimum element (if 'selector' is not given) or the minimum element projected by 
+     * the 'selector' function in 'this' collection.  If 'this' collection is empty, an error is thrown.
+     * @param selector Optional, the function that projects the value of which to determine a minimum
+     */
+    public min<U>(selector?: Selector<T, U>): T | U
+    {
+        if (this.array.length == 0)
+            throw new Error('No minimum element.');
 
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let minValue = (selector == null ? this.array[0] : selector(this.array[0]));
+
+        for (let i = 1; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let tempValue = (selector == null ? this.array[i] : selector(this.array[i]));
+
+            if (tempValue < minValue)
+                minValue = tempValue;
+        }
+
+        return minValue;
+    }
+
+    /**
+     * Returns the "minimum" element of 'this' collection, determined by the value projected by 
+     * the 'selector' function.  If 'this' collection is empty, an error is thrown.
+     * @param selector The function that projects the value to used to determine a minimum element
+     */
+    public minBy<U>(selector: Selector<T, U>): T
+    {
+        if (this.array.length == 0)
+            throw new Error('No minimum element.');
+        
+        if (selector == null)
+            throw new Error('Invalid selector.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let minValue = selector(this.array[0]);
+        let minObject = this.array[0];
+
+        for (let i = 1; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let tempObject = this.array[i];
+            let tempValue = selector(tempObject);
+
+            if (tempValue < minValue)
+            {
+                minValue = tempValue;
+                minObject = tempObject;
+            }
+        }
+
+        return minObject;
+    }
+
+    /**
+     * Returns either the maximum element (if 'selector' is not given) or the maximum element projected by 
+     * the 'selector' function in 'this' collection.  If 'this' collection is empty, an error is thrown.
+     * @param selector Optional, the function that projects the value of which to determine a maximum
+     */
+    public max<U>(selector?: Selector<T, U>): T | U
+    {
+        if (this.array.length == 0)
+            throw new Error('No maximum element.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let maxValue = (selector == null ? this.array[0] : selector(this.array[0]));
+
+        for (let i = 1; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let tempValue = (selector == null ? this.array[i] : selector(this.array[i]));
+
+            if (tempValue > maxValue)
+                maxValue = tempValue;
+        }
+
+        return maxValue;
+    }
+
+    /**
+     * Returns the "maximum" element of 'this' collection, determined by the value projected by 
+     * the 'selector' function.  If 'this' collection is empty, an error is thrown.
+     * @param selector The function that projects the value to used to determine a maximum element
+     */
+    public maxBy<U>(selector: Selector<T, U>): T
+    {
+        if (this.array.length == 0)
+            throw new Error('No maximum element.');
+        
+        if (selector == null)
+            throw new Error('Invalid selector.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let maxValue = selector(this.array[0]);
+        let maxObject = this.array[0];
+
+        for (let i = 1; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let tempObject = this.array[i];
+            let tempValue = selector(tempObject);
+
+            if (tempValue > maxValue)
+            {
+                maxValue = tempValue;
+                maxObject = tempObject;
+            }
+        }
+
+        return maxObject;
+    }
 
     /**
      * Returns the elements of 'this' collection sorted in ascending order of the projected value
@@ -1076,6 +1227,26 @@ export class Linq<T>
      */
     public orderBy<U>(keySelector: Selector<T, U>, comparer?: Comparer<U>): Linq<T>
     {
+        return this.orderByBasedOperator(keySelector, comparer, false);
+    }   
+
+    /**
+     * Returns the elements of 'this' collection sorted in descending order of the projected value
+     * given by the 'keySelector' function, using the 'comparer' function to compare the projected
+     * values.  If the 'comparer' function is not given, a comparer that uses the natural ordering 
+     * of the values will be used to compare the projected values.  Note that subsequent, immediate 
+     * calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
+     * is, sorting when two elements are determined to be equal by this orderBy call).
+     * @param keySelector The function that projects the value used to sort the elements
+     * @param comparer Optional, the function that compares projected values
+     */
+    public orderByDescending<U>(keySelector: Selector<T, U>, comparer?: Comparer<U>): Linq<T>
+    {
+        return this.orderByBasedOperator(keySelector, comparer, true);
+    }
+
+    private orderByBasedOperator<U>(keySelector: Selector<T, U>, comparer: Comparer<U>, reverse: boolean): Linq<T>
+    {
         if (keySelector == null)
             throw new Error('Invalid key selector.');
 
@@ -1085,10 +1256,66 @@ export class Linq<T>
 
         let results = new Linq(this.array, true);
 
-        results.deferredSort = { keySelector: keySelector, comparer: resolvedComparer, reverse: false, next: null };
+        results.deferredSort = { keySelector: keySelector, comparer: resolvedComparer, reverse: reverse, next: null };
 
         return results;
     }
+
+    /**
+     * Returns a collection the same elements as 'this' collection but with extra elements added 
+     * to the end so that the results collection has a length of at least 'width'.  The extra
+     * elements that are added are equal to the 'padding' value.
+     * @param width The length that the results collection will be at least equal to
+     * @param padding The value that is added to the results collection to fill it out
+     */
+    public pad(width: number, padding: T): Linq<T>
+    {
+        if (width == null)
+            throw new Error('Invalid width.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        if (length >= width)
+            return new Linq(this.array);
+
+        return new Linq(this.array.concat(Linq.repeat(padding, width - length).toArray()), false);
+    }
+
+    /**
+     * Returns a collection the same elements as 'this' collection but with extra elements added 
+     * to the end so that the results collection has a length of at least 'width'.  The extra
+     * elements that are added are determined by the 'paddingSelector' function.  
+     * @param width The length that the results collection will be at least equal to
+     * @param paddingSelector The function that indicates the value to add to the results collection
+     */
+    public padWith(width: number, paddingSelector: Selector<number, T>): Linq<T>
+    {
+        if (width == null)
+            throw new Error('Invalid width.');
+
+        if (paddingSelector == null)
+            throw new Error('Invalid padding selector.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        if (length >= width)
+            return new Linq(this.array);
+
+        let paddingArray = new Array<T>();
+
+        for (let i = length; i < width; i++)
+        {
+            paddingArray.push(paddingSelector(i));
+        }
+
+        return new Linq(this.array.concat(paddingArray), false);
+    }
+
+
 
     /**
      * Returns a collection of values projected from the elements of 'this' collection.
