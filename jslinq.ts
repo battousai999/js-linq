@@ -1315,6 +1315,34 @@ export class Linq<T>
         return new Linq(this.array.concat(paddingArray), false);
     }
 
+    /**
+     * Returns the same elements as 'this' collection, but first executes an 'action' on
+     * each element of 'this' collection.
+     * @param action The function to execute on each element of 'this' collection
+     */
+    public pipe(action: Action<T> | IndexedAction<T>): Linq<T>
+    {
+        if (action == null)
+            throw new Error('Invalid action.');
+
+        this.processDeferredSort();
+
+        this.array.forEach(action);
+
+        return new Linq(this.array);
+    }
+
+    /**
+     * Returns 'this' collection with the 'value' prepended (i.e, added to the front).
+     * @param value The value to be prepended to 'this' collection
+     */
+    public prepend(value: T): Linq<T>
+    {
+        this.processDeferredSort();
+
+        return new Linq([value].concat(this.array), false);
+    }
+
 
 
     /**

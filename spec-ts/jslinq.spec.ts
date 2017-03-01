@@ -1441,7 +1441,7 @@ describe('Linq', () => {
     {
         let col = Linq.from([0, 1, 2, 3]);
 
-        let padFunc = i => i * 10 + i;
+        let padFunc = (i: number) => i * 10 + i;
 
         it('works on a non-empty collection', () =>
         {
@@ -1461,6 +1461,55 @@ describe('Linq', () => {
         it('throws an exception on a null padding selector', () =>
         {
             expect(() => { col.padWith(8, null); }).toThrow();
+        });
+    });
+
+    describe('pipe', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4]);
+
+        let obj1 = { val: 1, result: 0 },
+            obj2 = { val: 2, result: 0 },
+            obj3 = { val: 3, result: 0 };
+
+        let col2 = Linq.from([obj1, obj2, obj3]);
+        let arr1 = new Array<number>(),
+            arr2 = new Array<number>(),
+            arr3 = new Array<any>();
+
+        it('works with a non-empty collection', () =>
+        {
+            expect(col1.pipe((x: any) => { arr1.push(x); }).toArray()).toEqual([1, 2, 3, 4]);
+            expect(arr1).toEqual([1, 2, 3, 4]);
+
+            expect(col1.pipe((x, i) => { arr2.push(i); }).toArray()).toEqual([1, 2, 3, 4]);
+            expect(arr2).toEqual([0, 1, 2, 3]);
+        });
+
+        it('works with an empty collection', () =>
+        {
+            expect(Linq.from([]).pipe((x: any) => { arr3.push(x); }).toArray()).toEqual([]);
+            expect(arr3).toEqual([]);
+        });
+    });
+
+    describe('prepend', () =>
+    {
+        let col = Linq.from([2, 3, 4, 5, 6, 7]);
+
+        it('works on a non-empty collection', () =>
+        {
+            expect(col.prepend(1).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).prepend('a').toArray()).toEqual(['a']);
+        });
+
+        it('works with a null value to prepend', () =>
+        {
+            expect(col.prepend(null).toArray()).toEqual([null, 2, 3, 4, 5, 6, 7]);
         });
     });
 
