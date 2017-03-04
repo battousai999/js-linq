@@ -85,7 +85,7 @@ export class Linq<T>
             throw new Error('Invalid \'pattern\' value.');
 
         if (text == null)
-            return new Linq([], false);
+            return new Linq<string>([], false);
 
         if (flags == null)
             flags = '';
@@ -154,22 +154,22 @@ export class Linq<T>
 
     public static get defaultStringComparer(): Comparer<string>
     {
-        return this.caseSensitiveStringComparer;
+        return Linq.caseSensitiveStringComparer;
     }
 
     public static get caseSensitiveStringComparer(): Comparer<string>
     {
-        return this._caseSensitiveStringComparer;
+        return Linq._caseSensitiveStringComparer;
     }
 
     private static _caseSensitiveStringComparer(x: string, y: string): number
     {
-        return this._generalComparer(x, y);
+        return Linq._generalComparer(x, y);
     }
 
     public static get caseInsensitiveStringComparer(): Comparer<string>
     {
-        return this._caseInsensitiveStringComparer;
+        return Linq._caseInsensitiveStringComparer;
     }
 
     private static _caseInsensitiveStringComparer(x: string, y: string): number
@@ -177,22 +177,22 @@ export class Linq<T>
         let lowerX = (x == null ? null : x.toLowerCase());
         let lowerY = (y == null ? null : y.toLowerCase());
 
-        return this._caseSensitiveStringComparer(lowerX, lowerY);
+        return Linq._caseSensitiveStringComparer(lowerX, lowerY);
     }
 
     public static get defaultConvertingStringComparer(): Comparer<any>
     {
-        return this.caseSensitiveConvertingStringComparer;
+        return Linq.caseSensitiveConvertingStringComparer;
     }
 
     public static get caseSensitiveConvertingStringComparer(): Comparer<any>
     {
-        return this._caseSensitiveConvertingStringComparer;
+        return Linq._caseSensitiveConvertingStringComparer;
     }
 
     public static get caseInsensitiveConvertingStringComparer(): Comparer<any>
     {
-        return this._caseInsensitiveConvertingStringComparer;
+        return Linq._caseInsensitiveConvertingStringComparer;
     }
 
     private static _caseSensitiveConvertingStringComparer: Comparer<any> = Linq.buildConvertingStringComparer(Linq._caseSensitiveStringComparer);
@@ -202,8 +202,8 @@ export class Linq<T>
     {
         return (x: any, y: any) =>
         {
-            let convertedX = this.convertToString(x);
-            let convertedY = this.convertToString(y);
+            let convertedX = Linq.convertToString(x);
+            let convertedY = Linq.convertToString(y);
 
             return comparer(convertedX, convertedY);
         };
@@ -211,7 +211,7 @@ export class Linq<T>
 
     public static get generalComparer(): Comparer<any>
     {
-        return this._generalComparer;
+        return Linq._generalComparer;
     }
 
     private static _generalComparer(x: any, y: any): number
@@ -234,7 +234,7 @@ export class Linq<T>
         {
             let value: any = comparer(x, y);
 
-            if (this.isBoolean(value))
+            if (Linq.isBoolean(value))
                 return value;
             else
                 return (value == 0);
@@ -243,7 +243,7 @@ export class Linq<T>
 
     private static convertToString(value: any) : string
     {
-        if (this.isString(value))
+        if (Linq.isString(value))
             return value;
         else 
             return (value == null ? null : value.toString());
@@ -272,7 +272,7 @@ export class Linq<T>
      * @param resultSelector Optional, the function that projects the final value to the returned result
      * @return The final, aggregate value.
      */
-    public aggregate<U, V>(seed: U, operation: (accum: U, element: T) => U, resultSelector?: Selector<U, V>): V
+    public aggregate<U, V>(seed: U, operation: Aggregator<U, T>, resultSelector?: Selector<U, V>): V
     {
         if (operation == null)
             throw new Error('Invalid operation.');
@@ -593,14 +593,14 @@ export class Linq<T>
         this.processDeferredSort();
 
         if (second == null)
-            second = [];
+            second = new Array<T>();
         
         let secondLinq = Linq.from(second);
 
         secondLinq.processDeferredSort();
 
         let length = this.array.length;
-        let results = new Linq([], false);
+        let results = new Linq<T>([], false);
 
         for (let i = 0; i < length; i++)
         {
@@ -672,7 +672,7 @@ export class Linq<T>
      * Executes the given 'action' on each element in 'this' collection.
      * @param action The function that is executed for each element in 'this' collection
      */
-    public foreach(action: Action<T> | IndexedAction<T>): void
+    public foreach(action: Action<T>): void
     {
         if (action == null)
             throw new Error('Invalid action');
@@ -899,7 +899,7 @@ export class Linq<T>
     public intersect(second: LinqCompatible<T>, comparer?: Comparer<T> | EqualityComparer<T>): Linq<T>
     {
         if (second == null)
-            return new Linq([], false);
+            return new Linq<T>([], false);
 
         let secondLinq = Linq.from(second);
 
@@ -910,7 +910,7 @@ export class Linq<T>
         let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
 
         let length = this.array.length;
-        let results = new Linq([], false);
+        let results = new Linq<T>([], false);
 
         for (let i = 0; i < length; i++)
         {
@@ -1320,7 +1320,7 @@ export class Linq<T>
      * each element of 'this' collection.
      * @param action The function to execute on each element of 'this' collection
      */
-    public pipe(action: Action<T> | IndexedAction<T>): Linq<T>
+    public pipe(action: Action<T>): Linq<T>
     {
         if (action == null)
             throw new Error('Invalid action.');
@@ -1343,13 +1343,89 @@ export class Linq<T>
         return new Linq([value].concat(this.array), false);
     }
 
+    /**
+     * Returns an equal-length collection where the N-th element is the aggregate of the
+     * 'operation' function performed on the first N-1 elements of 'this' collection (the
+     * first element of the results is set to the 'initialValue' value).  The 'operation' 
+     * function should be a commutative, binary operation (e.g., sum, multiplication, etc.)
+     * @param operation The function that aggregates the values of 'this' collection
+     */
+    public prescan<U>(operation: Aggregator<U, T>, initialValue: U): Linq<U>
+    {
+        if (operation == null)
+            throw new Error('Invalid operation.');
 
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        if (length == 0)
+            return new Linq<U>([], false);
+
+        let accumulator = initialValue;
+        let results = [accumulator];
+
+        for (let i = 0; i < length - 1; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            accumulator = operation(accumulator, this.array[i]);
+            results.push(accumulator);
+        }
+
+        return new Linq(results, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection in reverse order.
+     */
+    public reverse(): Linq<T>
+    {
+        this.processDeferredSort();
+
+        return new Linq(this.array.reverse(), false);
+    }
+
+    /**
+     * Returns an equal-length collection where the N-th element is the aggregate of 
+     * the 'operation' function performed on the first N elements of 'this' collection.  
+     * The 'operation' function should be a commutative, binary operation (e.g., sum, 
+     * multiplication, etc.).
+     * @param operation The function that aggregates the values of 'this' collection
+     */
+    public scan(operation: Aggregator<T, T>): Linq<T>
+    {
+        if (operation == null)
+            throw new Error('Invalid operation.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+
+        if (length == 0)
+            throw new Error('Cannot scan on an empty collection.');
+
+        let accumulator = this.array[0];
+        let results = [accumulator];
+
+        for (let i = 1; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            accumulator = operation(accumulator, this.array[i]);
+            results.push(accumulator);
+        }
+
+        return new Linq(results, false);
+    }
 
     /**
      * Returns a collection of values projected from the elements of 'this' collection.
      * @param selector The function that projects values from the elements
      */
-    public select<U>(selector: Selector<T, U> | IndexedSelector<T, U>): Linq<U>
+    public select<U>(selector: IndexedSelector<T, U>): Linq<U>
     {
         if (selector == null)
             throw new Error('Invalid selector.');
@@ -1357,6 +1433,193 @@ export class Linq<T>
         this.processDeferredSort();
 
         return new Linq(this.array.map(selector), false);
+    }
+
+    /**
+     * Returns the concatenation of values projected from the elements of 'this' collection by the
+     * 'collectionSelector' function.  If the 'resultSelector' function is given, then the results
+     * returned by this function will be projected from an element in the concatenation and the 
+     * element that originated the part of the concatenation.  Otherwise, the results returned by
+     * this function will be the element of the concatenation.
+     * @param collectionSelector The function that projects a collection of values from an element 
+     * @param resultSelector Optional, the function that projects the results from the concatenated results
+     */
+    public selectMany<U, V>(collectionSelector: CollectionSelector<T, U>, resultSelector?: MergeSelector<U, T, V>): Linq<V | U>
+    {
+        if (collectionSelector == null)
+            throw new Error('Invalid collection selector.');
+
+        this.processDeferredSort();
+
+        let innerLength = this.array.length;
+        let results = new Array<V | U>();
+
+        for (let i = 0; i < innerLength; i++)
+        {
+            let innerItem = this.array[i];
+            let outerCollection = collectionSelector(innerItem, i);
+
+            if (outerCollection == null)
+                continue;
+
+            let outerLinq = Linq.from(outerCollection);
+
+            outerLinq.processDeferredSort();
+
+            if (outerLinq.array.length == 0)
+                continue;
+
+            let outerLength = outerLinq.array.length;
+
+            for (let j = 0; j < outerLength; j++)
+            {
+                let outerItem = outerLinq.array[j];
+                let outerResult = (resultSelector == null ? outerItem : resultSelector(outerItem, innerItem));
+
+                results.push(outerResult);
+            }
+        }
+
+        return new Linq(results, false);
+    }
+
+    /**
+     * Returns whether 'this' collection is equal to the 'second' collection (that is, has the same elements in the
+     * same order).  If the 'comparer' function is given, it is used to determine whether elements from each of the
+     * two collections are equal.  Otherwise, the "===" operator is used to determine equality.
+     * @param second The collection to which 'this' collection is compared
+     * @param comparer Optional, the function used to compare elements of the two collections
+     */
+    public sequenceEqual(second: LinqCompatible<T>, comparer?: Comparer<T> | EqualityComparer<T>): boolean
+    {
+        if (second == null)
+            return false;
+
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+
+        this.processDeferredSort();
+
+        let secondLinq = Linq.from(second);
+
+        secondLinq.processDeferredSort();
+
+        let length = this.array.length;
+
+        if (length != secondLinq.array.length)
+            return false;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (normalizedComparer == null)
+            {
+                if (this.array[i] !== secondLinq.array[i])
+                    return false;
+            }
+            else if (!normalizedComparer(this.array[i], secondLinq.array[i]))
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns whether 'this' collection is equivalent to the 'second' collection (that is, has the 
+     * same elements regardless of order).  If the 'comparer' function is given, it is used to determine
+     * whether elements from each of the two collections are equal.  Otherwise, the "===" operator is
+     * used to determine equality.
+     * @param second The collection to which 'this' collection is compared
+     * @param comparer Optional, the function used to compare elements of the two collections
+     */
+    public sequenceEquivalent(second: LinqCompatible<T>, comparer?: Comparer<T> | EqualityComparer<T>): boolean
+    {
+        if (second == null)
+            return false;
+
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+
+        this.processDeferredSort();
+
+        let secondLinq = Linq.from(second);
+
+        secondLinq.processDeferredSort();
+
+        let length1 = this.array.length;
+        let length2 = secondLinq.array.length;
+
+        if (length1 != length2)
+            return false;
+
+        let lookup1 = this.toLookup(Linq.identity, normalizedComparer);
+        let lookup2 = secondLinq.toLookup(Linq.identity, normalizedComparer);
+
+        return ((lookup1.count() == lookup2.count()) &&
+            lookup1.all(x =>
+            {
+                let lookupNode = lookup2.firstOrDefault(y =>
+                {
+                    if (normalizedComparer == null)
+                        return (y.key === x.key);
+                    else
+                        return normalizedComparer(y.key, x.key);
+                },
+                null);
+
+                if (lookupNode == null)
+                    return false;
+
+                return (x.values.length == lookupNode.values.length);
+            }));
+    }
+
+
+
+    /**
+     * Returns a lookup-collection with the elements of 'this' collection grouped by a key
+     * projected by the 'keySelector' function.  If the optional 'comparer' is provided, then
+     * the comparer will be used to determine equality between keys.  If the 'comparer is not
+     * provided, the '===' operator will be used to determine equality between keys.
+     * @param keySelector The function used to project keys from the elements of 'this' collection
+     * @param comparer Optional, the function used to compare keys
+     */
+    public toLookup<U>(keySelector: Selector<T, U>, keyComparer?: Comparer<U> | EqualityComparer<U>): Linq<IGrouping<U, T>>
+    {
+        if (keySelector == null)
+            throw new Error('Invalid key selector.');
+
+        let normalizedKeyComparer = (keyComparer == null ? null : Linq.normalizeComparer(keyComparer));
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let results = new Linq<IGrouping<U, T>>(new Array<IGrouping<U, T>>(), false);
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let item = this.array[i];
+            let key = keySelector(item);
+
+            let lookupNode = results.firstOrDefault(x =>
+            {
+                if (normalizedKeyComparer == null)
+                    return x.key === key;
+                else
+                    return normalizedKeyComparer(x.key, key);
+            },
+            null);
+
+            if (lookupNode == null)
+            {
+                lookupNode = new Grouping<U, T>(key, new Array<T>());
+                results.array.push(lookupNode);
+            }
+
+            lookupNode.values.push(item);
+        }
+
+        return results;
     }
 
     /**
@@ -1371,6 +1634,39 @@ export class Linq<T>
         this.processDeferredSort();
 
         return new Linq(this.array.filter(predicate), false);
+    }
+
+    /**
+     * Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
+     * collection are not equal, the size of the returned collection will equal the minimum of the
+     * sizes of 'this' collection and the 'second' collection.
+     * @param second The collection to zip with 'this' collection
+     * @param resultSelector Optional, the function to use to project the result values
+     */
+    public zip<U, V>(second: LinqCompatible<U>, resultSelector?: MergeSelector<T, U, V>): Linq<V>
+    {
+        let actualResultSelector = (resultSelector == null ? Linq.merge : resultSelector);
+
+        this.processDeferredSort();
+
+        if (second == null)
+            return new Linq<V>([], false);
+
+        let secondLinq = Linq.from(second);
+
+        secondLinq.processDeferredSort();
+
+        let length = Math.min(this.array.length, secondLinq.array.length);
+        let results = new Array<V>();
+
+        for (let i = 0; i < length; i++)
+        {
+            results.push(actualResultSelector(this.array[i], secondLinq.array[i]));
+        }
+
+        return new Linq(results, false);        
     }
     
     /**
@@ -1426,13 +1722,14 @@ export type Predicate<T> = (item: T) => boolean;
 export type Comparer<T> = (x: T, y: T) => number;
 export type EqualityComparer<T> = (x: T, y: T) => boolean;
 export type Selector<T, U> = (item: T) => U;
-export type IndexedSelector<T, U> = (item: T, index: number) => U;
+export type IndexedSelector<T, U> = (item: T, index?: number) => U;
 export type MergeSelector<T, U, V> = (item1: T, item2: U) => V;
 export type LinqCompatible<T> = Array<T> | Linq<T>;
-export type Action<T> = (item: T) => void;
-export type IndexedAction<T> = (item: T, index: number) => void;
+export type Action<T> = (item: T, index?: number) => void;
 export type GroupJoinResultSelector<T, U, V> = (outerValue: T, innerValues: Array<U>) => V;
 export type JoinResultSelector<T, U, V> = (outerValue: T, innerValue: U) => V;
+export type Aggregator<T, U> = (accumulator: T, value: U) => T;
+export type CollectionSelector<T, U> = (item: T, index?: number) => LinqCompatible<U>;
 
 export interface IGrouping<Key, Value>
 {
