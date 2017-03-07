@@ -195,9 +195,6 @@ export class Linq<T>
         return Linq._caseInsensitiveConvertingStringComparer;
     }
 
-    private static _caseSensitiveConvertingStringComparer: Comparer<any> = Linq.buildConvertingStringComparer(Linq._caseSensitiveStringComparer);
-    private static _caseInsensitiveConvertingStringComparer: Comparer<any> = Linq.buildConvertingStringComparer(Linq._caseInsensitiveStringComparer);
-
     private static buildConvertingStringComparer(comparer: Comparer<string>): Comparer<any>
     {
         return (x: any, y: any) =>
@@ -208,6 +205,9 @@ export class Linq<T>
             return comparer(convertedX, convertedY);
         };
     }
+
+    private static _caseSensitiveConvertingStringComparer: Comparer<any> = Linq.buildConvertingStringComparer(Linq._caseSensitiveStringComparer);
+    private static _caseInsensitiveConvertingStringComparer: Comparer<any> = Linq.buildConvertingStringComparer(Linq._caseInsensitiveStringComparer);
 
     public static get generalComparer(): Comparer<any>
     {
@@ -1571,7 +1571,406 @@ export class Linq<T>
             }));
     }
 
+    /**
+     * Returns either the only element of 'this' collection (if 'predicate' is not given) or the
+     * first (and only) element of 'this' collection that satisfies the 'predicate' (if 'predicate' is 
+     * given).  If there are either multiple elements in 'this' collection (if 'predicate is not given)
+     * or there are multiple elements that satisfy the 'predicate' (if 'predicate' is given), then an
+     * error is thrown.  If there is no "single" element (either because 'this' collection is empty or
+     * no element satisfies the 'predicate'), an error is thrown.
+     * @param predicate Optional, the predicate function used to determine the element to return
+     */
+    public single(predicate?: Predicate<T>): T
+    {
+        return this.singleBasedOperator(predicate, null, true);
+    }
 
+    /**
+     * Returns either the only element of 'this' collection (if 'predicate' is not given) or the
+     * first (and only) element of 'this' collection that satisfies the 'predicate' (if 'predicate' is 
+     * given).  If there are either multiple elements in 'this' collection (if 'predicate is not given)
+     * or there are multiple elements that satisfy the 'predicate' (if 'predicate' is given), then an
+     * error is thrown.  If there is no "single" element (either because 'this' collection is empty or
+     * no element satisfies the 'predicate'), the 'defaultValue' is returned.
+     * @param defaultValue The default value that is returned if no "single" element is found
+     * @param predicate Optional, the predicate function used to determine the element to return
+     */
+    public singleOrDefault(predicate?: Predicate<T>, defaultValue?: T): T
+    {
+        return this.singleBasedOperator(predicate, defaultValue, false);
+    }
+
+    private singleBasedOperator(predicate: Predicate<T>, defaultValue: T, throwWhenNotFound: boolean): T
+    {
+        this.processDeferredSort();
+
+        if (predicate == null)
+        {
+            if (this.array.length == 0)
+            {
+                if (throwWhenNotFound)
+                    throw new Error('No single element in the empty collection.');
+                else 
+                    return defaultValue;
+            }
+
+            if (this.array.length > 1)
+                throw new Error('More than one element in the collection.');
+
+            return this.array[0];
+        }
+
+        let length = this.array.length;
+        let isFound = false;
+        let foundValue: T = null;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (i in this.array && predicate(this.array[i]))
+            {
+                if (isFound)
+                    throw new Error('More than one element satisfied the predicate in the collection.');
+
+                isFound = true;
+                foundValue = this.array[i];
+            }
+        }
+
+        if (!isFound)
+        {
+            if (throwWhenNotFound)
+                throw new Error('No single element satisfied the predicate in the collection.');
+            else
+                return defaultValue;
+        }
+
+        return foundValue;
+    }
+
+    /**
+     * Returns either the only element of 'this' collection or the value returned by the 'fallback'
+     * function if 'this' collection is empty.  If there are more than one element in 'this' collection,
+     * then an exception will be thrown.
+     * @param fallback The function that determines the value to return if there are no elements in 'this' collection
+     */
+    public singleOrFallback(fallback: () => T): T
+    {
+        if (fallback == null)
+            throw new Error('Invalid fallback function.');
+
+        this.processDeferredSort();
+
+        if (this.array.length == 0)
+            return fallback();
+        else if (this.array.length == 1)
+            return this.array[0];
+        else
+            throw new Error('More than one element in the collection.');
+    }
+
+    /**
+     * Returns the elements of 'this' collection with the first 'count' number of elements skipped.
+     * @param count The number of elements to skip from 'this' collection
+     */
+    public skip(count: number): Linq<T>
+    {
+        if (count == null || isNaN(count))
+            throw new Error('Invalid count.');
+
+        this.processDeferredSort();
+
+        if (count < 0)
+            count = 0;
+
+        return new Linq(this.array.slice(count), false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection, skipping initial elements until an element satisfies
+     * the 'predicate' function (that first element that satisfies the 'predicate' function is 
+     * included in the results).
+     * @param predicate The function that indicates when to stop skipping elements
+     */
+    public skipUntil(predicate: Predicate<T>): Linq<T>
+    {
+        if (predicate == null)
+            throw new Error('Invalid predicate.');
+
+        return this.skipWhile((x) => !predicate(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection skipping initial elements until an element does not
+     * satisfy the 'predicate' function (that first element that fails to satisfy the 'predicate' function
+     * is included in the results).
+     * @param predicate The function that indicates which of the initial elements to skip
+     */
+    public skipWhile(predicate: Predicate<T>): Linq<T>
+    {
+        if (predicate == null)
+            throw new Error('Invalid predicate.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let results = new Array<T>();
+        let isSkipping = true;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = this.array[i];
+
+            if (!isSkipping)
+                results.push(value);
+            else if (!predicate(value))
+            {
+                isSkipping = false;
+                results.push(value);
+            }
+        }
+
+        return new Linq(results, false);
+    }
+
+    /**
+     * Returns either the sum of the elements of 'this' collection (if 'selector' is not given) or the
+     * sum of the projected value of each element of 'this' collection (if 'selector' is given).
+     * @param selector Optional, the function that projects the values to be summed
+     */
+    public sum(selector?: Selector<T, number>): number
+    {
+        this.processDeferredSort();
+
+        if (this.array.length == 0)
+            return 0;
+
+        let length = this.array.length;
+        let sumValue = 0;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = (selector == null ? this.castAsNumber(this.array[i]) : selector(this.array[i]));
+
+            if (value == null)
+                continue;
+
+            if (isNaN(value))
+                throw new Error('Encountered an element that is not a number.');
+
+            sumValue += value;
+        }
+
+        return sumValue;
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking only the first 'count' number of elements.
+     * @param count The number of elements to take from the beginning of the collection
+     */
+    public take(count: number): Linq<T>
+    {
+        if (count == null || isNaN(count))
+            throw new Error('Invalid count.');
+
+        this.processDeferredSort();
+
+        if (count < 0)
+            count = 0;
+
+        return new Linq(this.array.slice(0, count), false);
+    }
+
+    /**
+     * Returns every n-th (n = step) element of 'this' collection.
+     * @param step The number of elements to bypass before returning the next element
+     */
+    public takeEvery(step: number): Linq<T>
+    {
+        if (step == null || isNaN(step))
+            throw new Error('Invalid step.');
+
+        return this.where((x, i) => (i % step) == 0);
+    }
+
+    /**
+     * Returns the elements of 'this' collection, taking only the last 'count' number of elements.
+     * @param count The number of elements to take from the end of the collection
+     */
+    public takeLast(count: number): Linq<T>
+    {
+        if (count == null || isNaN(count))
+            throw new Error('Invalid count.');
+
+        this.processDeferredSort();
+
+        if (count <= 0)
+            return new Linq(new Array<T>(), false);
+
+            if (count > this.array.length)
+                count = this.array.length;
+
+        return new Linq(this.array.slice(this.array.length - count), false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking element until an element satisfies the
+     * 'predicate' function (that first element that satisfies the 'predicate' function is not
+     * included in the results).
+     * @param predicate The function that indicates when to stop including elements in the results
+     */
+    public takeUntil(predicate: Predicate<T>): Linq<T>
+    {
+        if (predicate == null)
+            throw new Error('Invalid predicate.');
+
+        return this.takeWhile(x => !predicate(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking elements until an element does not satisfy
+     * the 'predicate' function (that first element that fails to satisfy the 'predicate' function
+     * is not included in the results).
+     * @param predicate The function that indicates which of the initial elements to include in the results
+     */
+    public takeWhile(predicate: Predicate<T>): Linq<T>
+    {
+        if (predicate == null)
+            throw new Error('Invalid predicate.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let results = new Array<T>();
+        let isTaking = true;
+
+        for (var i = 0; (i < length) && isTaking; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = this.array[i];
+
+            if (!predicate(value))
+                isTaking = false;
+            else
+                results.push(value);
+        }
+
+        return new Linq(results, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
+     * call) in ascending order of the projected value given by the 'keySelector' function, using the
+     * 'comparer' function to compare the projected values.  If the 'comparer' function is not given,
+     * a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+     * Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+     * thenBy, or thenByDescending call.
+     * @param keySelector The function that projects the value used to sort elements
+     * @param comparer Optional, the function that compares projected values
+     */
+    public thenBy<U>(keySelector: Selector<T, U>, comparer?: Comparer<U>): Linq<T>
+    {
+        return this.thenByBasedOperator(keySelector, comparer, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
+     * call) in descending order of the projected value given by the 'keySelector' function, using the
+     * 'comparer' function to compare the projected values.  If the 'comparer' function is not given,
+     * a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+     * Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+     * thenBy, or thenByDescending call.
+     * @param keySelector The function that projects the value used to sort elements
+     * @param comparer Optional, the function that compares projected values
+     */
+    public thenByDescending<U>(keySelector: Selector<T, U>, comparer?: Comparer<U>): Linq<T>
+    {
+        return this.thenByBasedOperator(keySelector, comparer, true);
+    }
+
+    private thenByBasedOperator<U>(keySelector: Selector<T, U>, comparer: Comparer<U>, reverse: boolean): Linq<T>
+    {
+        if (keySelector == null)
+            throw new Error('Invalid key selector.');
+
+        if (this.deferredSort == null)
+            throw new Error("ThenBy can only be called following an OrderBy/OrderByDescending.");
+
+        let resolvedComparer = (comparer == null ? Linq.generalComparer : comparer);
+        let results = new Linq(this.array, true);
+
+        results.deferredSort = this.composeDeferredSort(this.deferredSort, { keySelector: keySelector, comparer: resolvedComparer, reverse: reverse, next: null });
+
+        return results;
+    }
+    
+    /**
+     * Returns an array with the same elements as 'this' collection.
+     */
+    public toArray(): Array<T>
+    {
+        this.processDeferredSort();
+
+        return this.array.slice(0);
+    }
+
+    /**
+     * Returns a string consisting of all of the elements of 'this' collection delimited by the given
+     * 'delimiter' value.  If a 'delimiter' value is not given, then the delimiter "," is used.
+     * @param delimiter The delimiter separating the elements in the results
+     */
+    public toDelimitedString(delimiter?: string): string
+    {
+        if (delimiter == null)
+            delimiter = ',';
+
+        this.processDeferredSort();
+
+        return this.array.join(delimiter);
+    }
+
+    /**
+     * Returns an object that represents a "dictionary" of the elements of 'this' collection.  The
+     * 'keySelector' function is used to project the "key" value for each element of 'this' collection.
+     * If the 'elementSelector' function is given, the "value" associated with each "key" value is the
+     * value projected by the 'elementSelector' function.  If the 'elementSelector' function is not 
+     * given, the "value" associated with each "key" value is the element, itself.
+     * @param keySelector The function that projects the key for each element
+     * @param elementSelector Optional, the function that projects the value for each key
+     */
+    public toDictionary(keySelector: Selector<T, any>, elementSelector?: Selector<T, any>): {}
+    {
+        if (keySelector == null)
+            throw new Error('Invalid key selector.');
+
+        this.processDeferredSort();
+
+        let length = this.array.length;
+        let results: any = {};
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = this.array[i];
+            let key = keySelector(value);
+
+            if (key in results)
+                throw new Error('Duplicate key in the collection.');
+
+            results[key] = (elementSelector == null ? value : elementSelector(value));
+        }
+
+        return results;
+    }
 
     /**
      * Returns a lookup-collection with the elements of 'this' collection grouped by a key
@@ -1623,10 +2022,70 @@ export class Linq<T>
     }
 
     /**
+     * Returns the union of elements in 'this' collection and the 'second' collection, using the
+     * 'comparer' function to determine whether two different elements are equal.  If the 'comparer'
+     * function is not given, then the "===" operator will be used to compare elements.
+     * @param second The collection of elements to test for union
+     * @param comparer Optional, the function used to compare elements
+     */
+    public union(second: LinqCompatible<T>, comparer?: Comparer<T> | EqualityComparer<T>): Linq<T>
+    {
+        this.processDeferredSort();
+
+        let secondLinq = Linq.from(second == null ? [] : second);
+
+        secondLinq.processDeferredSort();
+
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+
+        let length = this.array.length;
+        let results = new Linq(new Array<T>(), false);
+
+        let isInResults = (value: T) =>
+        {
+            return results.array.some(x =>
+            {
+                if (normalizedComparer == null)
+                    return (x === value);
+                else
+                    return normalizedComparer(x, value);
+            });
+        };
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in this.array))
+                continue;
+
+            let value = this.array[i];
+            let inResults = isInResults(value);
+
+            if (!inResults)
+                results.array.push(value);
+        }
+
+        length = secondLinq.array.length;
+
+        for (let i = 0; i < length; i++)
+        {
+            if (!(i in secondLinq.array))
+                continue;
+
+            let value = secondLinq.array[i];
+            let inResults = isInResults(value);
+
+            if (!inResults)
+                results.array.push(value);
+        }
+
+        return results;
+    }
+
+    /**
      * Returns the elements of 'this' collection that satisfy the 'predicate' function.
      * @param predicate The function that determines which elements to return
      */
-    public where(predicate: Predicate<T>): Linq<T>
+    public where(predicate: IndexedPredicate<T>): Linq<T>
     {
         if (predicate == null)
             throw new Error('Invalid predicate.');
@@ -1668,15 +2127,40 @@ export class Linq<T>
 
         return new Linq(results, false);        
     }
-    
+
     /**
-     * Returns an array with the same elements as 'this' collection.
+     * Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
+     * collection are not equal, the size of the returned collection will equal the maximum of the
+     * sizes of 'this' collection and the 'second' collection, and the shorter collection with use
+     * values given by the 'defaultForFirst' and 'defaultForSecond' parameters (corresponding with
+     * which corresponding list is shorter).
+     * @param second The collection to zip with 'this' collection
+     * @param resultSelector Optional, the function to use to project the result values
      */
-    public toArray(): Array<T>
+    public zipLongest<U, V>(second: LinqCompatible<U>, defaultForFirst?: T, defaultForSecond?: U, resultSelector?: MergeSelector<T, U, V>): Linq<V>
     {
+        let actualResultSelector = (resultSelector == null ? Linq.merge : resultSelector);
+
         this.processDeferredSort();
 
-        return this.array.slice(0);
+        let secondLinq = Linq.from(second);
+
+        secondLinq.processDeferredSort();
+
+        let length = Math.max(this.array.length, secondLinq.array.length);
+        let results = new Array<V>();
+
+        for (let i = 0; i < length; i++)
+        {
+            results.push(
+                actualResultSelector(
+                    (i >= this.array.length ? defaultForFirst : this.array[i]),
+                    (i >= secondLinq.array.length ? defaultForSecond : secondLinq.array[i])));
+        }
+
+        return new Linq(results, false);
     }
 
 
@@ -1716,9 +2200,25 @@ export class Linq<T>
         this.array.sort((x, y) => compare(x, y, this.deferredSort));
         this.deferredSort = null;
     }
+
+    private composeDeferredSort<U>(info: DeferredSort<T, U>, appendInfo: DeferredSort<T, U>): DeferredSort<T, U>
+    {
+        let helper = (x: DeferredSort<T, U>): DeferredSort<T, U> =>
+        {
+            return {
+                keySelector: x.keySelector,
+                comparer: x.comparer,
+                reverse: x.reverse,
+                next: (x.next == null ? appendInfo : helper(x.next))
+            };
+        }
+
+        return helper(info);
+    }
 }
 
 export type Predicate<T> = (item: T) => boolean;
+export type IndexedPredicate<T> = (item: T, index?: number) => boolean;
 export type Comparer<T> = (x: T, y: T) => number;
 export type EqualityComparer<T> = (x: T, y: T) => boolean;
 export type Selector<T, U> = (item: T) => U;

@@ -7,13 +7,13 @@ describe('Linq', () =>
         if (expected == null || actual == null || expected.length != actual.length)
             return false;
         
-        var length = expected.length;
+        let length = expected.length;
         
-        for (var i = 0; i < length; i++)
+        for (let i = 0; i < length; i++)
         {
-            var found = false;
+            let found = false;
             
-            for (var j = 0; j < length; j++)
+            for (let j = 0; j < length; j++)
             {
                 if (expected[i] == actual[j])
                     found = true;
@@ -345,7 +345,7 @@ describe('Linq', () =>
 
     describe('batch', () =>
     {
-        var col = Linq.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+        let col = Linq.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
         it('works without a result selector', () =>
         {
@@ -481,14 +481,14 @@ describe('Linq', () =>
 
         it('works on a non-empty collection', () =>
         {
-            var value = Linq.from([]).defaultIfEmpty(99).toArray();
+            let value = Linq.from([]).defaultIfEmpty(99).toArray();
 
             expect(value).toEqual([99]);
         });
 
         it('works with a null "defaultValue" parameter', () =>
         {
-            var value = Linq.from([]).defaultIfEmpty(null).toArray();
+            let value = Linq.from([]).defaultIfEmpty(null).toArray();
 
             expect(value).toEqual([null]);
         });
@@ -496,12 +496,12 @@ describe('Linq', () =>
 
     describe('distinct', () =>
     {
-        var col = Linq.from(["one", "two", "three", "ONE", "TWO", "THREE"]);
+        let col = Linq.from(["one", "two", "three", "ONE", "TWO", "THREE"]);
 
         it('works when there are duplicate elements', () =>
         {
-            var value1 = Linq.from([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]).distinct().toArray();
-            var value2 = col.distinct((x, y) => x.toLowerCase() == y.toLowerCase()).toArray();
+            let value1 = Linq.from([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]).distinct().toArray();
+            let value2 = col.distinct((x, y) => x.toLowerCase() == y.toLowerCase()).toArray();
 
             expect(value1).toEqual([1, 2, 3, 4, 5]);
             expect(value2).toEqual(["one", "two", "three"]);
@@ -509,8 +509,8 @@ describe('Linq', () =>
 
         it('works when there are no duplicate elements', () =>
         {
-            var value1 = Linq.from([1, 2, 3, 4, 5]).distinct().toArray();
-            var value2 = col.distinct((x, y) => x == y).toArray();
+            let value1 = Linq.from([1, 2, 3, 4, 5]).distinct().toArray();
+            let value2 = col.distinct((x, y) => x == y).toArray();
 
             expect(value1).toEqual([1, 2, 3, 4, 5]);
             expect(value2).toEqual(["one", "two", "three", "ONE", "TWO", "THREE"]);
@@ -518,7 +518,7 @@ describe('Linq', () =>
 
         it('works on an empty collection', () =>
         {
-            var value = Linq.from([]).distinct().toArray();
+            let value = Linq.from([]).distinct().toArray();
 
             expect(value).toEqual([]);
         });
@@ -719,18 +719,18 @@ describe('Linq', () =>
 
     describe('first', () =>
     {
-        var col = Linq.from([1, 2, 3, 4, 5, 6]);
+        let col = Linq.from([1, 2, 3, 4, 5, 6]);
 
         it('works with a predicate', () =>
         {
-            var predicateFirst = col.first(x => x > 3);
+            let predicateFirst = col.first(x => x > 3);
 
             expect(predicateFirst).toEqual(4);
         });
 
         it('works without a predicate', () =>
         {
-            var basicFirst = col.first();
+            let basicFirst = col.first();
 
             expect(basicFirst).toEqual(1);
         });
@@ -760,9 +760,9 @@ describe('Linq', () =>
         
         it('works without a predicate', () =>
         {
-            var defaultFirst1 = col.firstOrDefault(null, 99);
-            var defaultFirst2 = Linq.from([]).firstOrDefault(null, 99);
-            var defaultFirst3 = Linq.from([]).firstOrDefault();
+            let defaultFirst1 = col.firstOrDefault(null, 99);
+            let defaultFirst2 = Linq.from([]).firstOrDefault(null, 99);
+            let defaultFirst3 = Linq.from([]).firstOrDefault();
 
             expect(defaultFirst1).toEqual(1);
             expect(defaultFirst2).toEqual(99);
@@ -810,28 +810,28 @@ describe('Linq', () =>
 
         it('returns grouped results', () =>
         {
-            var value = col1.groupBy(stateProjection, nameSelector).select(groupSelector);
+            let value = col1.groupBy(stateProjection, nameSelector).select(groupSelector);
 
             expect(value.toArray()).toEqual(["ut: steve,john", "nv: kelly", "wa: abbey"]);
         });
 
         it('works with no element selector', () =>
         {
-            var value = col2.groupBy(x => (x == null || x.length == 0 ? '' : x[0])).select(groupSelector);
+            let value = col2.groupBy(x => (x == null || x.length == 0 ? '' : x[0])).select(groupSelector);
 
             expect(value.toArray()).toEqual(["a: apple", "c: carrot,corn", "t: tomato", "w: watermellon,watercrest"]);
         });
 
         it('works on an empty collection', () =>
         {
-            var value = Linq.from([]).groupBy(stateProjection, nameSelector);
+            let value = Linq.from([]).groupBy(stateProjection, nameSelector);
 
             expect(value.toArray()).toEqual([]);
         });
 
         it('works with a comparer', () =>
         {
-            var value = col3.groupBy(stateProjection, nameSelector, (x, y) => x.toLowerCase() == y.toLowerCase()).select(groupSelector);
+            let value = col3.groupBy(stateProjection, nameSelector, (x, y) => x.toLowerCase() == y.toLowerCase()).select(groupSelector);
 
             expect(value.toArray()).toEqual(["UT: kevin,spencer", "co: glenda,may"]);
         });
@@ -995,7 +995,7 @@ describe('Linq', () =>
 
         it('works with a comparer', () =>
         {
-            var comparer = (x: string, y: string) => x.toLowerCase() == y.toLowerCase();
+            let comparer = (x: string, y: string) => x.toLowerCase() == y.toLowerCase();
             expect(col2.indexOfElement('B', comparer)).toEqual(1);
         });
     });
@@ -1209,7 +1209,7 @@ describe('Linq', () =>
 
         it('works with a comparer', () =>
         {
-            var comparer = (x: string, y: string) => x.toLowerCase() == y.toLowerCase();
+            let comparer = (x: string, y: string) => x.toLowerCase() == y.toLowerCase();
             expect(col2.lastIndexOfElement('B', comparer)).toEqual(5);
         });
     });
@@ -1267,7 +1267,7 @@ describe('Linq', () =>
 
         it('works with a selector', () =>
         {
-            var value = col2.min(x => x.value);
+            let value = col2.min(x => x.value);
 
             expect(value).toEqual(17);
         });
@@ -1284,7 +1284,7 @@ describe('Linq', () =>
 
         it('works with a non-empty collection', () =>
         {
-            var value = col.minBy(x => x.value);
+            let value = col.minBy(x => x.value);
 
             expect(value).toEqual({ id: 3, value: 17 });
         });
@@ -1312,7 +1312,7 @@ describe('Linq', () =>
 
         it('works with a selector', () =>
         {
-            var value = col2.max(x => x.value);
+            let value = col2.max(x => x.value);
 
             expect(value).toEqual(9000);
         });
@@ -1329,7 +1329,7 @@ describe('Linq', () =>
 
         it('works with a non-empty collection', () =>
         {
-            var value = col.maxBy(x => x.value);
+            let value = col.maxBy(x => x.value);
 
             expect(value).toEqual({ id: 1, value: 9000 });
         });
@@ -1558,9 +1558,9 @@ describe('Linq', () =>
 
         it('combines with zip to implement scan', () =>
         {
-            var list1 = col1.prescan(addition, 0);
-            var list2 = col1.zip(list1, addition);
-            var list3 = col1.scan(addition);
+            let list1 = col1.prescan(addition, 0);
+            let list2 = col1.zip(list1, addition);
+            let list3 = col1.scan(addition);
 
             expect(list2.toArray()).toEqual(list3.toArray());
         });
@@ -1582,7 +1582,7 @@ describe('Linq', () =>
 
         it('works with a single-element collection', () =>
         {
-            var value = Linq.from([111]).reverse();
+            let value = Linq.from([111]).reverse();
 
             expect(value.toArray()).toEqual([111]);
         });
@@ -1649,7 +1649,7 @@ describe('Linq', () =>
 
         it('works with a projection', () =>
         {
-            var projection = col.selectMany(x => x.list, x => "a" + x);
+            let projection = col.selectMany(x => x.list, x => "a" + x);
 
             expect(isEqualIgnoringOrder(projection.toArray(), ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9"])).toBeTruthy();
         });
@@ -1657,11 +1657,11 @@ describe('Linq', () =>
         it('works with a projection and an index', () =>
         {
             let projectionAndIndex = col.selectMany(
-                (x, i) => { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
+                (x, i) => { let l = x.list.slice(0); l.push((i + 1) * 10); return l; },
                 x => "b" + x);
 
             let projectionAndIndex2 = col.selectMany(
-                (x, i) => { var l = x.list.slice(0); l.push((i + 1) * 10); return l; },
+                (x, i) => { let l = x.list.slice(0); l.push((i + 1) * 10); return l; },
                 (x, parent) => parent.str + "-" + "b" + x);
 
             expect(isEqualIgnoringOrder(projectionAndIndex.toArray(), ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "b10", "b20", "b30"])).toBeTruthy();
@@ -1670,7 +1670,7 @@ describe('Linq', () =>
 
         it('works with an embedded $linq within the projection', () =>
         {
-            var linqInLinq = col.selectMany(
+            let linqInLinq = col.selectMany(
                 x => Linq.from(x.list).where(y => y % 2 == 0),
                 x => "c" + x);
 
@@ -1785,7 +1785,569 @@ describe('Linq', () =>
         });
     });
 
+    describe('single', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4, 5]);
 
+        it('works with a predicate', () =>
+        {
+            let value = col.single(x => x > 4);
+
+            expect(value).toEqual(5);
+        });
+
+        it('works without a predicate', () =>
+        {
+            let value = Linq.from([1]).single();
+
+            expect(value).toEqual(1);
+        });
+
+        it('throws an exception when called on an empty collection', () =>
+        {
+            let empty = Linq.from([]);
+
+            expect(() => { empty.single(); }).toThrow();
+            expect(() => { empty.single(x => x > 100); }).toThrow();
+        });
+
+        it('throws an exception when no elements in the collection satisfy the predicate', () =>
+        {
+            expect(() => { col.single(x => x > 100); }).toThrow();
+        });
+
+        it('throws an exception when called on a collection with more than one element (and no predicate)', () =>
+        {
+            expect(() => { col.single(); }).toThrow();
+        });
+
+        it('throws an exception when multiple elements in the collection satisfy the predicate', () =>
+        {
+            expect(() => { col.single(x => x > 1); }).toThrow();
+        });
+    });
+
+    describe('singleOrDefault', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4, 5]);
+
+        it('works with a predicate', () =>
+        {
+            let value1 = col.singleOrDefault(x => x > 4, 99);
+            let value2 = col.singleOrDefault(x => x > 100, 99);
+
+            expect(value1).toEqual(5);
+            expect(value2).toEqual(99);
+        });
+        
+        it('works with only a predicate', () =>
+        {
+            let defaultFirst3 = col.singleOrDefault(x => x > 4);
+            let defaultFirst4 = col.singleOrDefault(x => x > 100);
+
+            expect(defaultFirst3).toEqual(5);
+            expect(defaultFirst4).toBeUndefined();
+        });
+
+        it('works without a predicate', () =>
+        {
+            let value1 = Linq.from([1]).singleOrDefault(null, 99);
+            let value2 = Linq.from([]).singleOrDefault(null, 99);
+
+            expect(value1).toEqual(1);
+            expect(value2).toEqual(99);
+        });
+
+        it('throws an exception when called on a collection with more than one element (and no predicate)', () =>
+        {
+            expect(() => { col.singleOrDefault(null, 99); }).toThrow();
+        });
+
+        it('throws an exception when multple elements in the collection satisfy the predicate', () =>
+        {
+            expect(() => { col.singleOrDefault(x => x > 1, 99); }).toThrow();
+        });
+    });
+
+    describe('singleOrFallback', () =>
+    {
+        let col1 = Linq.from([1]);
+        let col2 = Linq.from([1, 2, 3, 4]);
+
+        let fallback = () => 99;
+
+        it('works in a situation where it does not need the fallback value', () =>
+        {
+            expect(col1.singleOrFallback(fallback)).toEqual(1);
+        });
+
+        it('works in a situation where it does need the fallback value', () =>
+        {
+            expect(Linq.from([]).singleOrFallback(fallback)).toEqual(99);
+        });
+
+        it('throws an exception on a collection with multiple elements', () =>
+        {
+            expect(() => { col2.singleOrFallback(fallback); }).toThrow();
+        });
+    });
+
+    describe('skip', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('skips some of the elements', () =>
+        {
+            expect(col.skip(4).toArray()).toEqual([5, 6, 7, 8]);
+        });
+
+        it('skips all of the elements', () =>
+        {
+            expect(col.skip(8).toArray()).toEqual([]);
+            expect(col.skip(100).toArray()).toEqual([]);
+        });
+
+        it('skips none of the elements', () =>
+        {
+            expect(col.skip(0).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('skips none of the elements on a negative count', () =>
+        {
+            expect(col.skip(-11).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).skip(4).toArray()).toEqual([]);
+        });
+
+        it('throws an exception on a null "count" parameter', () =>
+        {
+            expect(() => { col.skip(null); }).toThrow();
+        });
+    });
+
+    describe('skipUntil', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+        let col2 = Linq.from([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        let predicate = (x: number) => x > 4;
+
+        it('works to skip some of the elements of the collection', () =>
+        {
+            expect(col1.skipUntil(predicate).toArray()).toEqual([5, 6, 7, 8]);
+            expect(col2.skipUntil(predicate).toArray()).toEqual([5, 1, 2, 3, 4, 5]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).skipUntil(predicate).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should skip no elements', () =>
+        {
+            expect(col1.skipUntil(x => x > 0).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('throws an exception on a null predicate', () =>
+        {
+            expect(() => { col1.skipUntil(null); }).toThrow();
+        });
+    });
+
+    describe('skipWhile', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+        let col2 = Linq.from([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        it('skips some of the elements', () =>
+        {
+            expect(col1.skipWhile(x => x < 5).toArray()).toEqual([5, 6, 7, 8]);
+            expect(col2.skipWhile(x => x < 5).toArray()).toEqual([5, 1, 2, 3, 4, 5]);
+        });
+
+        it('skips all of the elements', () =>
+        {
+            expect(col1.skipWhile(x => x < 1000).toArray()).toEqual([]);
+        });
+
+        it('skips none of the elements', () =>
+        {
+            expect(col1.skipWhile(x => x < 0).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            let value = Linq.from([]).skipWhile(x => x < 4).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('throws an exception on a null "predicate" parameter', () =>
+        {
+            expect(() => { col1.skipWhile(null); }).toThrow();
+        });
+    });
+
+    describe('sum', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6]);
+        let col2 = Linq.from([{ id: 1, value: 100 }, { id: 2, value: 200 }, { id: 3, value: 300 }, { id: 4, value: 400 }]);
+
+        it('works without a projection', () =>
+        {
+            expect(col1.sum()).toEqual(21);
+        });
+
+        it('works with an empty collection', () =>
+        {
+            expect(Linq.from([]).sum()).toEqual(0);
+        });
+
+        it('works with a projection', () =>
+        {
+            let value = col2.sum(x => x.value);
+
+            expect(value).toEqual(1000);
+        });
+    });
+
+    describe('take', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('works when taking fewer elements than in the collection', () =>
+        {
+            let value = col1.take(4).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works when taking more elements than in the collection', () =>
+        {
+            let value = col1.take(20).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works when taking the same number of elements as in the collection', () =>
+        {
+            let value = col1.take(8).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            let value = Linq.from([]).take(4).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works when taking no elements', () =>
+        {
+            let value = col1.take(0).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('takes no elements with a negative count', () =>
+        {
+            expect(col1.take(-11).toArray()).toEqual([]);
+        });
+
+        it('throws an exception on a null "count" parameter', () =>
+        {
+            expect(() => { col1.take(null); }).toThrow();
+        });
+    });
+
+    describe('takeEvery', () =>
+    {
+        let col = Linq.from([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+        it('works in a situation where it should take some of the elements', () =>
+        {
+            expect(col.takeEvery(3).toArray()).toEqual([1, 4, 7]);
+        });
+
+        it('works with a count larger that the size of the collection', () =>
+        {
+            expect(col.takeEvery(20).toArray()).toEqual([1]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).takeEvery(3).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take all of the elements', () =>
+        {
+            expect(col.takeEvery(1).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        });
+
+        it('throws an exception on a null count', () =>
+        {
+            expect(() => { col.takeEvery(null); }).toThrow();
+        });
+    });
+
+    describe('takeLast', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+
+        it('works in a situation where it should take some of the elements', () =>
+        {
+            expect(col1.takeLast(3).toArray()).toEqual([6, 7, 8]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).takeLast(3).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take all of the elements', () =>
+        {
+            expect(col1.takeLast(8).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+            expect(col1.takeLast(20).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works in a situation where it should take none of the elements', () =>
+        {
+            expect(col1.takeLast(0).toArray()).toEqual([]);
+        });
+
+        it('throws an exception on a null count', () =>
+        {
+            expect(() => { col1.takeLast(null); }).toThrow();
+        });
+    });
+
+    describe('takeUntil', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+        let col2 = Linq.from([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        let predicate = (x: number) => x > 4;
+
+        it('works in a situation where it should take some of the elements', () =>
+        {
+            expect(col1.takeUntil(predicate).toArray()).toEqual([1, 2, 3, 4]);
+            expect(col2.takeUntil(predicate).toArray()).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            expect(Linq.from([]).takeUntil(predicate).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take none of the elements', () =>
+        {
+            expect(col1.takeUntil(x => x > 0).toArray()).toEqual([]);
+        });
+
+        it('works in a situation where it should take all of the elements', () =>
+        {
+            expect(col1.takeUntil(x => x > 9999).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('throws an exception on a null predicate', () =>
+        {
+            expect(() => { col1.takeUntil(null); }).toThrow();
+        });
+    });
+
+    describe('takeWhile', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4, 5, 6, 7, 8]);
+        let col2 = Linq.from([1, 2, 3, 4, 5, 1, 2, 3, 4, 5]);
+
+        it('works when taking some of the elements of the collection', () =>
+        {
+            let value1 = col1.takeWhile(x => x < 5).toArray();
+            let value2 = col2.takeWhile(x => x < 5).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([1, 2, 3, 4]);
+        });
+
+        it('works when taking all of the elements of the collection', () =>
+        {
+            let value = col1.takeWhile(x => x < 100).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works when taking none of the elements of the collection', () =>
+        {
+            let value = col1.takeWhile(x => x < 0).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('works on an empty collection', () =>
+        {
+            let value = Linq.from([]).takeWhile(x => x < 5).toArray();
+
+            expect(value).toEqual([]);
+        });
+
+        it('throws an exception on a null "predicate" parameter', () =>
+        {
+            expect(() => { col1.takeWhile(null); }).toThrow();
+        });
+    });
+
+    describe('thenBy', () =>
+    {
+        let col1 = Linq.from([{ id: 3, level1: 222, level2: 99 }, { id: 7, level1: 444, level2: 44 }, { id: 1, level1: 111, level2: 10 }, { id: 4, level1: 333, level2: 44 }, { id: 8, level1: 555, level2: 99 }, { id: 5, level1: 333, level2: 66 }, { id: 6, level1: 444, level2: 22 }, { id: 2, level1: 111, level2: 20 }]);
+        let col2 = Linq.from([{ id: 3, level1: 222, level2: 'a' }, { id: 7, level1: 444, level2: 'B' }, { id: 1, level1: 111, level2: 'A' }, { id: 4, level1: 333, level2: 'a' }, { id: 8, level1: 555, level2: 'a' }, { id: 5, level1: 333, level2: 'C' }, { id: 6, level1: 444, level2: 'a' }, { id: 2, level1: 111, level2: 'b' }]);
+
+        let level1Selector = (x: any) => x.level1;
+        let level2Selector = (x: any) => x.level2;
+        let resultSelector = (x: any) => x.id;
+
+        let comparer = (x: string, y: string) =>
+        {
+            var tempX = x.toLowerCase();
+            var tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', () =>
+        {
+            expect(col1.orderBy(level1Selector).thenBy(level2Selector).select(resultSelector).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works with string keys and no comparer passed', () =>
+        {
+            expect(col2.orderBy(level1Selector).thenBy(level2Selector).select(resultSelector).toArray()).toEqual([1, 2, 3, 5, 4, 7, 6, 8]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            expect(col2.orderBy(level1Selector).thenBy(level2Selector, comparer).select(resultSelector).toArray()).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('throws an exception on a null key selector', () =>
+        {
+            expect(() => { col1.orderBy(level1Selector).thenBy(null); }).toThrow();
+        });
+    });
+
+    describe('thenByDescending', () =>
+    {
+        let col1 = Linq.from([{ id: 3, level1: 222, level2: 99 }, { id: 7, level1: 444, level2: 44 }, { id: 1, level1: 111, level2: 10 }, { id: 4, level1: 333, level2: 44 }, { id: 8, level1: 555, level2: 99 }, { id: 5, level1: 333, level2: 66 }, { id: 6, level1: 444, level2: 22 }, { id: 2, level1: 111, level2: 20 }]);
+        let col2 = Linq.from([{ id: 3, level1: 222, level2: 'a' }, { id: 7, level1: 444, level2: 'B' }, { id: 1, level1: 111, level2: 'A' }, { id: 4, level1: 333, level2: 'a' }, { id: 8, level1: 555, level2: 'a' }, { id: 5, level1: 333, level2: 'C' }, { id: 6, level1: 444, level2: 'a' }, { id: 2, level1: 111, level2: 'b' }]);
+
+        let level1Selector = (x: any) => x.level1;
+        let level2Selector = (x: any) => x.level2;
+        let resultSelector = (x: any) => x.id;
+
+        let comparer = (x: string, y: string) =>
+        {
+            let tempX = x.toLowerCase();
+            let tempY = y.toLowerCase();
+
+            if (tempX < tempY)
+                return -1;
+            else if (tempX > tempY)
+                return 1;
+            else
+                return 0;
+        };
+
+        it('works with a given key selector', () =>
+        {
+            expect(col1.orderBy(level1Selector).thenByDescending(level2Selector).select(resultSelector).toArray()).toEqual([2, 1, 3, 5, 4, 7, 6, 8]);
+        });
+
+        it('works with string keys and no comparer passed', () =>
+        {
+            expect(col2.orderBy(level1Selector).thenByDescending(level2Selector).select(resultSelector).toArray()).toEqual([2, 1, 3, 4, 5, 6, 7, 8]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            expect(col2.orderBy(level1Selector).thenByDescending(level2Selector, comparer).select(resultSelector).toArray()).toEqual([2, 1, 3, 5, 4, 7, 6, 8]);
+        });
+
+        it('throws an exception on a null key selector', () =>
+        {
+            expect(() => { col1.orderBy(level1Selector).thenByDescending(null); }).toThrow();
+        });
+    });
+
+    describe('toDelimitedString', () =>
+    {
+        let col = Linq.from(['a', 'b', 'c', 'd', 'e']);
+
+        it('works with a single-character delimiter', () =>
+        {
+            expect(col.toDelimitedString('|')).toEqual('a|b|c|d|e');
+        });
+
+        it('works with a multi-character delimiter', () =>
+        {
+            expect(col.toDelimitedString(', ')).toEqual('a, b, c, d, e');
+        });
+
+        it('works with an implied delimiter', () =>
+        {
+            expect(col.toDelimitedString()).toEqual('a,b,c,d,e');
+        });
+
+        it('works with an empty delimiter', () =>
+        {
+            expect(col.toDelimitedString('')).toEqual('abcde');
+        });
+    });
+
+    describe('toDictionary', () =>
+    {
+        let col1 = Linq.from([{ prop: 'color', value: 'red' }, { prop: 'align', value: 'center' }, { prop: 'text', value: 'nicole' }]);
+        let col2 = Linq.from(['a_blue', 'b_red', 'c_green', 'd_purple']);
+        let col3 = Linq.from(['1_one', '1_uno', '2_two', '3_three']);
+
+        it('works with a key selector and an element selector', () =>
+        {
+            let value = col1.toDictionary(x => x.prop, x => x.value);
+
+            expect(value).toEqual({ color: 'red', align: 'center', text: 'nicole' });
+        });
+
+        it('works with just a key selector', () =>
+        {
+            let value = col2.toDictionary(x => x[0]);
+
+            expect(value).toEqual({ a: 'a_blue', b: 'b_red', c: 'c_green', d: 'd_purple' });
+        });
+
+        it('works on an empty collection', () =>
+        {
+            let value = Linq.from([]).toDictionary(x => x.prop);
+
+            expect(value).toEqual({});
+        });
+
+        it('throws an exception on a null "key selector" parameter', () =>
+        {
+            expect(() => { col1.toDictionary(null); }).toThrow();
+        });
+
+        it('throws an exception when there is a duplicate key', () =>
+        {
+            expect(() => { col3.toDictionary(x => x[0], x => x.slice(2)); }).toThrow();
+        });
+    });
 
     describe('toLookup', () =>
     {
@@ -1883,6 +2445,55 @@ describe('Linq', () =>
             expect(() => { col.toLookup(null); }).toThrow();
         });        
     });
+
+    describe('union', () =>
+    {
+        let col1 = Linq.from([1, 2, 3, 4]);
+        let col2 = Linq.from([5, 6, 7, 8]);
+        let col3 = Linq.from(["one", "two", "three", "three", "four"]);
+        let col4 = Linq.from(["ONE", "TWO", "TWO", "THREE"]);
+
+        it('works with distinct elements in the sets', () =>
+        {
+            let value1 = col1.union(col2).toArray();
+            let value2 = col1.union([11, 22, 33, 44]).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+            expect(value2).toEqual([1, 2, 3, 4, 11, 22, 33, 44]);
+        });
+
+        it('works with non-distinct elements in the sets', () =>
+        {
+            let value1 = col1.union([3, 4, 5, 6]).toArray();
+            let value2 = col3.union(col4).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4, 5, 6]);
+            expect(value2).toEqual(["one", "two", "three", "four", "ONE", "TWO", "THREE"]);
+        });
+
+        it('works with a comparer', () =>
+        {
+            let value = col3.union(col4, (x: string, y: string) => x.toLowerCase() == y.toLowerCase()).toArray();
+
+            expect(value).toEqual(["one", "two", "three", "four"]);
+        });
+
+        it('works with an empty collection', () =>
+        {
+            let value1 = col1.union([]).toArray();
+            let value2 = Linq.from([]).union(col2).toArray();
+
+            expect(value1).toEqual([1, 2, 3, 4]);
+            expect(value2).toEqual([5, 6, 7, 8]);
+        });
+
+        it('works with a null second collection', () =>
+        {
+            let value = col1.union(null).toArray();
+
+            expect(value).toEqual([1, 2, 3, 4]);
+        });
+    });
     
     describe('where', () =>
     {
@@ -1890,21 +2501,21 @@ describe('Linq', () =>
 
         it('is correct with partitioned results', () =>
         { 
-            var lessThan4 = col.where((x: number) => x < 4);
+            let lessThan4 = col.where((x: number) => x < 4);
 
             expect(lessThan4.toArray()).toEqual([1, 2, 3]); 
         });
 
         it('is correct with empty results', () =>
         { 
-            var none = col.where((x: number) => x < 0);
+            let none = col.where((x: number) => x < 0);
 
             expect(none.toArray()).toEqual([]); 
         });
 
         it('is correct with full results', function () 
         { 
-            var all = col.where((x: number) => x > 0);
+            let all = col.where((x: number) => x > 0);
 
             expect(all.toArray()).toEqual([1, 2, 3, 4, 5]); 
         });
@@ -1948,6 +2559,64 @@ describe('Linq', () =>
         it('works with a null array', () =>
         {
             expect(col1.zip(null, resultSelector).toArray()).toEqual([]);
+        });
+    });
+
+    describe('zipLongest', () =>
+    {
+        let col1 = Linq.from(['a', 'b', 'c', 'd']);
+        let col2 = Linq.from(['a', 'b', 'c', 'd', 'e', 'f']);
+        let col3 = Linq.from([1, 2, 3, 4]);
+
+        let resultSelector = (x: any, y: any) => x + '_' + y;
+        let defaultFirst = '*';
+        let defaultSecond = '$';
+
+        it('works on collections of the same length', () =>
+        {
+            expect(col1.zipLongest(col3, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4']);
+        });
+
+        it('works on collections that are not of the same length', () =>
+        {
+            let col = col3.select((x: any): string => x);
+
+            expect(col.zipLongest(col2, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['1_a', '2_b', '3_c', '4_d', '*_e', '*_f']);
+            expect(col2.zipLongest(col3, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4', 'e_$', 'f_$']);
+        });
+
+        it('works on arrays', () =>
+        {
+            expect(col1.zipLongest([1, 2, 3, 4, 5, 6, 7, 8], defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_1', 'b_2', 'c_3', 'd_4', '*_5', '*_6', '*_7', '*_8']);
+        });
+        
+        it('works on a null result selector', () =>
+        {
+            let col = col3.select((x: any): string => x);
+
+            expect(col1.zipLongest(col, defaultFirst, defaultSecond).toArray()).toEqual([['a', 1], ['b', 2], ['c', 3], ['d', 4]]);
+        });
+
+        it('works on empty collections', () =>
+        {
+            expect(col1.zipLongest([], defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_$', 'b_$', 'c_$', 'd_$']);
+            expect(Linq.from([]).zipLongest(col1, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['*_a', '*_b', '*_c', '*_d']);
+        });
+
+        it('works on null collections', () =>
+        {
+            expect(col1.zipLongest(null, defaultFirst, defaultSecond, resultSelector).toArray()).toEqual(['a_$', 'b_$', 'c_$', 'd_$']);
+        });
+
+        it('works with null default values', () =>
+        {
+            let resultSelector2 = (x: any, y: any) =>
+            {
+                return (x == null ? '<null>' : x) + '=' + (y == null ? '<null>' : y);
+            };
+
+            expect(col2.zipLongest(col3, null, null, resultSelector2).toArray()).toEqual(['a=1', 'b=2', 'c=3', 'd=4', 'e=<null>', 'f=<null>']);
+            expect(col3.zipLongest(col2, null, null, resultSelector2).toArray()).toEqual(['1=a', '2=b', '3=c', '4=d', '<null>=e', '<null>=f']);
         });
     });
 });
