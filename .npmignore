@@ -1,6 +1,9 @@
 nuget-pub/
 node_modules/
 testing/
+coverage/
 spec/
+spec-ts/
 todo.txt
 gruntfile.js
+karma_ts.conf.js
