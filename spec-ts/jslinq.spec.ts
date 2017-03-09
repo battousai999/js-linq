@@ -2619,4 +2619,185 @@ describe('Linq', () =>
             expect(col3.zipLongest(col2, null, null, resultSelector2).toArray()).toEqual(['1=a', '2=b', '3=c', '4=d', '<null>=e', '<null>=f']);
         });
     });
+
+    describe('createProjectionComparer', () =>
+    {
+        type Course = { id: number, name: string, courseNum: string };
+
+        let col = [
+            { id: 1001, name: 'Single Variable Calculus', courseNum: '18.01' },
+            { id: 1002, name: 'Linear Algebra', courseNum: '18.06' },
+            { id: 1003, name: 'Analysis I', courseNum: '18.100B' },
+            { id: 1004, name: 'Advanced Calculus for Engineers', courseNum: '18.075' },
+            { id: 1005, name: 'Number Theory I', courseNum: '18.785' },
+            { id: 1006, name: 'Category Theory for Scientists', courseNum: '18.S996' },
+            { id: 1007, name:  'SINGLE VARIABLE CALCULUS', courseNum: '18.01SC' }
+        ];
+
+        let projection1 = (x: Course) => x.id;
+        let projection2 = (x: Course) => x.name;
+        let projection3 = (x: Course) => getCourseSubNumber(x.courseNum);
+
+        let getCourseSubNumber = (x: string): number =>
+        {
+            let regex = new RegExp(/^[^\.]+\.(\d+)(?:[a-z]+\.*)?$/i);
+
+            let matches = regex.exec(x);
+
+            if (matches == null)
+                return null;
+            
+            return parseInt(matches[1], 10);
+        };
+
+        it('works without a comparer', () =>
+        {
+            let comparer1 = Linq.createProjectionComparer(projection1);
+            let comparer2 = Linq.createProjectionComparer(projection2);
+            let comparer3 = Linq.createProjectionComparer(projection3);
+
+            expect(comparer1(col[0], col[1])).toBeLessThan(0);
+            expect(comparer1(col[3], col[0])).toBeGreaterThan(0);
+            expect(comparer1(col[4], col[4])).toEqual(0);
+
+            expect(comparer2(col[3], col[5])).toBeLessThan(0);
+            expect(comparer2(col[4], col[5])).toBeGreaterThan(0);
+
+            expect(comparer3(col[0], col[4])).toBeLessThan(0);
+            expect(comparer3(col[2], col[6])).toBeGreaterThan(0);
+            expect(comparer3(col[0], col[6])).toEqual(0);
+        });
+
+        it('works with a comparer', () =>
+        {
+            let reverseComparer = (x: number, y: number) => y - x;
+
+            let comparer1 = Linq.createProjectionComparer(projection1, reverseComparer);
+            let comparer2 = Linq.createProjectionComparer(projection2, Linq.caseInsensitiveStringComparer);
+            let comparer3 = Linq.createProjectionComparer(projection3, reverseComparer);
+
+            expect(comparer1(col[0], col[1])).toBeGreaterThan(0);
+            expect(comparer1(col[3], col[0])).toBeLessThan(0);
+            expect(comparer1(col[4], col[4])).toEqual(0);
+
+            expect(comparer2(col[3], col[5])).toBeLessThan(0);
+            expect(comparer2(col[4], col[5])).toBeGreaterThan(0);
+            expect(comparer3(col[0], col[6])).toEqual(0);
+
+            expect(comparer3(col[0], col[4])).toBeGreaterThan(0);
+            expect(comparer3(col[2], col[6])).toBeLessThan(0);
+            expect(comparer3(col[0], col[6])).toEqual(0);
+        });
+
+        it('throws an exception on a null projection', () =>
+        {
+            expect(() => { Linq.createProjectionComparer(null); }).toThrow();
+        });
+    });
+
+    describe('createProjectionEqualityComparer', () =>
+    {
+        type Course = { id: number, name: string, courseNum: string };
+
+        let col = [
+            { id: 1001, name: 'Single Variable Calculus', courseNum: '18.01' },
+            { id: 1002, name: 'Linear Algebra', courseNum: '18.06' },
+            { id: 1003, name: 'Analysis I', courseNum: '18.100B' },
+            { id: 1004, name: 'Advanced Calculus for Engineers', courseNum: '18.075' },
+            { id: 1005, name: 'Number Theory I', courseNum: '18.785' },
+            { id: 1006, name: 'Category Theory for Scientists', courseNum: '18.S996' },
+            { id: 1007, name:  'SINGLE VARIABLE CALCULUS', courseNum: '18.01SC' }
+        ];
+
+        let projection1 = (x: Course) => x.id;
+        let projection2 = (x: Course) => x.name;
+        let projection3 = (x: Course) => getCourseSubNumber(x.courseNum);
+
+        let getCourseSubNumber = (x: string): number =>
+        {
+            let regex = new RegExp(/^[^\.]+\.(\d+)(?:[a-z]+\.*)?$/i);
+
+            let matches = regex.exec(x);
+
+            if (matches == null)
+                return null;
+            
+            return parseInt(matches[1], 10);
+        };
+
+        it('works without a comparer', () =>
+        {
+            let comparer1 = Linq.createProjectionEqualityComparer(projection1);
+            let comparer2 = Linq.createProjectionEqualityComparer(projection2);
+            let comparer3 = Linq.createProjectionEqualityComparer(projection3);
+
+            expect(comparer1(col[0], col[1])).toBeFalsy();
+            expect(comparer1(col[3], col[0])).toBeFalsy();
+            expect(comparer1(col[4], col[4])).toBeTruthy();
+
+            expect(comparer2(col[3], col[5])).toBeFalsy();
+            expect(comparer2(col[4], col[5])).toBeFalsy();
+
+            expect(comparer3(col[0], col[4])).toBeFalsy();
+            expect(comparer3(col[2], col[6])).toBeFalsy();
+            expect(comparer3(col[0], col[6])).toBeTruthy();
+        });
+
+        it('works with a Comparer<T>', () =>
+        {
+            let reverseComparer = (x: number, y: number) => y - x;
+
+            let comparer1 = Linq.createProjectionEqualityComparer(projection1, reverseComparer);
+            let comparer2 = Linq.createProjectionEqualityComparer(projection2, Linq.caseInsensitiveStringComparer);
+            let comparer3 = Linq.createProjectionEqualityComparer(projection3, reverseComparer);
+
+            expect(comparer1(col[0], col[1])).toBeFalsy();
+            expect(comparer1(col[3], col[0])).toBeFalsy();
+            expect(comparer1(col[4], col[4])).toBeTruthy();
+
+            expect(comparer2(col[3], col[5])).toBeFalsy();
+            expect(comparer2(col[4], col[5])).toBeFalsy();
+            expect(comparer3(col[0], col[6])).toBeTruthy();
+
+            expect(comparer3(col[0], col[4])).toBeFalsy();
+            expect(comparer3(col[2], col[6])).toBeFalsy();
+            expect(comparer3(col[0], col[6])).toBeTruthy();
+        });
+
+        it('works with an EqualityComparer<T>', () =>
+        {
+            let parityComparer = (x: number, y: number): boolean => 
+            {
+                let isEven = (n: number) => n % 2 == 0;
+
+                let xIsEven = isEven(x);
+                let yIsEven = isEven(y);
+
+                return (xIsEven == yIsEven);
+            };
+
+            let comparer1 = Linq.createProjectionEqualityComparer(projection1, parityComparer);
+            let comparer2 = Linq.createProjectionEqualityComparer(projection2, Linq.normalizeComparer(Linq.caseInsensitiveStringComparer));
+            let comparer3 = Linq.createProjectionEqualityComparer(projection3, parityComparer);
+
+            expect(comparer1(col[1], col[4])).toBeFalsy();
+            expect(comparer1(col[2], col[3])).toBeFalsy();
+            expect(comparer1(col[0], col[2])).toBeTruthy();
+            expect(comparer1(col[1], col[3])).toBeTruthy();
+
+            expect(comparer2(col[3], col[5])).toBeFalsy();
+            expect(comparer2(col[4], col[5])).toBeFalsy();
+            expect(comparer3(col[0], col[6])).toBeTruthy();
+            
+            expect(comparer3(col[0], col[4])).toBeTruthy();
+            expect(comparer3(col[6], col[4])).toBeTruthy();
+            expect(comparer3(col[1], col[3])).toBeFalsy();
+            expect(comparer3(col[4], col[1])).toBeFalsy();
+        });
+
+        it('throws an exception on a null projection', () =>
+        {
+            expect(() => { Linq.createProjectionEqualityComparer(null); }).toThrow();
+        });
+    });
 });

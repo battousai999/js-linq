@@ -241,6 +241,32 @@ export class Linq<T>
         };
     }
 
+    public static createProjectionComparer<U, V>(projection: Selector<U, V>, comparer?: Comparer<V>): Comparer<U>
+    {
+        if (projection == null)
+            throw new Error('Invalid projection.');
+
+        if (comparer == null)
+            comparer = (x: V, y: V) => Linq._generalComparer(x, y);
+
+        return (x: U, y: U) => comparer(projection(x), projection(y));
+    }
+
+    public static createProjectionEqualityComparer<U, V>(projection: Selector<U, V>, comparer?: Comparer<V> | EqualityComparer<V>): EqualityComparer<U>
+    {
+        if (projection == null)
+            throw new Error('Invalid projection.');
+
+        let normalizedComparer: EqualityComparer<V>;
+
+        if (comparer == null)
+            normalizedComparer = (x: V, y: V) => x === y;
+        else
+            normalizedComparer = Linq.normalizeComparer(comparer);
+
+        return (x: U, y: U) => normalizedComparer(projection(x), projection(y));
+    }
+
     private static convertToString(value: any) : string
     {
         if (Linq.isString(value))
