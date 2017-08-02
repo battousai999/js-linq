@@ -7,7 +7,7 @@ $linq is a Javascript version of .NET's Linq to Objects, with some query operati
 ### What is $linq?
 $linq is an implementation of .NET Linq to Objects for Javascript.  It implements most of the corresponding .NET Linq to Objects methods.  It also implements some methods inspired by MoreLinq (http://code.google.com/p/morelinq).  $linq will work with arrays and jQuery collections.  $linq can also generate values from a numerical range, as an item repeated a given number of times, and from RegExp match results.
 
-$linq also includes a typescript definition file (jslinq.d.ts).
+$linq also includes a version of the library written in Typescript (jslinq.ts).
 
 ### NPM package page
 https://www.npmjs.com/package/js-linq
@@ -75,6 +75,48 @@ var results = $linq(users).join(groups,
             ", group: " + inner.groupName;
     },
     "(x, y) => x.toLowerCase() == y.toLowerCase()");    
+```
+### Examples using the Typescript version
+A simple example of breaking up a sequence of numbers into even and odd arrays:
+``` typescript
+let list = Linq.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+let evens = list.where(x => x % 2 == 0).toArray();
+let odds = list.where(x => x % 2 == 1).toArray();
+```
+Ordering a list of people:
+``` typescript
+let people = [{first: "Jason", last: "Bourne"},
+    {first: "Gandalf", last: "The Grey"},
+    {first: "John", last: "Smith"},
+    {first: "Albert", last: "Smith"}];
+    
+let results = Linq.from(people)
+    .orderBy(x => x.last)
+    .thenBy(x => x.first)
+    .toArray();
+```
+Using an inner join:
+``` typescript
+let users = [{username: "asmith", domain: "north_america"},
+    {username: "tmcfarland", domain: "europe"},
+    {username: "cdeckard", domain: "north_america"}];
+    
+let groups = [{user: "ASMITH", groupName: "base_users"},
+    {user: "TMCFARLAND", groupName: "admins"},
+    {user: "CDECKARD", groupName: "base_users"},
+    {user: "CDECKARD", groupName: "testers"}];
+    
+let results = Linq.from(users).join(groups,
+    x => x.username,           // key for 'users'
+    x => x.user,               // key for 'groups'
+    (outer, inner) =>          // function to generate results
+    { 
+        return "user: " + outer.username + 
+            ", domain: " + outer.domain +
+            ", group: " + inner.groupName;
+    },
+    (x, y) => x.toLowerCase() == y.toLowerCase());    
 ```
 ### License
 The MIT License (MIT)
