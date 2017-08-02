@@ -1,3 +1,7 @@
+/*
+    $linq Version 1.6.0 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
+*/
+
 export class Linq<T>
 {
     private array: Array<T>;
