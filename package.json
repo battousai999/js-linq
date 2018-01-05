@@ -4,7 +4,7 @@
   "description": "A Javascript version of .NET's LINQ to Objects, with some query operations inspired by MoreLinq.",
   "main": "jslinq.js",
   "scripts": {
-    "test": "karma start karma_ts.conf.js --single-run"
+    "test": "karma start"
   },
   "repository": {
     "type": "git",
@@ -18,17 +18,22 @@
   "homepage": "https://github.com/battousai999/js-linq",
   "devDependencies": {
     "@types/jasmine": "^2.5.35",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
     "grunt": "^0.4.5",
     "grunt-contrib-uglify": "^0.11.1",
     "grunt-karma": "^0.12.1",
-    "jasmine-core": "^2.4.1",
-    "karma": "^1.2.0",
-    "karma-cli": "^1.0.1",
+    "jasmine-core": "^2.8.0",
+    "karma": "^2.0.0",
     "karma-chrome-launcher": "^2.0.0",
-    "karma-jasmine": "^1.0.2",
-    "karma-phantomjs-launcher": "^1.0.2",
-    "karma-typescript": "^2.1.7",
+    "karma-cli": "^1.0.1",
+    "karma-jasmine": "^1.1.1",
+    "karma-phantomjs-launcher": "^1.0.4",
+    "karma-webpack": "^2.0.9",
     "load-grunt-tasks": "^3.4.1",
-    "phantomjs-prebuilt": "^2.1.4"
+    "phantomjs-prebuilt": "^2.1.16",
+    "webpack": "^3.10.0"
   }
 }
