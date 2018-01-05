@@ -32,4 +32,11 @@ describe('constructor', () =>
         expect(Utils.isEqualIgnoringOrder(arr, [1, 2, 3, 4, 99])).toBeTruthy();
         expect(Utils.isEqualIgnoringOrder(arr, linq.array)).toBeTruthy();
     });
+
+    it('when called with null then returns empty linq object', () => 
+    {
+        var linq = new Linq(null);
+
+        expect(Utils.isEqualIgnoringOrder(linq.array, [])).toBeTruthy();
+    });
 });
