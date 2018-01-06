@@ -4,7 +4,7 @@
 
 class LinqHelper
 {
-
+    
 }
 
 export class Linq
@@ -18,4 +18,8 @@ export class Linq
 
         this.deferredSort = null;
     }
+
+    static isFunction(func) { return (typeof func == "function"); }
+    static isArray(obj) { return Array.isArray(obj); }  // Kept for backwards-compatibility reasons
+    static isString(obj) { return (typeof obj === 'string' || obj instanceof String); }
 }

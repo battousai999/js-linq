@@ -5,16 +5,16 @@ describe('constructor', () =>
 {
     it('when called with array then has elements in array', () => 
     {
-        var arr = [1, 2, 3, 4, 5];
-        var linq = new Linq(arr);
+        let arr = [1, 2, 3, 4, 5];
+        let linq = new Linq(arr);
 
         expect(Utils.isEqualIgnoringOrder(arr, linq.array)).toBeTruthy();
     });
 
     it('when called with array-copying then arrays are distinct', () => 
     {
-        var arr = [1, 2, 3, 4];
-        var linq = new Linq(arr, true);
+        let arr = [1, 2, 3, 4];
+        let linq = new Linq(arr, true);
 
         arr.push(99);
 
@@ -24,8 +24,8 @@ describe('constructor', () =>
 
     it('when called with no array-copying then arrays are not distinct', () => 
     {
-        var arr = [1, 2, 3, 4];
-        var linq = new Linq(arr, false);
+        let arr = [1, 2, 3, 4];
+        let linq = new Linq(arr, false);
 
         arr.push(99);
 
@@ -35,7 +35,7 @@ describe('constructor', () =>
 
     it('when called with null then returns empty linq object', () => 
     {
-        var linq = new Linq(null);
+        let linq = new Linq(null);
 
         expect(Utils.isEqualIgnoringOrder(linq.array, [])).toBeTruthy();
     });
