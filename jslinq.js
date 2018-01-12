@@ -22,4 +22,9 @@ export class Linq
     static isFunction(func) { return (typeof func == "function"); }
     static isArray(obj) { return Array.isArray(obj); }  // Kept for backwards-compatibility reasons
     static isString(obj) { return (typeof obj === 'string' || obj instanceof String); }
+    static isBoolean(obj) { return (typeof obj === 'boolean' || obj instanceof Boolean); }
+    static isNumber(obj) { return (typeof obj === 'number' || obj instanceof Number); }
+
+    static identity(x) { return x; }
+    static merge(x, y) { return [x, y]; }
 }
