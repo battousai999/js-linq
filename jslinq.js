@@ -10,6 +10,10 @@ class LinqHelper
 
 export class Linq
 {
+    // Soon, this will need to be changed to take an argument that conforms to the iterable protocol (which
+    // includes Arrays and generators).
+    // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable
+    // I'm not sure how this will impact the 'copyArray' parameter (i.e., whether it will be needed or not)
     constructor(array, copyArray = true)
     {
         if (copyArray)
@@ -86,7 +90,14 @@ export class Linq
         if (comparer == null)
             comparer = (x, y) => Linq.generalComparer(x, y);
 
-        return (x, y) => comparer(projection(x), projection(y));
+        return (x, y) => {
+            let results = comparer(projection(x), projection(y));
+
+            if (Linq.isBoolean(results))
+                throw new Error('The given \'comparer\' was an equality comparer instead of a comparer.');
+
+            return results;
+        };
     }
 
     static createProjectionEqualityComparer(projection, comparer = null)
