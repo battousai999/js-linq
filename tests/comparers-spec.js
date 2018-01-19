@@ -629,7 +629,7 @@ describe('defaultStringEqualityComparer', () =>
 
 describe('normalizeComparer', () => 
 {
-    var tests = [
+    let tests = [
         ['', ''],
         ['test', 'test'],
         ['test', 'TEST'],
@@ -661,32 +661,32 @@ describe('normalizeComparer', () =>
 
     it('when passed a regular (non-equality) comparer then convert to a function that returns boolean values', () => 
     {
-        var normalizedComparer = Linq.normalizeComparer(Linq.caseSensitiveStringComparer);
-        var results = tests.every(([x, y]) => Linq.isBoolean(normalizedComparer(x, y)));
+        let normalizedComparer = Linq.normalizeComparer(Linq.caseSensitiveStringComparer);
+        let results = tests.every(([x, y]) => Linq.isBoolean(normalizedComparer(x, y)));
 
         expect(results).toBeTruthy();
     });
 
     it('when passed a regular (non-equality) comparer then the returned comparer orders the same as the passed-in comparer', () => 
     {
-        var baseComparer = Linq.caseSensitiveStringComparer;
-        var normalizedComparer = Linq.normalizeComparer(baseComparer);
+        let baseComparer = Linq.caseSensitiveStringComparer;
+        let normalizedComparer = Linq.normalizeComparer(baseComparer);
 
         runTestScenarios(baseComparer, normalizedComparer, tests);
     });
 
     it('when passed an equality comparer then convert to a function that returns boolean values', () => 
     {
-        var normalizedComparer = Linq.normalizeComparer(Linq.caseSensitiveStringEqualityComparer);
-        var results = tests.every(([x, y]) => Linq.isBoolean(normalizedComparer(x, y)));
+        let normalizedComparer = Linq.normalizeComparer(Linq.caseSensitiveStringEqualityComparer);
+        let results = tests.every(([x, y]) => Linq.isBoolean(normalizedComparer(x, y)));
 
         expect(results).toBeTruthy();
     });
 
     it('when passed an equality comparer then the returned comparer orders the same as the passed-in comparer', () => 
     {
-        var baseComparer = Linq.caseSensitiveStringEqualityComparer;
-        var normalizedComparer = Linq.normalizeComparer(baseComparer);
+        let baseComparer = Linq.caseSensitiveStringEqualityComparer;
+        let normalizedComparer = Linq.normalizeComparer(baseComparer);
 
         runTestScenarios(baseComparer, normalizedComparer, tests);
     });
@@ -694,7 +694,7 @@ describe('normalizeComparer', () =>
 
 describe('createProjectionComparer', () => 
 {
-    var tests = [
+    let tests = [
         [0, 2],
         [0, 10],
         [12, 99],
@@ -703,8 +703,8 @@ describe('createProjectionComparer', () =>
         [-9, 11]
     ];
 
-    var projection = x => 2 -x;
-    var comparer = Linq.createProjectionComparer(projection);
+    let projection = x => 2 -x;
+    let comparer = Linq.createProjectionComparer(projection);
 
     let runTestScenarios = (firstComparer, secondComparer, samples) =>
     {
@@ -718,22 +718,22 @@ describe('createProjectionComparer', () =>
 
     it('when passed a non-null projection then returns a function that returns numbers', () => 
     {
-        var results = tests.every(([x, y]) => Linq.isNumber(comparer(x, y)));
+        let results = tests.every(([x, y]) => Linq.isNumber(comparer(x, y)));
 
         expect(results).toBeTruthy();
     });
 
     it('when passed a null comparer then compares projected values equivalently to Linq.generalComparer', () => 
     {
-        var baselineComparer = Linq.createProjectionComparer(projection, Linq.generalComparer);
+        let baselineComparer = Linq.createProjectionComparer(projection, Linq.generalComparer);
 
         runTestScenarios(comparer, baselineComparer, tests);
     });
 
     it('when passed a non-null comparer then compares projected values with comparer', () => 
     {
-        var baselineComparer = (x, y) => Linq.caseInsensitiveStringComparer(x[0], y[0]);
-        var comparer = Linq.createProjectionComparer(x => x[0], Linq.caseInsensitiveStringComparer);
+        let baselineComparer = (x, y) => Linq.caseInsensitiveStringComparer(x[0], y[0]);
+        let comparer = Linq.createProjectionComparer(x => x[0], Linq.caseInsensitiveStringComparer);
 
         runTestScenarios(comparer, baselineComparer, tests);
     });
@@ -741,7 +741,7 @@ describe('createProjectionComparer', () =>
 
 describe('createProjectionEqualityComparer', () => 
 {
-    var tests = [
+    let tests = [
         [0, 2],
         [0, 10],
         [12, 99],
@@ -750,8 +750,8 @@ describe('createProjectionEqualityComparer', () =>
         [-9, 11]
     ];
 
-    var projection = x => 2 -x;
-    var comparer = Linq.createProjectionEqualityComparer(projection);
+    let projection = x => 2 -x;
+    let comparer = Linq.createProjectionEqualityComparer(projection);
 
     let runTestScenarios = (firstComparer, secondComparer, samples) =>
     {
@@ -765,30 +765,30 @@ describe('createProjectionEqualityComparer', () =>
 
     it('when passed a non-null projection then returns a function that returns booleans', () => 
     {
-        var results = tests.every(([x, y]) => Linq.isBoolean(comparer(x, y)));
+        let results = tests.every(([x, y]) => Linq.isBoolean(comparer(x, y)));
 
         expect(results).toBeTruthy();
     });
 
     it('when passed a null equality comparer then compares projected values equivalently to strict equality', () => 
     {
-        var baselineComparer = Linq.createProjectionEqualityComparer(projection, (x, y) => x === y);
+        let baselineComparer = Linq.createProjectionEqualityComparer(projection, (x, y) => x === y);
 
         runTestScenarios(comparer, baselineComparer, tests);
     });
 
     it('when passed a non-null equality comparer then compares projected values with equality comparer', () => 
     {
-        var baselineComparer = (x, y) => Linq.caseInsensitiveStringEqualityComparer(x[0], y[0]);
-        var comparer = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringEqualityComparer);
+        let baselineComparer = (x, y) => Linq.caseInsensitiveStringEqualityComparer(x[0], y[0]);
+        let comparer = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringEqualityComparer);
 
         runTestScenarios(comparer, baselineComparer, tests);
     });
 
     it('when passed a non-equality comparer then compares projected values with the comparer converted to an equality comparer', () => 
     {
-        var baselineComparer = (x, y) => Linq.caseInsensitiveStringEqualityComparer(x[0], y[0]);
-        var comparer = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringComparer);
+        let baselineComparer = (x, y) => Linq.caseInsensitiveStringEqualityComparer(x[0], y[0]);
+        let comparer = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringComparer);
 
         runTestScenarios(comparer, baselineComparer, tests);
     });

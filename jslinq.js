@@ -5,23 +5,34 @@
 class LinqHelper
 {
     static convertToString(value) { return (value == null ? null : value.toString()); }
-    static convertToNumber(value) { return (Linq.isNumber(value) ? value : NaN); }
+    static convertToNumber(value) { return (Linq.isNumber(value) ? value : NaN); }    
 }
+
+// Used in the Linq.isGenerator() function to test for being a generator.
+var GeneratorFunction = (function*(){}).constructor;
 
 export class Linq
 {
-    // Soon, this will need to be changed to take an argument that conforms to the iterable protocol (which
-    // includes Arrays and generators).
-    // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable
-    // I'm not sure how this will impact the 'copyArray' parameter (i.e., whether it will be needed or not)
-    constructor(array, copyArray = true)
+    /**
+     * Creates a new linq object.  If `source` is a function, then it is expected to return an iterable, a generator
+     * or another function that returns either an iterable or a generator.
+     * 
+     * The iterables that can be passed in `source` are those defined by the "iterable protocol" (see
+     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable).
+     * 
+     * @constructor
+     * @param {iterable|generator|function} source - The source from which this linq object enumerates values
+     * @throws If `source` is not an iterable, a generator, or a function.
+     */
+    constructor(source)
     {
-        if (copyArray)
-            this.array = (array == null ? [] : array.slice(0));
-        else
-            this.array = array;
+        if (source == null)
+            source = [];
 
-        this.deferredSort = null;
+        if (Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source))
+            this.source = source;
+        else
+            throw new Error('The \'source\' is not either an iterable or a generator.');
     }
 
     // Helper functions
@@ -30,6 +41,8 @@ export class Linq
     static isString(obj) { return (typeof obj === 'string' || obj instanceof String); }
     static isBoolean(obj) { return (typeof obj === 'boolean' || obj instanceof Boolean); }
     static isNumber(obj) { return (typeof obj === 'number' || obj instanceof Number); }
+    static isIterable(obj) { return obj != null && typeof obj[Symbol.iterator] === 'function'; }
+    static isGenerator(obj) { return (obj instanceof GeneratorFunction); }
 
     static identity(x) { return x; }
     static merge(x, y) { return [x, y]; }
@@ -116,4 +129,25 @@ export class Linq
     }
 
     // Linq operators
+    toIterable()
+    {
+        let helper = source =>
+        {
+            if (Linq.isIterable(source))
+                return source;
+            else if (Linq.isGenerator(source))
+                return source();
+            else if (Linq.isFunction(source))
+                return helper(source());
+            else 
+                throw new Error('Could not return an iterable because the \'source\' was not valid.');
+        };
+
+        return helper(this.source);
+    }
+
+    toArray()
+    {
+        return Array.from(this.toIterable());
+    }
 }

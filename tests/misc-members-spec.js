@@ -128,3 +128,60 @@ describe('merge', () =>
         expect(Linq.merge(11, 'testing')).toEqual([11, 'testing']);
     });
 });
+
+describe('isIterable', () => 
+{
+    it('when called with an array then returns true', () => 
+    {
+        expect(Linq.isIterable([])).toBeTruthy();
+    });
+
+    it('when called with a generator then returns true', () => 
+    {
+        function* smallSeries()
+        {
+            yield 1;
+            yield 2;
+            yield 3;
+            yield 4;
+            yield 5;
+        }
+
+        expect(Linq.isIterable(smallSeries())).toBeTruthy();
+    });
+
+    it('when called with a null value then returns false', () => 
+    {
+        expect(Linq.isIterable(null)).toBeFalsy();
+    });
+
+    it('when called with a non-iterable then returns false', () => 
+    {
+        expect(Linq.isIterable(99)).toBeFalsy();
+    });
+});
+
+describe('isGenerator', () => 
+{
+    it('when called with a null value then returns false', () => 
+    {
+        expect(Linq.isGenerator(null)).toBeFalsy();
+    });
+
+    it('when called with a non-generator then return false', () => 
+    {
+        expect(Linq.isGenerator(99)).toBeFalsy();
+    });
+
+    it('when called with a generator then return true', () => 
+    {
+        function* gen()
+        {
+            yield 1;
+            yield 2;
+            yield 3;
+        }
+
+        expect(Linq.isGenerator(gen)).toBeTruthy();
+    });
+});
