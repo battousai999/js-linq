@@ -21,7 +21,7 @@ export class Linq
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable).
      * 
      * @constructor
-     * @param {iterable|generator|function} source - The source from which this linq object enumerates values
+     * @param {iterable|generator|Linq|function} source - The source from which this linq object enumerates values
      * @throws If `source` is not an iterable, a generator, or a function.
      */
     constructor(source)
@@ -29,7 +29,7 @@ export class Linq
         if (source == null)
             source = [];
 
-        if (Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source))
+        if (Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source) || Linq.isLinq(source))
             this.source = source;
         else
             throw new Error('The \'source\' is not either an iterable or a generator.');
@@ -43,6 +43,7 @@ export class Linq
     static isNumber(obj) { return (typeof obj === 'number' || obj instanceof Number); }
     static isIterable(obj) { return obj != null && typeof obj[Symbol.iterator] === 'function'; }
     static isGenerator(obj) { return (obj instanceof GeneratorFunction); }
+    static isLinq(obj) { return (obj instanceof Linq); }
 
     static identity(x) { return x; }
     static merge(x, y) { return [x, y]; }
@@ -133,7 +134,9 @@ export class Linq
     {
         let helper = source =>
         {
-            if (Linq.isIterable(source))
+            if (Linq.isLinq(source))
+                return source.toIterable();
+            else if (Linq.isIterable(source))
                 return source;
             else if (Linq.isGenerator(source))
                 return source();
