@@ -1,19 +1,19 @@
 import {Linq} from '../jslinq';
 import {Utils} from './utils';
 
-describe('constructor', () =>
+describe('from', () => 
 {
-    it('when called with iterable (Array) then has elements', () => 
+    it('when called with an iterable (Array) then has elements', () => 
     {
-        let arr = [1, 2, 3, 4, 5];
-        let linq = new Linq(arr);
+        let arr = [2, 3, 4, 5, 6];
+        let linq = Linq.from(arr);
 
         expect(linq.toArray()).toEqual(arr);
     });
 
     it('when called with an iterable (TypedArray) then has elements', () => 
     {
-        let testValues = [10, 20, 30, 40];
+        let testValues = [20, 30, 40, 50];
         let arr = new Int16Array(4);
 
         arr[0] = testValues[0];
@@ -21,7 +21,7 @@ describe('constructor', () =>
         arr[2] = testValues[2];
         arr[3] = testValues[3];
 
-        let linq = new Linq(arr);
+        let linq = Linq.from(arr);
         let results = linq.toArray();
 
         expect(linq.toArray()).toEqual(testValues);
@@ -29,8 +29,8 @@ describe('constructor', () =>
 
     it('when called with an iterable (Set) then has elements', () => 
     {
-        let testValues = [10, 'test', 33, 'THIS'];
-        let linq = new Linq(new Set(testValues));
+        let testValues = [10, 'test', 33, 'THIS', 99];
+        let linq = Linq.from(new Set(testValues));
 
         expect(Utils.isEqualIgnoringOrder(linq.toArray(), testValues)).toBeTruthy();
     });
@@ -38,13 +38,13 @@ describe('constructor', () =>
     it('when called with an iterable (Map) then has elements', () => 
     {
         let testValues = [
+            [-300, 'limit'],
             [0, 'yes'], 
             [7, 'no'], 
-            [99, 'div'], 
-            [-300, 'limit']
+            [99, 'div']
         ];
 
-        let linq = new Linq(new Map(testValues));
+        let linq = Linq.from(new Map(testValues));
         let results1 = linq.toArray().map(x => x[0]);
         let expected1 = testValues.map(x => x[0]);
         let results2 = linq.toArray().map(x => x[1]);
@@ -56,8 +56,8 @@ describe('constructor', () =>
 
     it('when called with an iterable (String) then has elements', () => 
     {
-        let testValue = 'contravariant';
-        let linq = new Linq(testValue);
+        let testValue = 'monomorphism';
+        let linq = Linq.from(testValue);
         let expected = testValue.split('');
 
         expect(linq.toArray()).toEqual(expected);
@@ -67,24 +67,15 @@ describe('constructor', () =>
     {
         function* gen()
         {
-            yield 1;
-            yield 2;
             yield 3;
             yield 4;
+            yield 1;
+            yield 2;
         }
     
-        let linq = new Linq(gen);
+        let linq = Linq.from(gen);
 
-        expect(linq.toArray()).toEqual([1, 2, 3, 4]);
-    });
-
-    it('when called with a Linq object then has elements', () => 
-    {
-        let arr = [2, 4, 6, 8, 10];
-        let originalLinq = new Linq(arr);
-        let linq = new Linq(originalLinq);
-
-        expect(linq.toArray()).toEqual(arr);
+        expect(linq.toArray()).toEqual([3, 4, 1, 2]);
     });
 
     it('when called with a function that returns a generator then has elements', () => 
@@ -93,41 +84,50 @@ describe('constructor', () =>
         {
             function* gen()
             {
-                yield 1;
-                yield 2;
                 yield 3;
                 yield 4;
+                yield 1;
+                yield 2;
             }
         
             return gen;
         }
 
-        let linq = new Linq(testFunc);
+        let linq = Linq.from(testFunc);
 
-        expect(linq.toArray()).toEqual([1, 2, 3, 4]);
+        expect(linq.toArray()).toEqual([3, 4, 1, 2]);
     });
 
     it('when called with a function that returns an iterator then has elements', () => 
     {
-        let testValue = ['t', 'e', 's', 't', 'i', 'n', 'g'];
+        let testValue = ['t', 'e', 's', 't', 'i', 'n', 'g', ' ', 's', 't', 'u', 'f', 'f'];
         let testFunc = () => testValue.join('');
-        let linq = new Linq(testFunc);
+        let linq = Linq.from(testFunc);
 
         expect(linq.toArray()).toEqual(testValue);
     });
 
     it('when called with a function that returns neither an iterator nor a generator and toIterator is called then throws exception', () => 
     {
-        let testFunc = () => 99;
-        let linq = new Linq(testFunc);
+        let testFunc = () => null;
+        let linq = Linq.from(testFunc);
 
         expect(() => linq.toIterable()).toThrow();
     });
 
-    it('when called with null then returns empty linq object', () => 
+    it('when called with null then returns an empty linq object', () => 
     {
-        let linq = new Linq(null);
+        let linq = Linq.from(null);
 
         expect(linq.toArray()).toEqual([]);
+    });
+
+    it('when called with a Linq object then has elements', () => 
+    {
+        let arr = [4, 6, 8, 10, 12];
+        let originalLinq = new Linq(arr);
+        let linq = new Linq(originalLinq);
+
+        expect(linq.toArray()).toEqual(arr);
     });
 });

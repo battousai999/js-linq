@@ -6,6 +6,28 @@ class LinqHelper
 {
     static convertToString(value) { return (value == null ? null : value.toString()); }
     static convertToNumber(value) { return (Linq.isNumber(value) ? value : NaN); }    
+    static isConstructorCompatibleSource(source) { return Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source) || Linq.isLinq(source); }
+
+    static buildRangeGenerator(from, to, step)
+    {
+        function compare(x, y)
+        {
+            if (step > 0)
+                return (x <= y);
+            else
+                return (x >= y);
+        }
+
+        function *gen()
+        {
+            for (var i = from; compare(i, to); i += step)
+            {
+                yield i;
+            }
+        }
+
+        return gen;
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
@@ -29,7 +51,7 @@ export class Linq
         if (source == null)
             source = [];
 
-        if (Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source) || Linq.isLinq(source))
+        if (LinqHelper.isConstructorCompatibleSource(source))
             this.source = source;
         else
             throw new Error('The \'source\' is not either an iterable or a generator.');
@@ -129,7 +151,60 @@ export class Linq
         return (x, y) => normalizedComparer(projection(x), projection(y));
     }
 
+    // Constructor functions
+
+    /**
+     * Creates a new Linq object, acting very similarly as the Linq constructor, but also accepts:
+     * 
+     * (1) jQuery objects, and 
+     * (2) objects that would cause the constructor to throw an exception (resulting in a Linq object 
+     *     that represents a single-item list containing the object).
+     * 
+     * @param {*} source - A source of items
+     * @returns {Linq} 
+     */
+    static from(source)
+    {
+        if (source == null || LinqHelper.isConstructorCompatibleSource(source))
+            return new Linq(source);
+        else if (typeof jQuery !== 'undefined' && (collection instanceof jQuery))
+            return new Linq(source.get());
+        else
+            return new Linq([source]);
+    }
+
+    /**
+     * Create a new linq object that contains a range of integers.
+     * 
+     * @param {num} from - The starting value of the range
+     * @param {num} to - The ending value of the range
+     * @param {num} [step=1] - The amount by which to increment each iteration
+     * @returns {Linq} 
+     */
+    static range(from, to, step)
+    {
+        if ((from == null) || isNaN(from))
+            throw new Error("Invalid 'from' value.");
+
+        if ((to == null) || isNaN(to))
+            throw new Error("Invalid 'to' value.");
+
+        if ((step == null) || isNaN(step))
+            step = 1;
+
+        if (step == 0)
+            throw new Error("Invalid 'step' value--cannot be zero.");
+
+        return new Linq(LinqHelper.buildRangeGenerator(from, to, step));
+    }
+
     // Linq operators
+
+    /**
+     * Returns an iterable (as defined by the "iterable protocol"--see
+     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
+     * represents the contents of the Linq object.
+     */
     toIterable()
     {
         let helper = source =>
@@ -149,6 +224,9 @@ export class Linq
         return helper(this.source);
     }
 
+    /**
+     * Returns an array that represents the contents of the Linq object.
+     */
     toArray()
     {
         return Array.from(this.toIterable());
