@@ -100,32 +100,32 @@ describe('identity', () =>
     });
 });
 
-describe('merge', () => 
+describe('tuple', () => 
 {
     it('when called with two values then its first element is correct', () => 
     {
-        expect(Linq.merge(11, 22)[0]).toEqual(11);
-        expect(Linq.merge(true, false)[0]).toEqual(true);
-        expect(Linq.merge('test', 'me')[0]).toEqual('test');
-        expect(Linq.merge(null, undefined)[0]).toEqual(null);
+        expect(Linq.tuple(11, 22)[0]).toEqual(11);
+        expect(Linq.tuple(true, false)[0]).toEqual(true);
+        expect(Linq.tuple('test', 'me')[0]).toEqual('test');
+        expect(Linq.tuple(null, undefined)[0]).toEqual(null);
     });
 
     it('when called with two values then its second element is correct', () => 
     {
-        expect(Linq.merge(11, 22)[1]).toEqual(22);
-        expect(Linq.merge(true, false)[1]).toEqual(false);
-        expect(Linq.merge('test', 'me')[1]).toEqual('me');
-        expect(Linq.merge(null, undefined)[1]).toEqual(undefined);
+        expect(Linq.tuple(11, 22)[1]).toEqual(22);
+        expect(Linq.tuple(true, false)[1]).toEqual(false);
+        expect(Linq.tuple('test', 'me')[1]).toEqual('me');
+        expect(Linq.tuple(null, undefined)[1]).toEqual(undefined);
     });
 
     it('when called then it returns an array', () => 
     {
-        expect(Array.isArray(Linq.merge(11, 22))).toBeTruthy();
+        expect(Array.isArray(Linq.tuple(11, 22))).toBeTruthy();
     });
 
     it('when called with values of different type then it returns the correct elements', () => 
     {
-        expect(Linq.merge(11, 'testing')).toEqual([11, 'testing']);
+        expect(Linq.tuple(11, 'testing')).toEqual([11, 'testing']);
     });
 });
 

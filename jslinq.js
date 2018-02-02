@@ -68,7 +68,7 @@ export class Linq
     static isLinq(obj) { return (obj instanceof Linq); }
 
     static identity(x) { return x; }
-    static merge(x, y) { return [x, y]; }
+    static tuple(x, y) { return [x, y]; }
 
     // Comparer functions
     static defaultStringComparer(x, y) { return Linq.caseSensitiveStringComparer(x, y); }
