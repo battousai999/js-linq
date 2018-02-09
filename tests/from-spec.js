@@ -3,6 +3,14 @@ import {Utils} from './utils';
 
 describe('from', () => 
 {
+    it('when called then returns a Linq object', () => 
+    {
+        let linq = Linq.from([1, 2, 3]);
+
+        expect(linq).not.toBeNull();
+        expect(linq instanceof Linq).toBeTruthy();
+    });
+
     it('when called with an iterable (Array) then has elements', () => 
     {
         let arr = [2, 3, 4, 5, 6];

@@ -20,9 +20,22 @@ class LinqHelper
 
         function *gen()
         {
-            for (var i = from; compare(i, to); i += step)
+            for (let i = from; compare(i, to); i += step)
             {
                 yield i;
+            }
+        }
+
+        return gen;
+    }
+
+    static buildRepeatGenerator(item, repetitions)
+    {
+        function *gen()
+        {
+            for (let i = 0; i < repetitions; i++)
+            {
+                yield item;
             }
         }
 
@@ -174,7 +187,7 @@ export class Linq
     }
 
     /**
-     * Create a new linq object that contains a range of integers.
+     * Create a new Linq object that contains a range of integers.
      * 
      * @param {num} from - The starting value of the range
      * @param {num} to - The ending value of the range
@@ -196,6 +209,21 @@ export class Linq
             throw new Error("Invalid 'step' value--cannot be zero.");
 
         return new Linq(LinqHelper.buildRangeGenerator(from, to, step));
+    }
+
+    /**
+     * Create a new Linq object that contains a given number of repetitions of an object.
+     * 
+     * @param {*} item - The item to repeat
+     * @param {num} [repetitions=1] - The number of times to repeat the object
+     * @returns {Linq}
+     */
+    static repeat(item, repetitions)
+    {
+        if ((repetitions == null) || isNaN(repetitions))
+            repetitions = 1;
+
+        return new Linq(LinqHelper.buildRepeatGenerator(item, repetitions));
     }
 
     // Linq operators

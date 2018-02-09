@@ -2,6 +2,14 @@ import {Linq} from '../jslinq';
 
 describe('range', () => 
 {
+    it('when called then returns a Linq object', () => 
+    {
+        let linq = Linq.range(1, 10);
+
+        expect(linq).not.toBeNull();
+        expect(linq instanceof Linq).toBeTruthy();
+    });
+
     it('when called with a \'to\' larger than its \'from\' (and with positive \'step\') then returns a Linq object with the correct contents', () => 
     {
         let linq = Linq.range(2, 10);
