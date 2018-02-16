@@ -226,6 +226,52 @@ export class Linq
         return new Linq(LinqHelper.buildRepeatGenerator(item, repetitions));
     }
 
+    /**
+     * Create a new linq object that contains all of the matches for a regex pattern.  Note that 'g' does not need to be added 
+     * to the flags parameter (it will be automatically added).
+     * 
+     * @param {string} text 
+     * @param {string|RegExp} pattern 
+     * @param {string} [flags] 
+     */
+    static matches(text, pattern, flags)
+    {
+        if (pattern == null)
+            throw new Error('Invalid \'pattern\' value.');
+
+        if (text == null)
+            return new Linq();
+
+        if (!Linq.isString(text))
+            throw new Error('Parameter \'text\' is not a string.');
+
+        if (flags == null)
+            flags = '';
+        
+        if (!flags.includes('g'))
+            flags += 'g';
+
+        let internalPattern;
+
+        if (pattern instanceof RegExp)
+        {
+            if (!flags.includes('i') && pattern.ignoreCase)
+                flags += 'i';
+
+            if (!flags.includes('m') && pattern.multiline)
+                flags += 'm';
+
+            internalPattern = pattern.source;
+        }
+        else
+            internalPattern = pattern;
+
+        let regex = new RegExp(internalPattern, flags);
+        let matches = text.match(regex);
+
+        return new Linq(matches = null ? [] : matches);
+    }
+
     // Linq operators
 
     /**
