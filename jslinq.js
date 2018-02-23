@@ -42,6 +42,18 @@ class LinqHelper
 
         return gen;
     }
+
+    static ValidateRequiredFunction(func, message)
+    {
+        if ((func == null) || !Linq.isFunction(func))
+            throw new Error(message);
+    }
+
+    static ValidateOptionalFunction(func, message)
+    {
+        if ((func != null) && !Linq.isFunction(func))
+            throw new Error(message);
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
@@ -312,6 +324,32 @@ export class Linq
     }
 
     // Linq operators
+
+    aggregate(seed, operation, resultSelector)
+    {
+        LinqHelper.ValidateRequiredFunction(operation, "Invalid operation.");
+        LinqHelper.ValidateOptionalFunction(resultSelector, "Invalid result selector.");
+
+        let iterator = this.toIterable();
+        let result = seed;
+        let isFirstElement = true;
+
+        for (let current of iterator)
+        {
+            if (isFirstElement && seed == null)
+            {
+                isFirstElement = false;
+                result = current;
+            }
+            else
+                result = operation(result, current);
+        }
+
+        if (isFirstElement && seed == null)
+            throw new Error("Cannot evaluate aggregation of an empty collection with no seed.");
+
+        return (resultSelector == null ? result : resultSelector(result));
+    }
 
     /**
      * Returns an iterable (as defined by the "iterable protocol"--see
