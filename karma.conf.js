@@ -1,6 +1,6 @@
 module.exports = function(config) {
     config.set({
-        browsers: ['PhantomJS'],
+        browsers: ['Chrome'],
         files: [
             { pattern: 'test-context.js', watched: false }
         ],

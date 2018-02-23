@@ -43,16 +43,24 @@ class LinqHelper
         return gen;
     }
 
-    static ValidateRequiredFunction(func, message)
+    static validateRequiredFunction(func, message)
     {
         if ((func == null) || !Linq.isFunction(func))
             throw new Error(message);
     }
 
-    static ValidateOptionalFunction(func, message)
+    static validateOptionalFunction(func, message)
     {
         if ((func != null) && !Linq.isFunction(func))
             throw new Error(message);
+    }
+
+    static getIterator(iterable)
+    {        
+        if (!Linq.isIterable(iterable))
+            return new Error('Value is not an iterable.');
+
+        return iterable[Symbol.iterator]();
     }
 }
 
@@ -327,26 +335,33 @@ export class Linq
 
     aggregate(seed, operation, resultSelector)
     {
-        LinqHelper.ValidateRequiredFunction(operation, "Invalid operation.");
-        LinqHelper.ValidateOptionalFunction(resultSelector, "Invalid result selector.");
+        LinqHelper.validateRequiredFunction(operation, "Invalid operation.");
+        LinqHelper.validateOptionalFunction(resultSelector, "Invalid result selector.");
 
-        let iterator = this.toIterable();
-        let result = seed;
-        let isFirstElement = true;
+        let iterator = LinqHelper.getIterator(this.toIterable());
+        let currentValue = null;
+        let result = null;
 
-        for (let current of iterator)
+        let getNext = () => 
         {
-            if (isFirstElement && seed == null)
-            {
-                isFirstElement = false;
-                result = current;
-            }
-            else
-                result = operation(result, current);
-        }
+            let state = iterator.next();
 
-        if (isFirstElement && seed == null)
+            currentValue = state.value;
+
+            return !state.done;
+        };
+
+        if (getNext())
+            result = (seed == null ? currentValue : operation(seed, currentValue));
+        else if (seed == null)
             throw new Error("Cannot evaluate aggregation of an empty collection with no seed.");
+        else
+            result = seed;
+
+        while (getNext())
+        {
+            result = operation(result, currentValue);
+        }
 
         return (resultSelector == null ? result : resultSelector(result));
     }
