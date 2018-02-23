@@ -403,15 +403,47 @@ export class Linq
     {
         LinqHelper.validateRequiredFunction(predicate);
 
-        let iterator = this.toIterable();
+        let iterable = this.toIterable();
 
-        for (let item of iterator)
+        for (let item of iterable)
         {
             if (!predicate(item))
                 return false;
         }
 
         return true;
+    }
+
+    /**
+     * Returns a boolean value indicating whether any of the elements of the collection satisfy the 
+     * predicate.  Returns 'false' if the collection is empty.
+     * 
+     * @param {predicate} [predicate] - The predicate applied to the collection
+     * @returns {boolean} - A value indicating whether any of the elements satisfied the predicate. 
+     */
+    any(predicate)
+    {
+        LinqHelper.validateOptionalFunction(predicate);
+
+        let iterable = this.toIterable();
+
+        if (predicate == null)
+        {
+            let iterator = LinqHelper.getIterator(iterable);
+            let state = iterator.next();
+
+            return !state.done;
+        }
+        else
+        {
+            for (let item of iterable)
+            {
+                if (predicate(item))
+                    return true;
+            }
+
+            return false;
+        }
     }
 
     /**
