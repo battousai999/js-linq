@@ -342,6 +342,12 @@ export class Linq
      */
 
     /**
+     * @callback predicate
+     * @param {*} value - The value to test
+     * @returns {boolean}
+     */
+
+    /**
      * Returns the aggregate value of performing the `operation` function on each of the values of
      * 'this' collection, starting with a value equal to `seed` (or to the value of the first element
      * of 'this' collection, if `seed` is null).  The final value is either directly returned (if no
@@ -384,6 +390,28 @@ export class Linq
         }
 
         return (resultSelector == null ? result : resultSelector(result));
+    }
+
+    /**
+     * Returns a boolean value indicating whether all of the elements of the collection satisfy the 
+     * predicate.  Returns 'true' if the collection is empty.
+     * 
+     * @param {predicate} predicate - The predicate applied to the collection
+     * @returns {boolean} - A value indicating whether all of the elements satisfied the predicate.
+     */
+    all(predicate)
+    {
+        LinqHelper.validateRequiredFunction(predicate);
+
+        let iterator = this.toIterable();
+
+        for (let item of iterator)
+        {
+            if (!predicate(item))
+                return false;
+        }
+
+        return true;
     }
 
     /**
