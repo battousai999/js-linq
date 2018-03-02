@@ -447,6 +447,39 @@ export class Linq
     }
 
     /**
+     * Returns the average value of all of the elements (or projection of the elements, if there is
+     * a selector), excluding null values.  If any of the elements (or projection of the elements) are
+     * NaN (i.e., not a number), then an exception will be thrown.
+     * 
+     * @param {projection} [selector] - A projection function that returns the value to be averaged
+     * @returns {number} - The average value calculated from the collection.
+     */
+    average(selector)
+    {
+        LinqHelper.validateOptionalFunction(selector);
+
+        let iterable = this.toIterable();
+        let result = 0;
+        let counter = 1;
+
+        for (let item of iterable)
+        {
+            let value = (selector == null ? item : selector(item));
+
+            if (value == null)
+                continue;
+
+            if (isNaN(value))
+                throw new Error('Encountered an element that is not a number.');
+
+            result += (value - result) / counter;
+            counter += 1;
+        }
+
+        return result;
+    }
+
+    /**
      * Returns an iterable (as defined by the "iterable protocol"--see
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
      * represents the contents of the Linq object.
