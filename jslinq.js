@@ -480,6 +480,54 @@ export class Linq
     }
 
     /**
+     * Returns an collection with the elements of 'this' collection grouped into separate 
+     * arrays (i.e., "buckets") of the 'size' given.  If the 'result selector' is given
+     * the the buckets will contain the values projected from the elements by the result
+     * selector.  The given 'size' must be greater than zero.
+     * 
+     * @param {number} size - The size of buckets into which to group the elements
+     * @param {projection} [resultSelector] - The projection function to use to project the result values
+     * @returns {Linq}
+     */
+    batch(size, resultSelector)
+    {
+        LinqHelper.validateOptionalFunction(resultSelector);
+
+        if ((size == null) || isNaN(size) || (size <= 0))
+            throw new Error('Invalid size.');
+
+        let iterable = this.toIterable();
+
+        function* batchGenerator()
+        {
+            let bucket = null;
+            let index = 0;
+
+            for (let item of iterable)
+            {
+                if (bucket == null)
+                    bucket = [];
+
+                bucket[index] = (resultSelector == null ? item : resultSelector(item));
+                index += 1;
+
+                if (index == size)
+                {
+                    yield bucket;
+
+                    bucket = null;
+                    index = 0;
+                }
+            }
+
+            if ((bucket != null) && (index > 0))
+                yield bucket;
+        }
+
+        return new Linq(batchGenerator);
+    }
+
+    /**
      * Returns an iterable (as defined by the "iterable protocol"--see
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
      * represents the contents of the Linq object.
