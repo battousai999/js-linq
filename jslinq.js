@@ -70,6 +70,25 @@ var GeneratorFunction = (function*(){}).constructor;
 export class Linq
 {
     /**
+     * A type that can be passed the the Linq constructor.
+     * @typedef {iterable|generator|Linq|function} LinqCompatible
+     */
+
+    /**
+     * A function that can act as a projection function (i.e., projects a value into some other value).
+     * @callback projection
+     * @param {*} value - The value to be projected
+     * @returns {*} - The projected value.
+     */
+
+    /**
+     * A function that can act as a predicate function (i.e., projects a value to a boolean value).
+     * @callback predicate
+     * @param {*} value - The value to test
+     * @returns {boolean}
+     */
+
+    /**
      * Creates a new linq object.  If `source` is a function, then it is expected to return an iterable, a generator
      * or another function that returns either an iterable or a generator.
      * 
@@ -77,7 +96,7 @@ export class Linq
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable).
      * 
      * @constructor
-     * @param {iterable|generator|Linq|function} source - The source from which this linq object enumerates values
+     * @param {LinqCompatible} source - The source from which this linq object enumerates values
      * @throws If `source` is not an iterable, a generator, or a function.
      */
     constructor(source)
@@ -336,18 +355,6 @@ export class Linq
     // Linq operators
 
     /**
-     * @callback projection
-     * @param {*} value - The value to be projected
-     * @returns {*} - The projected value.
-     */
-
-    /**
-     * @callback predicate
-     * @param {*} value - The value to test
-     * @returns {boolean}
-     */
-
-    /**
      * Returns the aggregate value of performing the `operation` function on each of the values of
      * 'this' collection, starting with a value equal to `seed` (or to the value of the first element
      * of 'this' collection, if `seed` is null).  The final value is either directly returned (if no
@@ -525,6 +532,39 @@ export class Linq
         }
 
         return new Linq(batchGenerator);
+    }
+
+    /**
+     * Returns a collection containing all of the elements of 'this' collection followed by 
+     * all of the elements of the 'second' collection.
+     * 
+     * @param {LinqCompatible} [second] - The collection of items to append to 'this' collection
+     * @returns {Linq} - The concatenation of the collection with a second collection.
+     */
+    concat(second)
+    {
+        if (second == null)
+            return new Linq(this);
+
+        var secondLinq = (Linq.isLinq(second) ? second : new Linq(second));
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        function* concatGenerator()
+        {
+            for (let item of firstIterable)
+            {
+                yield item;
+            }
+
+            for (let item of secondIterable)
+            {
+                yield item;
+            }
+        }
+
+        return new Linq(concatGenerator);
     }
 
     /**
