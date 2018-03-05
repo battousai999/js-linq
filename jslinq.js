@@ -89,6 +89,24 @@ export class Linq
      */
 
     /**
+     * A comparer is a function that takes two values and returns 0 if they are considered the "same" (by
+     * the comparer), -1 if they are considered "in order", and 1 if they are considered "out-of-order".
+     * @callback comparer
+     * @param {*} value1 - The first value to compare
+     * @param {*} value2 - The second value to compare
+     * @returns {number} - The value (-1/0/1) that represents the ordering of the two values.
+     */
+
+    /**
+     * An equality comparer is a function that takes two values and returns a boolean value indicating 
+     * whether the two values are considered the "same" (by the equality comparer).
+     * @callback equalityComparer
+     * @param {*} value1 - The first value to compare
+     * @param {*} value2 - The second value to compare
+     * @returns {boolean} - The value indicating whether the two values are the same.
+     */
+
+    /**
      * Creates a new linq object.  If `source` is a function, then it is expected to return an iterable, a generator
      * or another function that returns either an iterable or a generator.
      * 
@@ -158,6 +176,13 @@ export class Linq
         return (x < y ? -1 : (x > y ? 1 : 0));
     }
 
+    /**
+     * This function converts a "comparer" into an "equality comparer".  If the function is already an equality
+     * comparer, then the resultant function will remain an equality comparer.
+     * 
+     * @param {comparer} comparer - The function to convert into an equality comparer
+     * @returns {equalityComparer}
+     */
     static normalizeComparer(comparer)
     {
         return (x, y) =>
@@ -171,6 +196,14 @@ export class Linq
         };
     }
 
+    /**
+     * This function creates a new comparer based upon the `projection` of values passed to the new comparer.  This
+     * function can also be passed a `comparer` that is used in the new comparer to compare the projected values.
+     * 
+     * @param {projection} projection - The projection from which compare projected values
+     * @param {comparer} [comparer] - A comparer with which to compare projected values
+     * @returns {comparer}
+     */
     static createProjectionComparer(projection, comparer = null)
     {
         if (projection == null)
@@ -189,6 +222,15 @@ export class Linq
         };
     }
 
+    /**
+     * This function create a new equality comparer based upon the `projection` of the values passed to the new equality
+     * comparer.  This function can also be passed a `comparer` that is used in the new equality comparer to compare the
+     * projected values.
+     * 
+     * @param {projection} projection - The projection from which to compare projected values
+     * @param {comparer|equalityComparer} [comparer] - The comparer with which to compare projected values
+     * @returns {equalityComparer}
+     */
     static createProjectionEqualityComparer(projection, comparer = null)
     {
         if (projection == null)
