@@ -8,6 +8,23 @@ class LinqHelper
     static convertToNumber(value) { return (Linq.isNumber(value) ? value : NaN); }    
     static isConstructorCompatibleSource(source) { return Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source) || Linq.isLinq(source); }
     static isStringNullOrEmpty(str) { return (str == null || str === ''); }
+    static isTypedArray(x) { return ArrayBuffer.isView(x) && !(x instanceof DataView); }
+    static isCollectionHavingLength(x) { return Array.isArray(x) || Linq.isString(x) || LinqHelper.isTypedArray(x); }
+    static isCollectionHavingSize(x) { return (x instanceof Set) || (x instanceof Map); }
+
+    static isEmptyIterable(x)
+    {
+        if (LinqHelper.isCollectionHavingLength(x))
+            return (x.length === 0);
+
+        if (LinqHelper.isCollectionHavingSize(x))
+            return (x.size === 0);
+
+        let iterator = LinqHelper.getIterator(iterable);
+        let state = iterator.next();
+
+        return state.done;
+    }
 
     static buildRangeGenerator(from, to, step)
     {
@@ -477,22 +494,15 @@ export class Linq
         let iterable = this.toIterable();
 
         if (predicate == null)
-        {
-            let iterator = LinqHelper.getIterator(iterable);
-            let state = iterator.next();
+            return !LinqHelper.isEmptyIterable(iterable);
 
-            return !state.done;
-        }
-        else
+        for (let item of iterable)
         {
-            for (let item of iterable)
-            {
-                if (predicate(item))
-                    return true;
-            }
-
-            return false;
+            if (predicate(item))
+                return true;
         }
+
+        return false;
     }
 
     /**
@@ -636,6 +646,36 @@ export class Linq
         }
 
         return false;
+    }
+
+    /**
+     * Returns the number of items in 'this' collection (if no `predicate` is given) or the number of
+     * items in 'this' collection that satisfy the `predicate`.
+     * 
+     * @param {predicate} [predicate] - The predicate used to count elements
+     * @returns {number}
+     */
+    count(predicate)
+    {
+        LinqHelper.validateOptionalFunction(predicate);
+
+        let iterable = this.toIterable();
+
+        if (predicate == null && LinqHelper.isCollectionHavingLength(iterable))
+            return iterable.length;
+
+        if (predicate == null && LinqHelper.isCollectionHavingSize(iterable))
+            return iterable.size;
+
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            if (predicate == null || predicate(item))
+                counter += 1;
+        }
+
+        return counter;
     }
 
     /**
