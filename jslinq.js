@@ -610,6 +610,35 @@ export class Linq
     }
 
     /**
+     * Returns a boolean value indicating whether 'this' collection contains the given `item`.  The
+     * `comparer` function can be used to specify how the `item` is compared to the elements of 'this' 
+     * collection.  If `comparer` is not given, the "===" operator is used to compare elements.
+     * 
+     * @param {*} item - The item to search for in 'this' collection
+     * @param {comparer|equalityComparer} [comparer] - The function to use to compare elements
+     * @returns {bool}
+     */
+    contains(item, comparer)
+    {
+        LinqHelper.validateOptionalFunction(comparer);
+
+        if (comparer == null)
+            comparer = (x, y) => x === y;
+        else
+            comparer = Linq.normalizeComparer(comparer);
+
+        let iterable = this.toIterable();
+
+        for (let x of iterable)
+        {
+            if (comparer(x, item))
+                return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Returns an iterable (as defined by the "iterable protocol"--see
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
      * represents the contents of the Linq object.
