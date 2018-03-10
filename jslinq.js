@@ -679,6 +679,24 @@ export class Linq
     }
 
     /**
+     * Returns either 'this' collection, if 'this' collection is empty, or a collection containing
+     * only the `defaultValue` as an element.  In other words, this function always returns a collection 
+     * containing at least one element.
+     * 
+     * @param {*} defaultValue 
+     * @returns {Linq}
+     */
+    defaultIfEmpty(defaultValue)
+    {
+        let iterable = this.toIterable();
+
+        if (LinqHelper.isEmptyIterable(iterable))
+            return new Linq([defaultValue]);
+        else
+            return new Linq(this);
+    }
+
+    /**
      * Returns an iterable (as defined by the "iterable protocol"--see
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
      * represents the contents of the Linq object.
