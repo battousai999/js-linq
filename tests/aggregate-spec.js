@@ -2,7 +2,7 @@ import {Linq} from '../jslinq';
 
 describe('aggregate', () => 
 {
-    let empty = new Linq([]);
+    let empty = Linq.empty();
     let linq1 = new Linq([1, 4, 5]);
     let linq2 = new Linq(['a', 'b', 'c', 'd', 'e']);
     let linq3 = new Linq([1, 2, 3, 4, 5, 6]);

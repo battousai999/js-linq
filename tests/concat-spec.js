@@ -4,7 +4,7 @@ describe('concat', () =>
 {
     let arr = [1, 2, 3];
     let linq = new Linq(arr);
-    let empty = new Linq([]);
+    let empty = Linq.empty();
 
     it('when called on an empty collection then returns the passed collection', () => 
     {

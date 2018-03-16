@@ -18,7 +18,7 @@ describe('average', () =>
 
     it('when called on an empty collection then returns 0', () => 
     {
-        let linq = new Linq([]);
+        let linq = Linq.empty();
 
         expect(linq.average()).toEqual(0);
     });

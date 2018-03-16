@@ -43,7 +43,7 @@ describe('all', () =>
     {
         let predicate = x => x > 100;
 
-        expect(Linq.from([]).all(predicate)).toBeTruthy();
+        expect(Linq.empty().all(predicate)).toBeTruthy();
     });
 
     it('when called without a predicate then throws an exception', () => 

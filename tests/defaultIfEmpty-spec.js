@@ -4,7 +4,7 @@ describe('defaultIfEmpty', () =>
 {
     it('when called on an empty collection then returns collection with default value', () => 
     {
-        var arr = Linq.from([]).defaultIfEmpty(99).toArray();
+        var arr = Linq.empty().defaultIfEmpty(99).toArray();
 
         expect(arr).toEqual([99]);
     });
@@ -19,7 +19,7 @@ describe('defaultIfEmpty', () =>
 
     it('when called on an empty collection with a default value of `null` then returns a collection containing null', () => 
     {
-        var arr = Linq.from([]).defaultIfEmpty(null).toArray();
+        var arr = Linq.empty().defaultIfEmpty(null).toArray();
 
         expect(arr).toEqual([null]);
     });

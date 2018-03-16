@@ -11,7 +11,7 @@ describe('toArray', () =>
 
     it('when called on a Linq object that is empty returns an empty array', () => 
     {
-        let linq = new Linq([]);
+        let linq = Linq.empty();
 
         expect(linq.toArray()).toEqual([]);
     });

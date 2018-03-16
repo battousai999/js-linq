@@ -20,7 +20,7 @@ describe('contains', () =>
 
     it('when called on an empty collection then returns false', () => 
     {
-        expect(Linq.from([]).contains(99)).toBeFalsy();
+        expect(Linq.empty().contains(99)).toBeFalsy();
     });
 
     it('when called with a comparer on a collection that contains the item then returns true', () => 

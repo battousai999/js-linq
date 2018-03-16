@@ -4,7 +4,7 @@ describe('any', () =>
 {
     it('when called on an empty collection then returns false', () => 
     {
-        let linq = new Linq([]);
+        let linq = Linq.empty();
 
         expect(linq.any()).toBeFalsy();
         expect(linq.any(x => x > 10)).toBeFalsy();

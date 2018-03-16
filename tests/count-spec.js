@@ -8,7 +8,7 @@ describe('count', () =>
 
     it('when called on an empty collection then return 0', () => 
     {
-        expect(Linq.from([]).count()).toEqual(0);
+        expect(Linq.empty().count()).toEqual(0);
     });
 
     it('when called on a non-empty collection then return size of collection', () => 
@@ -49,7 +49,7 @@ describe('count', () =>
 
     it('when called with a predicate on an empty collection then return 0', () => 
     {
-        expect(Linq.from([]).count(isEven)).toEqual(0);
+        expect(Linq.empty().count(isEven)).toEqual(0);
     });
 
     it('when called with a non-function predicate then throw an exception', () => 

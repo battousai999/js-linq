@@ -79,10 +79,33 @@ class LinqHelper
 
         return iterable[Symbol.iterator]();
     }
+
+    static firstBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
+    {
+        for (let item of iterable)
+        {
+            if ((predicate == null) || predicate(item))
+                return item;
+        }
+
+        if (throwIfNotFound)
+            throw new Error('No first item was found in the collection.');
+        else
+            return defaultValue;
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
 var GeneratorFunction = (function*(){}).constructor;
+
+export class Grouping
+{
+    constructor(key, values)
+    {
+        this.key = key;
+        this.values = (values == null ? [] : Array.from(values));
+    }
+}
 
 export class Linq
 {
@@ -411,6 +434,16 @@ export class Linq
         return new Linq(Object.keys(obj).map(projection));
     }
 
+    /**
+     * Returns a new empty Linq object.
+     * 
+     * @returns {Linq}
+     */
+    static empty()
+    {
+        return new Linq([]);
+    }
+
     // Linq operators
 
     /**
@@ -467,7 +500,7 @@ export class Linq
      */
     all(predicate)
     {
-        LinqHelper.validateRequiredFunction(predicate);
+        LinqHelper.validateRequiredFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
@@ -489,7 +522,7 @@ export class Linq
      */
     any(predicate)
     {
-        LinqHelper.validateOptionalFunction(predicate);
+        LinqHelper.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
@@ -515,7 +548,7 @@ export class Linq
      */
     average(selector)
     {
-        LinqHelper.validateOptionalFunction(selector);
+        LinqHelper.validateOptionalFunction(selector, 'Invalid selector.');
 
         let iterable = this.toIterable();
         let result = 0;
@@ -550,7 +583,7 @@ export class Linq
      */
     batch(size, resultSelector)
     {
-        LinqHelper.validateOptionalFunction(resultSelector);
+        LinqHelper.validateOptionalFunction(resultSelector, 'Invalid result selector.');
 
         if ((size == null) || isNaN(size) || (size <= 0))
             throw new Error('Invalid size.');
@@ -626,11 +659,11 @@ export class Linq
      * 
      * @param {*} item - The item to search for in 'this' collection
      * @param {comparer|equalityComparer} [comparer] - The function to use to compare elements
-     * @returns {bool}
+     * @returns {boolean}
      */
     contains(item, comparer)
     {
-        LinqHelper.validateOptionalFunction(comparer);
+        LinqHelper.validateOptionalFunction(comparer, 'Invalid comparer.');
 
         if (comparer == null)
             comparer = (x, y) => x === y;
@@ -657,7 +690,7 @@ export class Linq
      */
     count(predicate)
     {
-        LinqHelper.validateOptionalFunction(predicate);
+        LinqHelper.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
@@ -694,6 +727,137 @@ export class Linq
             return new Linq([defaultValue]);
         else
             return new Linq(this);
+    }
+
+    /**
+     * Returns a collection of all of the distinct elements of 'this' collection, using `comparer` (if it
+     * is given) to determine whether two elements are equal.  If `comparer` is not given, the "===" operator
+     * is used to compare elements.
+     * 
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements
+     * @returns {Linq} 
+     */
+    distinct(comparer)
+    {
+        return this.distinctBy(Linq.identity, comparer);
+    }
+
+    /**
+     * Returns a collection of all of the elements that are considered distinct relative to the key value returned
+     * by the `keySelector` projection, using `comparer` (if it is given) to determine whether to keys are equal.
+     * If `comparer` is not given, the "===" operator is used to compare keys.
+     * 
+     * @param {projection} keySelector - The projection function used to return keys for the elements
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare keys
+     * @returns {Linq} 
+     */
+    distinctBy(keySelector, comparer)
+    {
+        LinqHelper.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqHelper.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        // So sad--ES6's Set class does not allow for custom equality comparison, so have to use
+        // groupBy instead of Set, which would perform more quickly.
+        return this.groupBy(keySelector, null, comparer).select(x => x.values[0]);
+    }
+
+
+    
+    /**
+     * Returns either the first element of 'this' collection (if `predicate` is not given) or the
+     * first element of 'this' collection that satisfies the `predicate` (if `predicate` is given).
+     * If there is no "first" element to return (either because 'this' collection is empty or no element
+     * satisfies the `predicate`), the `defaultValue` is returned.
+     * 
+     * @param {predicate} [predicate] - The predicate function used to determine the element to return 
+     * @param {*} [defaultValue] - The value to return if no "first" element is found
+     * @returns {*} - The element that was found.
+     */
+    firstOrDefault(predicate, defaultValue)
+    {
+        LinqHelper.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqHelper.firstBasedOperator(iterable, predicate, defaultValue, false);
+    }
+
+
+
+    /**
+     * Return a collection of groupings (i.e., objects with a property called 'key' that
+     * contains the grouping key and a property called 'values' that contains an array
+     * of elements that are grouped under the grouping key).  The array of elements grouped
+     * under the grouping key will be elements of 'this' collection (if no `elementSelector` 
+     * is given) or projected elements given by `elementSelector`.  The grouping key for 
+     * each element in 'this' collection is given by the `keySelector` function.  If a
+     * `keyComparer` function is given, it will be used to determine equality among the
+     * grouping keys (if `comparer` is not given, it the "===" operator will be used).
+     * 
+     * @param {projection} keySelector - The function that returns the grouping key for an element 
+     * @param {projection} [elementSelector] - The function that projects elements to be returned 
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare grouping keys
+     * @returns {Linq} - A Linq object representing a collection of `Grouping` objects.
+     */
+    groupBy(keySelector, elementSelector, keyComparer)
+    {
+        LinqHelper.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqHelper.validateOptionalFunction(elementSelector, 'Invalid element selector.');
+        LinqHelper.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+
+        if (keyComparer != null)
+            keyComparer = Linq.normalizeComparer(keyComparer);
+
+        let iterable = this.toIterable();
+        let groupings = [];
+        let groupingsLinq = new Linq(groupings);
+
+        for (let item of iterable)
+        {
+            let key = keySelector(item);
+            let element = (elementSelector == null ? item : elementSelector(item));
+
+            let foundGroup = groupingsLinq.firstOrDefault(x =>
+                {
+                    if (keyComparer == null)
+                        return (x.key === key);
+                    else
+                        return keyComparer(x.key, key);
+                    },
+                null);
+
+            if (foundGroup == null)
+                groupings.push(new Grouping(key, [element]));
+            else
+                foundGroup.values.push(element);
+        }
+
+        return groupingsLinq;
+    }
+
+    
+
+    /**
+     * Returns a collection of values projected from the elements of 'this' collection.
+     * 
+     * @param {projection} selector - The function that projects the values from the elements
+     * @returns {Linq}
+     */
+    select(selector)
+    {
+        LinqHelper.validateRequiredFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+
+        function* selectGenerator()
+        {
+            for (let item of iterable)
+            {
+                yield selector(item);
+            }
+        }
+
+        return new Linq(selectGenerator);
     }
 
     /**
