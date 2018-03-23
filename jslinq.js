@@ -12,13 +12,13 @@ class LinqHelper
     static isCollectionHavingLength(x) { return Array.isArray(x) || Linq.isString(x) || LinqHelper.isTypedArray(x); }
     static isCollectionHavingSize(x) { return (x instanceof Set) || (x instanceof Map); }
 
-    static isEmptyIterable(x)
+    static isEmptyIterable(iterable)
     {
-        if (LinqHelper.isCollectionHavingLength(x))
-            return (x.length === 0);
+        if (LinqHelper.isCollectionHavingLength(iterable))
+            return (iterable.length === 0);
 
-        if (LinqHelper.isCollectionHavingSize(x))
-            return (x.size === 0);
+        if (LinqHelper.isCollectionHavingSize(iterable))
+            return (iterable.size === 0);
 
         let iterator = LinqHelper.getIterator(iterable);
         let state = iterator.next();
@@ -302,7 +302,7 @@ export class Linq
     {
         if (source == null || LinqHelper.isConstructorCompatibleSource(source))
             return new Linq(source);
-        else if (typeof jQuery !== 'undefined' && (collection instanceof jQuery))
+        else if (typeof jQuery !== 'undefined' && (source instanceof jQuery))
             return new Linq(source.get());
         else
             return new Linq([source]);
@@ -392,7 +392,7 @@ export class Linq
         let regex = new RegExp(internalPattern, flags);
         let matches = text.match(regex);
 
-        return new Linq(matches = null ? [] : matches);
+        return new Linq(matches == null ? [] : matches);
     }
 
     /**

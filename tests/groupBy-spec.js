@@ -7,7 +7,7 @@ describe('groupBy', () =>
         let col3 = new Linq([{ name: 'kevin', state: 'UT' }, { name: 'spencer', state: 'ut' }, { name: 'glenda', state: 'co' }, { name: 'may', state: 'CO' }]);
 
         let stateProjection = x => x.state;
-        let groupSelector = x => x.key + ': ' + x.values.join(',');
+        let groupSelector = x => `${x.key}: ${x.values.join(',')}`;
         let nameSelector = x => x.name;
 
     it('when called on an empty collection then returns an empty collection', () => 
@@ -66,7 +66,7 @@ describe('groupBy', () =>
 
     it('when called with a non-function key selector then throws an exception', () => 
     {
-        expect(() => { col11.groupBy('not-a-function'); }).toThrow();
+        expect(() => { col1.groupBy('not-a-function'); }).toThrow();
     });
 
     it('when called with a non-function element selector then throws an exception', () => 

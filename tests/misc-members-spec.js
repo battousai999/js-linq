@@ -7,7 +7,7 @@ describe('isFunction', () =>
         function testFunc() { return 'test'; }
 
         expect(Linq.isFunction(testFunc)).toBeTruthy();
-        expect(Linq.isFunction((value) => value + 1)).toBeTruthy();
+        expect(Linq.isFunction(value => value + 1)).toBeTruthy();
     });
 
     it('when called with a non-function then returns false', () => 

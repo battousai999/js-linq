@@ -31,6 +31,13 @@ describe('any', () =>
         expect(linq.any()).toBeTruthy();
     });
 
+    it('when called without a predicate on an empty generator-based collection then returns false', () => 
+    {
+        function* gen() {}
+
+        expect(Linq.from(gen).any()).toBeFalsy();
+    });
+
     it('when called with an inclusive predicate on an infinite collection then eventually returns', () => 
     {
         function* gen()

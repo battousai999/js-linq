@@ -32,11 +32,11 @@ describe('properties', () =>
 
     it('when called with a non-null \'keyPropertyName\' then returns a collection of objects having a property of that value', () => 
     {
-        let linq1 = Linq.properties(obj1, 'name', null);
-        let linq2 = Linq.properties(arr1, 'index');
+        let linq3 = Linq.properties(obj1, 'name', null);
+        let linq4 = Linq.properties(arr1, 'index');
 
-        expect(linq1.toArray()).toEqual([{name: 'prop1', value: 'value1'}, {name: 'prop2', value: 'value2'}]);
-        expect(linq2.toArray()).toEqual([{index: '0', value: 'aaa'}, {index: '1', value: 'bbb'}, {index: '2', value: 'ccc'}]);
+        expect(linq3.toArray()).toEqual([{name: 'prop1', value: 'value1'}, {name: 'prop2', value: 'value2'}]);
+        expect(linq4.toArray()).toEqual([{index: '0', value: 'aaa'}, {index: '1', value: 'bbb'}, {index: '2', value: 'ccc'}]);
     });
 
     it('when called with a null \'keyPropertyName\' then returns a collection of objects having a property name of \'key\'', () => 
@@ -47,11 +47,11 @@ describe('properties', () =>
 
     it('when called with a non-null \'valuePropertyName\' then returns a collection of objects having a property of that value', () => 
     {
-        let linq1 = Linq.properties(obj1, null, 'result');
-        let linq2 = Linq.properties(arr1, 'index', 'val');
+        let linq3 = Linq.properties(obj1, null, 'result');
+        let linq4 = Linq.properties(arr1, 'index', 'val');
 
-        expect(linq1.toArray()).toEqual([{key: 'prop1', result: 'value1'}, {key: 'prop2', result: 'value2'}]);
-        expect(linq2.toArray()).toEqual([{index: '0', val: 'aaa'}, {index: '1', val: 'bbb'}, {index: '2', val: 'ccc'}]);
+        expect(linq3.toArray()).toEqual([{key: 'prop1', result: 'value1'}, {key: 'prop2', result: 'value2'}]);
+        expect(linq4.toArray()).toEqual([{index: '0', val: 'aaa'}, {index: '1', val: 'bbb'}, {index: '2', val: 'ccc'}]);
     });
 
     it('when called with a null \'valuePropertyName\' then returns a collection of objects having a property name of \'key\'', () => 

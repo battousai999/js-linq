@@ -7,7 +7,7 @@ describe('aggregate', () =>
     let linq2 = new Linq(['a', 'b', 'c', 'd', 'e']);
     let linq3 = new Linq([1, 2, 3, 4, 5, 6]);
 
-    let aggregateFunc = (current, value) => current * 2 + value;
+    let aggregateFunc = (current, value) => (current * 2) + value;
     let addition = (x, y) => x + y;
 
     it('when called with a seed a non-empty collection then returns correct aggregate value', () => 
@@ -44,7 +44,7 @@ describe('aggregate', () =>
 
     it('when called with a resultSelector then returns the value of the aggregation passed to the resultSelector', () => 
     {
-        let selector = x => 'value: ' + x;
+        let selector = x => `value: ${x}`;
 
         expect(linq1.aggregate(5, aggregateFunc, selector)).toEqual('value: 57');
     });

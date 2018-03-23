@@ -17,7 +17,7 @@ describe('concat', () =>
     {
         let results = linq.concat(empty).toArray();
 
-        expect(results).toEqual(arr)
+        expect(results).toEqual(arr);
     });
 
     it('when called with a non-empty collection then returns the concatenation', () => 

@@ -16,15 +16,12 @@ describe('constructor', () =>
         let testValues = [10, 20, 30, 40];
         let arr = new Int16Array(4);
 
-        arr[0] = testValues[0];
-        arr[1] = testValues[1];
-        arr[2] = testValues[2];
-        arr[3] = testValues[3];
+        [arr[0], arr[1], arr[2], arr[3]] = testValues;
 
         let linq = new Linq(arr);
         let results = linq.toArray();
 
-        expect(linq.toArray()).toEqual(testValues);
+        expect(results).toEqual(testValues);
     });
 
     it('when called with an iterable (Set) then has elements', () => 
@@ -100,7 +97,7 @@ describe('constructor', () =>
             }
         
             return gen;
-        }
+        };
 
         let linq = new Linq(testFunc);
 

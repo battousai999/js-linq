@@ -10,7 +10,9 @@ describe('distinctBy', () =>
 
     it('when called on an empty collection then returns an empty collection', () => 
     {
-        let results = Linq.empty().distinctBy(nameProjection).toArray();
+        let results = Linq.empty()
+            .distinctBy(nameProjection)
+            .toArray();
 
         expect(results).toEqual([]);
     });

@@ -27,7 +27,9 @@ describe('batch', () =>
 
     it('when called on an empty collection then returns an empty collection', () => 
     {
-        let results = Linq.empty().batch(10).toArray();
+        let results = Linq.empty()
+            .batch(10)
+            .toArray();
 
         expect(results).toEqual([]);
     });

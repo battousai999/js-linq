@@ -32,7 +32,7 @@ describe('generalComparer', () =>
             [
                 [99, null],
                 [true, null],
-                ['testing', null],
+                ['testing', null]
             ]);
     });
 
@@ -151,10 +151,10 @@ describe('caseSensitiveStringComparer', () =>
     {
         runTestScenarios(compare, isEqualOrder,
             [
-                ['',''],
-                ['abcdef','abcdef'],
-                ['TESTING','TESTING'],
-                ['fuNCTor','fuNCTor'],
+                ['', ''],
+                ['abcdef', 'abcdef'],
+                ['TESTING', 'TESTING'],
+                ['fuNCTor', 'fuNCTor']
             ]);
     });
 
@@ -242,10 +242,10 @@ describe('caseInsensitiveStringComparer', () =>
     {
         runTestScenarios(compare, isEqualOrder,
             [
-                ['',''],
-                ['abcdef','abcdef'],
-                ['TESTING','TESTING'],
-                ['fuNCTor','fuNCTor'],
+                ['', ''],
+                ['abcdef', 'abcdef'],
+                ['TESTING', 'TESTING'],
+                ['fuNCTor', 'fuNCTor'],
                 ['SABER', 'saber'],
                 ['chocolate', 'CHOCOLATE'],
                 ['monomorphism', 'monoMORPhism'],
@@ -271,16 +271,16 @@ describe('caseInsensitiveStringComparer', () =>
 describe('defaultStringComparer', () => 
 {
     let compare = Linq.defaultStringComparer;
-    let isSameAsCaseSensitiveStringComparer = (results, x, y)  => expect(results).toBe(Linq.caseSensitiveStringComparer(x, y));
+    let isSameAsCaseSensitiveStringComparer = (results, x, y) => expect(results).toBe(Linq.caseSensitiveStringComparer(x, y));
     
-    let runTestScenarios = samples =>
+    let runTestScenarios2 = samples =>
     {
         return samples.every(([x, y]) => isSameAsCaseSensitiveStringComparer(compare(x, y), x, y));
     };
     
     it('when first parameter is null then it acts the same as caseSensitiveStringComparer', () => 
     {
-        runTestScenarios([
+        runTestScenarios2([
             [null, 'test'],
             [null, '']
         ]);
@@ -288,7 +288,7 @@ describe('defaultStringComparer', () =>
 
     it('when second parameter is null then it acts the same as caseSensitiveStringComparer', () => 
     {
-        runTestScenarios([
+        runTestScenarios2([
             ['testing', null],
             ['', null]
         ]);
@@ -296,7 +296,7 @@ describe('defaultStringComparer', () =>
 
     it('when both parameters are null then it acts the same as caseSensitiveStringComparer', () => 
     {
-        runTestScenarios([
+        runTestScenarios2([
             [null, null],
             [undefined, undefined]
         ]);
@@ -305,7 +305,7 @@ describe('defaultStringComparer', () =>
     it('when first parameter is lexicographically smaller-than second parameter then it acts the same as caseSensitiveStringComparer', () => 
     {
         // Note: computer lexicographical ordering puts uppercase before lowercase
-        runTestScenarios([
+        runTestScenarios2([
             ['', 'testing'],
             ['TEST', 'test'],
             ['teSt', 'test'],
@@ -320,7 +320,7 @@ describe('defaultStringComparer', () =>
     it('when first parameter is lexicographically larger-than second parameter then it acts the same as caseSensitiveStringComparer', () => 
     {
         // Note: computer lexicographical ordering puts uppercase before lowercase
-        runTestScenarios([
+        runTestScenarios2([
             ['tester', ''],
             ['cat', 'CAT'],
             ['haskell', 'hasKell'],
@@ -333,26 +333,26 @@ describe('defaultStringComparer', () =>
 
     it('when first parameter is neither lexicographically smaller-than nor lexicographically larger-than second parameter then it acts the same as caseSensitiveStringComparer', () => 
     {
-        runTestScenarios([
-            ['',''],
-            ['abcdef','abcdef'],
-            ['TESTING','TESTING'],
-            ['fuNCTor','fuNCTor'],
+        runTestScenarios2([
+            ['', ''],
+            ['abcdef', 'abcdef'],
+            ['TESTING', 'TESTING'],
+            ['fuNCTor', 'fuNCTor']
         ]);
     });
 
     it('when first parameter is a non-string then it acts the same as caseSensitiveStringComparer', () => 
     {
-        runTestScenarios([[11, '222'], [123, 'test'], [321, 'TEST']]);
-        runTestScenarios([[111, '111'], [12345, '12345']]);
-        runTestScenarios([[333, '111'], [12345, '1234'], [111111, '111'], [33333, '3331111']]);
+        runTestScenarios2([[11, '222'], [123, 'test'], [321, 'TEST']]);
+        runTestScenarios2([[111, '111'], [12345, '12345']]);
+        runTestScenarios2([[333, '111'], [12345, '1234'], [111111, '111'], [33333, '3331111']]);
     });
 
     it('when second parameter is a non-string then it acts the same as caseSensitiveStringComparer', () => 
     {
-        runTestScenarios([['111', 333], ['1234', 12345], ['111', 111111], ['3331111', 33333]]);
-        runTestScenarios([['111', 111], ['12345', 12345]]);
-        runTestScenarios([['222', 11], ['test', 123], ['TEST', 321]]);
+        runTestScenarios2([['111', 333], ['1234', 12345], ['111', 111111], ['3331111', 33333]]);
+        runTestScenarios2([['111', 111], ['12345', 12345]]);
+        runTestScenarios2([['222', 11], ['test', 123], ['TEST', 321]]);
     });
 });
 
@@ -422,10 +422,10 @@ describe('caseSensitiveStringEqualityComparer', () =>
     {
         runTestScenarios(compare, isEqual,
             [
-                ['',''],
-                ['abcdef','abcdef'],
-                ['TESTING','TESTING'],
-                ['fuNCTor','fuNCTor'],
+                ['', ''],
+                ['abcdef', 'abcdef'],
+                ['TESTING', 'TESTING'],
+                ['fuNCTor', 'fuNCTor']
             ]);
     });
 
@@ -513,10 +513,10 @@ describe('caseInsensitiveStringEqualityComparer', () =>
     {
         runTestScenarios(compare, isEqual,
             [
-                ['',''],
-                ['abcdef','abcdef'],
-                ['TESTING','TESTING'],
-                ['fuNCTor','fuNCTor'],
+                ['', ''],
+                ['abcdef', 'abcdef'],
+                ['TESTING', 'TESTING'],
+                ['fuNCTor', 'fuNCTor'],
                 ['SABER', 'saber'],
                 ['chocolate', 'CHOCOLATE'],
                 ['monomorphism', 'monoMORPhism'],
@@ -542,16 +542,16 @@ describe('caseInsensitiveStringEqualityComparer', () =>
 describe('defaultStringEqualityComparer', () => 
 {
     let compare = Linq.defaultStringEqualityComparer;
-    let isSameAsCaseSensitiveStringEqualityComparer = (results, x, y)  => expect(results).toBe(Linq.caseSensitiveStringEqualityComparer(x, y));
+    let isSameAsCaseSensitiveStringEqualityComparer = (results, x, y) => expect(results).toBe(Linq.caseSensitiveStringEqualityComparer(x, y));
     
-    let runTestScenarios = samples =>
+    let runTestScenarios2 = samples =>
     {
         return samples.every(([x, y]) => isSameAsCaseSensitiveStringEqualityComparer(compare(x, y), x, y));
     };
     
     it('when first parameter is null then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
-        runTestScenarios([
+        runTestScenarios2([
             [null, 'test'],
             [null, '']
         ]);
@@ -559,7 +559,7 @@ describe('defaultStringEqualityComparer', () =>
 
     it('when second parameter is null then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
-        runTestScenarios([
+        runTestScenarios2([
             ['testing', null],
             ['', null]
         ]);
@@ -567,7 +567,7 @@ describe('defaultStringEqualityComparer', () =>
 
     it('when both parameters are null then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
-        runTestScenarios([
+        runTestScenarios2([
             [null, null],
             [undefined, undefined]
         ]);
@@ -576,7 +576,7 @@ describe('defaultStringEqualityComparer', () =>
     it('when first parameter is lexicographically smaller-than second parameter then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
         // Note: computer lexicographical ordering puts uppercase before lowercase
-        runTestScenarios([
+        runTestScenarios2([
             ['', 'testing'],
             ['TEST', 'test'],
             ['teSt', 'test'],
@@ -591,7 +591,7 @@ describe('defaultStringEqualityComparer', () =>
     it('when first parameter is lexicographically larger-than second parameter then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
         // Note: computer lexicographical ordering puts uppercase before lowercase
-        runTestScenarios([
+        runTestScenarios2([
             ['tester', ''],
             ['cat', 'CAT'],
             ['haskell', 'hasKell'],
@@ -604,26 +604,26 @@ describe('defaultStringEqualityComparer', () =>
 
     it('when first parameter is neither lexicographically smaller-than nor lexicographically larger-than second parameter then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
-        runTestScenarios([
-            ['',''],
-            ['abcdef','abcdef'],
-            ['TESTING','TESTING'],
-            ['fuNCTor','fuNCTor'],
+        runTestScenarios2([
+            ['', ''],
+            ['abcdef', 'abcdef'],
+            ['TESTING', 'TESTING'],
+            ['fuNCTor', 'fuNCTor']
         ]);
     });
 
     it('when first parameter is a non-string then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
-        runTestScenarios([[11, '222'], [123, 'test'], [321, 'TEST']]);
-        runTestScenarios([[111, '111'], [12345, '12345']]);
-        runTestScenarios([[333, '111'], [12345, '1234'], [111111, '111'], [33333, '3331111']]);
+        runTestScenarios2([[11, '222'], [123, 'test'], [321, 'TEST']]);
+        runTestScenarios2([[111, '111'], [12345, '12345']]);
+        runTestScenarios2([[333, '111'], [12345, '1234'], [111111, '111'], [33333, '3331111']]);
     });
 
     it('when second parameter is a non-string then it acts the same as caseSensitiveStringEqualityComparer', () => 
     {
-        runTestScenarios([['111', 333], ['1234', 12345], ['111', 111111], ['3331111', 33333]]);
-        runTestScenarios([['111', 111], ['12345', 12345]]);
-        runTestScenarios([['222', 11], ['test', 123], ['TEST', 321]]);
+        runTestScenarios2([['111', 333], ['1234', 12345], ['111', 111111], ['3331111', 33333]]);
+        runTestScenarios2([['111', 111], ['12345', 12345]]);
+        runTestScenarios2([['222', 11], ['test', 123], ['TEST', 321]]);
     });
 });
 
@@ -653,9 +653,10 @@ describe('normalizeComparer', () =>
             throw new Error('Unexpected value.');
     };
 
-    let runTestScenarios = (firstComparer, secondComparer, samples) =>
+    let runTestScenarios2 = (firstComparer, secondComparer, samples) =>
     {
         let p = ([x, y]) => expect(interpretOrder(firstComparer(x, y)) === interpretOrder(secondComparer(x, y))).toBeTruthy();
+
         return samples.every(p);
     };
 
@@ -672,7 +673,7 @@ describe('normalizeComparer', () =>
         let baseComparer = Linq.caseSensitiveStringComparer;
         let normalizedComparer = Linq.normalizeComparer(baseComparer);
 
-        runTestScenarios(baseComparer, normalizedComparer, tests);
+        runTestScenarios2(baseComparer, normalizedComparer, tests);
     });
 
     it('when passed an equality comparer then convert to a function that returns boolean values', () => 
@@ -688,7 +689,7 @@ describe('normalizeComparer', () =>
         let baseComparer = Linq.caseSensitiveStringEqualityComparer;
         let normalizedComparer = Linq.normalizeComparer(baseComparer);
 
-        runTestScenarios(baseComparer, normalizedComparer, tests);
+        runTestScenarios2(baseComparer, normalizedComparer, tests);
     });
 });
 
@@ -703,10 +704,10 @@ describe('createProjectionComparer', () =>
         [-9, 11]
     ];
 
-    let projection = x => 2 -x;
+    let projection = x => 2 - x;
     let comparer = Linq.createProjectionComparer(projection);
 
-    let runTestScenarios = (firstComparer, secondComparer, samples) =>
+    let runTestScenarios2 = (firstComparer, secondComparer, samples) =>
     {
         return samples.every(([x, y]) => expect(firstComparer(x, y) === secondComparer(x, y)).toBeTruthy());
     };
@@ -727,15 +728,15 @@ describe('createProjectionComparer', () =>
     {
         let baselineComparer = Linq.createProjectionComparer(projection, Linq.generalComparer);
 
-        runTestScenarios(comparer, baselineComparer, tests);
+        runTestScenarios2(comparer, baselineComparer, tests);
     });
 
     it('when passed a non-null comparer then compares projected values with comparer', () => 
     {
         let baselineComparer = (x, y) => Linq.caseInsensitiveStringComparer(x[0], y[0]);
-        let comparer = Linq.createProjectionComparer(x => x[0], Linq.caseInsensitiveStringComparer);
+        let comparer2 = Linq.createProjectionComparer(x => x[0], Linq.caseInsensitiveStringComparer);
 
-        runTestScenarios(comparer, baselineComparer, tests);
+        runTestScenarios2(comparer2, baselineComparer, tests);
     });
 });
 
@@ -750,10 +751,10 @@ describe('createProjectionEqualityComparer', () =>
         [-9, 11]
     ];
 
-    let projection = x => 2 -x;
+    let projection = x => 2 - x;
     let comparer = Linq.createProjectionEqualityComparer(projection);
 
-    let runTestScenarios = (firstComparer, secondComparer, samples) =>
+    let runTestScenarios2 = (firstComparer, secondComparer, samples) =>
     {
         return samples.every(([x, y]) => expect(firstComparer(x, y) === secondComparer(x, y)).toBeTruthy());
     };
@@ -774,22 +775,22 @@ describe('createProjectionEqualityComparer', () =>
     {
         let baselineComparer = Linq.createProjectionEqualityComparer(projection, (x, y) => x === y);
 
-        runTestScenarios(comparer, baselineComparer, tests);
+        runTestScenarios2(comparer, baselineComparer, tests);
     });
 
     it('when passed a non-null equality comparer then compares projected values with equality comparer', () => 
     {
         let baselineComparer = (x, y) => Linq.caseInsensitiveStringEqualityComparer(x[0], y[0]);
-        let comparer = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringEqualityComparer);
+        let comparer2 = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringEqualityComparer);
 
-        runTestScenarios(comparer, baselineComparer, tests);
+        runTestScenarios2(comparer2, baselineComparer, tests);
     });
 
     it('when passed a non-equality comparer then compares projected values with the comparer converted to an equality comparer', () => 
     {
         let baselineComparer = (x, y) => Linq.caseInsensitiveStringEqualityComparer(x[0], y[0]);
-        let comparer = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringComparer);
+        let comparer2 = Linq.createProjectionEqualityComparer(x => x[0], Linq.caseInsensitiveStringComparer);
 
-        runTestScenarios(comparer, baselineComparer, tests);
+        runTestScenarios2(comparer2, baselineComparer, tests);
     });
 });

@@ -19,17 +19,17 @@ describe('count', () =>
     it('when called on a non-empty collection that has a `length` property then return value of length property', () => 
     {
         let arr = [1, 2, 3, 4, 5, 6, 7];
-        let linq = new Linq(arr);
+        let linq2 = new Linq(arr);
 
-        expect(linq.count()).toEqual(arr.length);
+        expect(linq2.count()).toEqual(arr.length);
     });
 
     it('when called on a non-empty collection that has a `size` property then return value of size property', () => 
     {
         let set = new Set([1, 2, 3, 4, 5]);
-        let linq = new Linq(set);
+        let linq2 = new Linq(set);
 
-        expect(linq.count()).toEqual(set.size);
+        expect(linq2.count()).toEqual(set.size);
     });
 
     it('when called with a predicate on a collection having all elements satisfying the predicate then return same value as collection size', () => 

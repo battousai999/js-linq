@@ -14,8 +14,13 @@ describe('distinct', () =>
 
     it('when called on an empty collection then returns an empty collection', () => 
     {
-        let results1 = Linq.empty().distinct().toArray();
-        let results2 = Linq.empty().distinct(strictComparer).toArray();
+        let results1 = Linq.empty()
+            .distinct()
+            .toArray();
+
+        let results2 = Linq.empty()
+            .distinct(strictComparer)
+            .toArray();
 
         expect(results1).toEqual([]);
         expect(results2).toEqual([]);
@@ -41,7 +46,7 @@ describe('distinct', () =>
     {
         let results = nodups2
             .distinct(Linq.caseSensitiveStringEqualityComparer)
-            .toArray()
+            .toArray();
 
         expect(results).toEqual(arr2);
     });

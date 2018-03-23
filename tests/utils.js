@@ -5,13 +5,13 @@ export class Utils
         if (expected == null || actual == null || expected.length != actual.length)
             return false;
         
-        let length = expected.length;
+        let len = expected.length;
         
-        for (let i = 0; i < length; i++)
+        for (let i = 0; i < len; i++)
         {
             let found = false;
             
-            for (let j = 0; j < length; j++)
+            for (let j = 0; j < len; j++)
             {
                 if (expected[i] == actual[j])
                     found = true;
