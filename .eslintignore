@@ -1,0 +1,3 @@
+*.min.js
+jslinq.old.js
+spec/jslinqSpec.js

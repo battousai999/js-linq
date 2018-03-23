@@ -9,7 +9,8 @@ class LinqHelper
     static isConstructorCompatibleSource(source) { return Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source) || Linq.isLinq(source); }
     static isStringNullOrEmpty(str) { return (str == null || str === ''); }
     static isTypedArray(x) { return ArrayBuffer.isView(x) && !(x instanceof DataView); }
-    static isCollectionHavingLength(x) { return Array.isArray(x) || Linq.isString(x) || LinqHelper.isTypedArray(x); }
+    static isIndexedCollection(x) { return Array.isArray(x) || Linq.isString(x) || LinqHelper.isTypedArray(x); }
+    static isCollectionHavingLength(x) { return LinqHelper.isIndexedCollection(x); }
     static isCollectionHavingSize(x) { return (x instanceof Set) || (x instanceof Map); }
 
     static isEmptyIterable(iterable)
@@ -759,6 +760,45 @@ export class Linq
         // So sad--ES6's Set class does not allow for custom equality comparison, so have to use
         // groupBy instead of Set, which would perform more quickly.
         return this.groupBy(keySelector, null, comparer).select(x => x.values[0]);
+    }
+
+    /**
+     * Returns the element of 'this' collection located at the ordinal position given by `index` (a zero-based 
+     * index).  If that position is either less than zero or greater than or equal to the size of 'this' 
+     * collection, then an error will be thrown.
+     * 
+     * @param {number} index - The zero-based index of the element to return
+     * @returns {*}
+     */
+    elementAt(index)
+    {
+        let createError = () => new Error('Invalid index.');
+
+        if ((index == null) || isNaN(index) || (index < 0))
+            throw createError();
+
+        let iterable = this.toIterable();
+
+        if (LinqHelper.isCollectionHavingLength(iterable) && (index >= iterable.length))
+            throw createError();
+
+        if (LinqHelper.isCollectionHavingSize(iterable) && (index >= iterable.size))
+            throw createError();
+
+        if (LinqHelper.isIndexedCollection(iterable))
+            return iterable[index];
+
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            if (counter === index)
+                return item;
+
+            counter += 1;
+        }
+
+        throw createError();
     }
 
 
