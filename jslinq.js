@@ -94,6 +94,35 @@ class LinqHelper
         else
             return defaultValue;
     }
+
+    static elementAtBasedOperator(index, iterableFunc, outOfBoundsFunc)
+    {
+        if ((index == null) || isNaN(index) || (index < 0))
+            return outOfBoundsFunc();
+
+        let iterable = iterableFunc();
+
+        if (LinqHelper.isCollectionHavingLength(iterable) && (index >= iterable.length))
+            return outOfBoundsFunc();
+
+        if (LinqHelper.isCollectionHavingSize(iterable) && (index >= iterable.size))
+            return outOfBoundsFunc();
+
+        if (LinqHelper.isIndexedCollection(iterable))
+            return iterable[index];
+
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            if (counter === index)
+                return item;
+
+            counter += 1;
+        }
+
+        return outOfBoundsFunc();
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
@@ -772,33 +801,25 @@ export class Linq
      */
     elementAt(index)
     {
-        let createError = () => new Error('Invalid index.');
+        return LinqHelper.elementAtBasedOperator(index,
+            () => this.toIterable(),
+            () => { throw new Error('Invalid index.'); });
+    }
 
-        if ((index == null) || isNaN(index) || (index < 0))
-            throw createError();
-
-        let iterable = this.toIterable();
-
-        if (LinqHelper.isCollectionHavingLength(iterable) && (index >= iterable.length))
-            throw createError();
-
-        if (LinqHelper.isCollectionHavingSize(iterable) && (index >= iterable.size))
-            throw createError();
-
-        if (LinqHelper.isIndexedCollection(iterable))
-            return iterable[index];
-
-        let counter = 0;
-
-        for (let item of iterable)
-        {
-            if (counter === index)
-                return item;
-
-            counter += 1;
-        }
-
-        throw createError();
+    /**
+     * Returns either the element of 'this' collection located at the ordinal position given by `index` (a
+     * zero-based index), if the `index` is contained within the bounds of 'this' collection, or the `defaultValue`,
+     * if the `index` is not contained within the bounds of 'this' collection.
+     * 
+     * @param {number} index - The zero-based index of the element to return
+     * @param {*} defaultValue - The value to return if the `index` is outside the bounds of 'this' collection
+     * @returns {*}
+     */
+    elementAtOrDefault(index, defaultValue)
+    {
+        return LinqHelper.elementAtBasedOperator(index, 
+            () => this.toIterable(),
+            () => defaultValue);
     }
 
 

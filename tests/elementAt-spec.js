@@ -30,7 +30,7 @@ describe('elementAt', () =>
         let arr2 = [1, 2, 3, 4];
         let linq2 = new Linq(new Set(arr2));
 
-        expect(() => { linq2.elementAt(arr.length); }).toThrow();
+        expect(() => { linq2.elementAt(arr2.length); }).toThrow();
     });
 
     it('when called on an iterable without length or size and with an index larger than the size of the collection then throws an exception', () => 
