@@ -12,14 +12,23 @@ class LinqHelper
     static isIndexedCollection(x) { return Array.isArray(x) || Linq.isString(x) || LinqHelper.isTypedArray(x); }
     static isCollectionHavingLength(x) { return LinqHelper.isIndexedCollection(x); }
     static isCollectionHavingSize(x) { return (x instanceof Set) || (x instanceof Map); }
+    static isCollectionHavingExplicitCardinality(x) { return LinqHelper.isCollectionHavingLength(x) || LinqHelper.isCollectionHavingSize(x); }
+    
+    static getExplicitCardinality(x) 
+    {
+        if (LinqHelper.isCollectionHavingLength(x))
+            return x.length;
+            
+        if (LinqHelper.isCollectionHavingSize(x))
+            return x.size;
+
+        return null;
+    }
 
     static isEmptyIterable(iterable)
     {
-        if (LinqHelper.isCollectionHavingLength(iterable))
-            return (iterable.length === 0);
-
-        if (LinqHelper.isCollectionHavingSize(iterable))
-            return (iterable.size === 0);
+        if (LinqHelper.isCollectionHavingExplicitCardinality(iterable))
+            return (LinqHelper.getExplicitCardinality(iterable) === 0);
 
         let iterator = LinqHelper.getIterator(iterable);
         let state = iterator.next();
@@ -102,10 +111,7 @@ class LinqHelper
 
         let iterable = iterableFunc();
 
-        if (LinqHelper.isCollectionHavingLength(iterable) && (index >= iterable.length))
-            return outOfBoundsFunc();
-
-        if (LinqHelper.isCollectionHavingSize(iterable) && (index >= iterable.size))
+        if (LinqHelper.isCollectionHavingExplicitCardinality(iterable) && (index >= LinqHelper.getExplicitCardinality(iterable)))
             return outOfBoundsFunc();
 
         if (LinqHelper.isIndexedCollection(iterable))
@@ -724,11 +730,8 @@ export class Linq
 
         let iterable = this.toIterable();
 
-        if (predicate == null && LinqHelper.isCollectionHavingLength(iterable))
-            return iterable.length;
-
-        if (predicate == null && LinqHelper.isCollectionHavingSize(iterable))
-            return iterable.size;
+        if (predicate == null && LinqHelper.isCollectionHavingExplicitCardinality(iterable))
+            return LinqHelper.getExplicitCardinality(iterable);
 
         let counter = 0;
 
@@ -820,6 +823,60 @@ export class Linq
         return LinqHelper.elementAtBasedOperator(index, 
             () => this.toIterable(),
             () => defaultValue);
+    }
+
+    /**
+     * Returns 'this' collection "zipped-up" with the `second` collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the `second` collection.  If the size of 'this' collection and the `second` 
+     * collection are not equal, then an exception will be thrown.
+     * 
+     * @param {LinqCompatible} second - The collection to zip with 'this' collection 
+     * @param {projection} [resultSelector] - The function to use to project the result values
+     * @returns {Linq}
+     */
+    equiZip(second, resultSelector)
+    {
+        LinqHelper.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        if (resultSelector == null)
+            resultSelector = Linq.tuple;
+
+        let secondLinq = (Linq.isLinq(second) ? second : new Linq(second));
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        if (LinqHelper.isCollectionHavingExplicitCardinality(firstIterable) &&
+            LinqHelper.isCollectionHavingExplicitCardinality(secondIterable) &&
+            (LinqHelper.getExplicitCardinality(firstIterable) !== LinqHelper.getExplicitCardinality(secondIterable)))
+        {
+            throw new Error('The two collections being equi-zipped are not of equal lengths.');
+        }
+
+        function* equizipGenerator()
+        {
+            let firstIterator = LinqHelper.getIterator(firstIterable);
+            let secondIterator = LinqHelper.getIterator(secondIterable);
+
+            let firstState = firstIterator.next();
+            let secondState = secondIterator.next();
+
+            while (!firstState.done)
+            {
+                if (secondState.done)
+                    throw new Error('Second collection is too short.');
+
+                yield resultSelector(firstState.value, secondState.value);
+
+                firstState = firstIterator.next();
+                secondState = secondIterator.next();
+            }
+
+            if (!secondState.done)
+                throw new Error('First collection is too short.');
+        }
+
+        return new Linq(equizipGenerator);
     }
 
 
