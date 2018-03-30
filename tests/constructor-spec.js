@@ -121,6 +121,16 @@ describe('constructor', () =>
         expect(() => linq.toIterable()).toThrow();
     });
 
+    it('when called with a value that is not a "compatible source" then throws an exception', () => 
+    {
+        expect(() => 
+        { 
+            let test = new Linq(99); 
+            
+            test.toArray();
+        }).toThrow();
+    });
+
     it('when called with null then returns empty linq object', () => 
     {
         let linq = new Linq(null);

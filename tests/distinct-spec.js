@@ -10,8 +10,6 @@ describe('distinct', () =>
     let dups1 = new Linq(arr1.concat(arr1));
     let dups2 = new Linq(arr3);
 
-    let strictComparer = (x, y) => x === y;
-
     it('when called on an empty collection then returns an empty collection', () => 
     {
         let results1 = Linq.empty()
@@ -19,7 +17,7 @@ describe('distinct', () =>
             .toArray();
 
         let results2 = Linq.empty()
-            .distinct(strictComparer)
+            .distinct(Linq.strictComparer)
             .toArray();
 
         expect(results1).toEqual([]);

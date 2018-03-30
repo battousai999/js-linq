@@ -30,6 +30,20 @@ describe('equiZip', () =>
         expect(() => { linq1.equiZip(linq2).toArray(); }).toThrow();
     });
 
+    it('when called on an empty collection with a null second collection then returns an empty collection', () => 
+    {
+        let linq1 = Linq.empty();
+
+        expect(linq1.equiZip(null).toArray()).toEqual([]);
+    });
+
+    it('when called on a non-empty collection with a null second collection then throws an exception', () => 
+    {
+        let linq1 = new Linq(arr1);
+
+        expect(() => { linq1.equiZip(null); }).toThrow();
+    });
+
     it('when called with two collections of the same size then returns a zipped collection', () => 
     {
         let linq1 = new Linq(arr1);

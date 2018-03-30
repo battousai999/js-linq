@@ -129,6 +129,30 @@ class LinqHelper
 
         return outOfBoundsFunc();
     }
+
+    static normalizeComparerOrDefault(comparer)
+    {
+        return (comparer == null ? Linq.strictComparer : Linq.normalizeComparer(comparer));
+    }
+
+    static ensureLinq(collection)
+    {
+        return (Linq.isLinq(collection) ? collection : new Linq(collection));
+    }
+
+    static buildContainsEvaluator(iterable, normalizedComparer)
+    {
+        return x =>
+        {
+            for (let item of iterable)
+            {
+                if (normalizedComparer(x, item))
+                    return true;
+            }
+
+            return false;    
+        };
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
@@ -218,6 +242,7 @@ export class Linq
     static tuple(x, y) { return [x, y]; }
 
     // Comparer functions
+    static strictComparer(x, y) { return x === y; }
     static defaultStringComparer(x, y) { return Linq.caseSensitiveStringComparer(x, y); }
 
     static caseSensitiveStringComparer(x, y) 
@@ -312,12 +337,7 @@ export class Linq
         if (projection == null)
             throw new Error('Invalid projection.');
 
-        let normalizedComparer;
-
-        if (comparer == null)
-            normalizedComparer = (x, y) => x === y;
-        else
-            normalizedComparer = Linq.normalizeComparer(comparer);
+        let normalizedComparer = LinqHelper.normalizeComparerOrDefault(comparer);
 
         return (x, y) => normalizedComparer(projection(x), projection(y));
     }
@@ -667,7 +687,7 @@ export class Linq
         if (second == null)
             return new Linq(this);
 
-        var secondLinq = (Linq.isLinq(second) ? second : new Linq(second));
+        var secondLinq = LinqHelper.ensureLinq(second);
 
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
@@ -701,20 +721,11 @@ export class Linq
     {
         LinqHelper.validateOptionalFunction(comparer, 'Invalid comparer.');
 
-        if (comparer == null)
-            comparer = (x, y) => x === y;
-        else
-            comparer = Linq.normalizeComparer(comparer);
-
+        let normalizedComparer = LinqHelper.normalizeComparerOrDefault(comparer);
         let iterable = this.toIterable();
+        let evaluator = LinqHelper.buildContainsEvaluator(iterable, normalizedComparer);
 
-        for (let x of iterable)
-        {
-            if (comparer(x, item))
-                return true;
-        }
-
-        return false;
+        return evaluator(item);
     }
 
     /**
@@ -842,7 +853,7 @@ export class Linq
         if (resultSelector == null)
             resultSelector = Linq.tuple;
 
-        let secondLinq = (Linq.isLinq(second) ? second : new Linq(second));
+        let secondLinq = LinqHelper.ensureLinq(second);
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
 
@@ -877,6 +888,51 @@ export class Linq
         }
 
         return new Linq(equizipGenerator);
+    }
+
+    /**
+     * Returns elements in 'this' collection that do not also exist in the `second` collection, using `comparer`
+     * (if it is given) to determine whether two items are equal.  Also, the returned elements will not include
+     * duplicates from 'this' collection. If `comparer` is not given, the "===" operator is used to compare elements.
+     * 
+     * @param {LinqCompatible} second - The collection to use to exlude elements
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements 
+     */
+    except(second, comparer)
+    {
+        LinqHelper.validateOptionalFunction(comparer);
+
+        let normalizedComparer = LinqHelper.normalizeComparerOrDefault(comparer);
+        let secondLinq = LinqHelper.ensureLinq(second);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        let isInSecond = LinqHelper.buildContainsEvaluator(secondIterable, normalizedComparer);
+
+        // Unfortunately, no Set class with custom equality comparison--so has to be done in a much less-efficient way
+        let seenList = [];
+        let seenLinq = new Linq(seenList);
+        let isAlreadySeen = x => 
+        {
+            let isSeen = seenLinq.contains(x, normalizedComparer);
+
+            if (!isSeen)
+                seenList.push(x);
+
+            return isSeen;
+        };
+
+        function* exceptGenerator()
+        {
+            for (let item of firstIterable)
+            {
+                if (!isInSecond(item) && !isAlreadySeen(item))
+                    yield item;
+            }
+        }
+
+        return new Linq(exceptGenerator);
     }
 
 
@@ -923,8 +979,7 @@ export class Linq
         LinqHelper.validateOptionalFunction(elementSelector, 'Invalid element selector.');
         LinqHelper.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
 
-        if (keyComparer != null)
-            keyComparer = Linq.normalizeComparer(keyComparer);
+        let normalizedKeyComparer = LinqHelper.normalizeComparerOrDefault(keyComparer);
 
         let iterable = this.toIterable();
         let groupings = [];
@@ -935,14 +990,7 @@ export class Linq
             let key = keySelector(item);
             let element = (elementSelector == null ? item : elementSelector(item));
 
-            let foundGroup = groupingsLinq.firstOrDefault(x =>
-                {
-                    if (keyComparer == null)
-                        return (x.key === key);
-                    else
-                        return keyComparer(x.key, key);
-                    },
-                null);
+            let foundGroup = groupingsLinq.firstOrDefault(x => normalizedKeyComparer(x.key, key), null);
 
             if (foundGroup == null)
                 groupings.push(new Grouping(key, [element]));
