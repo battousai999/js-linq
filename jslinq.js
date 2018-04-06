@@ -2,24 +2,24 @@
     $linq Version 2.0.0 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
 */
 
-class LinqHelper
+class LinqInternal
 {
     static convertToString(value) { return (value == null ? null : value.toString()); }
     static convertToNumber(value) { return (Linq.isNumber(value) ? value : NaN); }    
     static isConstructorCompatibleSource(source) { return Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source) || Linq.isLinq(source); }
     static isStringNullOrEmpty(str) { return (str == null || str === ''); }
     static isTypedArray(x) { return ArrayBuffer.isView(x) && !(x instanceof DataView); }
-    static isIndexedCollection(x) { return Array.isArray(x) || Linq.isString(x) || LinqHelper.isTypedArray(x); }
-    static isCollectionHavingLength(x) { return LinqHelper.isIndexedCollection(x); }
+    static isIndexedCollection(x) { return Array.isArray(x) || Linq.isString(x) || LinqInternal.isTypedArray(x); }
+    static isCollectionHavingLength(x) { return LinqInternal.isIndexedCollection(x); }
     static isCollectionHavingSize(x) { return (x instanceof Set) || (x instanceof Map); }
-    static isCollectionHavingExplicitCardinality(x) { return LinqHelper.isCollectionHavingLength(x) || LinqHelper.isCollectionHavingSize(x); }
+    static isCollectionHavingExplicitCardinality(x) { return LinqInternal.isCollectionHavingLength(x) || LinqInternal.isCollectionHavingSize(x); }
     
     static getExplicitCardinality(x) 
     {
-        if (LinqHelper.isCollectionHavingLength(x))
+        if (LinqInternal.isCollectionHavingLength(x))
             return x.length;
             
-        if (LinqHelper.isCollectionHavingSize(x))
+        if (LinqInternal.isCollectionHavingSize(x))
             return x.size;
 
         return null;
@@ -27,10 +27,10 @@ class LinqHelper
 
     static isEmptyIterable(iterable)
     {
-        if (LinqHelper.isCollectionHavingExplicitCardinality(iterable))
-            return (LinqHelper.getExplicitCardinality(iterable) === 0);
+        if (LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+            return (LinqInternal.getExplicitCardinality(iterable) === 0);
 
-        let iterator = LinqHelper.getIterator(iterable);
+        let iterator = LinqInternal.getIterator(iterable);
         let state = iterator.next();
 
         return state.done;
@@ -111,10 +111,10 @@ class LinqHelper
 
         let iterable = iterableFunc();
 
-        if (LinqHelper.isCollectionHavingExplicitCardinality(iterable) && (index >= LinqHelper.getExplicitCardinality(iterable)))
+        if (LinqInternal.isCollectionHavingExplicitCardinality(iterable) && (index >= LinqInternal.getExplicitCardinality(iterable)))
             return outOfBoundsFunc();
 
-        if (LinqHelper.isIndexedCollection(iterable))
+        if (LinqInternal.isIndexedCollection(iterable))
             return iterable[index];
 
         let counter = 0;
@@ -222,7 +222,7 @@ export class Linq
         if (source == null)
             source = [];
 
-        if (LinqHelper.isConstructorCompatibleSource(source))
+        if (LinqInternal.isConstructorCompatibleSource(source))
             this.source = source;
         else
             throw new Error('The \'source\' is not either an iterable or a generator.');
@@ -247,7 +247,7 @@ export class Linq
 
     static caseSensitiveStringComparer(x, y) 
     { 
-        let normalize = value => (value == null ? null : LinqHelper.convertToString(value));
+        let normalize = value => (value == null ? null : LinqInternal.convertToString(value));
 
         return Linq.generalComparer(normalize(x), normalize(y)); 
     }
@@ -337,7 +337,7 @@ export class Linq
         if (projection == null)
             throw new Error('Invalid projection.');
 
-        let normalizedComparer = LinqHelper.normalizeComparerOrDefault(comparer);
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
 
         return (x, y) => normalizedComparer(projection(x), projection(y));
     }
@@ -356,7 +356,7 @@ export class Linq
      */
     static from(source)
     {
-        if (source == null || LinqHelper.isConstructorCompatibleSource(source))
+        if (source == null || LinqInternal.isConstructorCompatibleSource(source))
             return new Linq(source);
         else if (typeof jQuery !== 'undefined' && (source instanceof jQuery))
             return new Linq(source.get());
@@ -386,7 +386,7 @@ export class Linq
         if (step == 0)
             throw new Error("Invalid 'step' value--cannot be zero.");
 
-        return new Linq(LinqHelper.buildRangeGenerator(from, to, step));
+        return new Linq(LinqInternal.buildRangeGenerator(from, to, step));
     }
 
     /**
@@ -401,7 +401,7 @@ export class Linq
         if ((repetitions == null) || isNaN(repetitions))
             repetitions = 1;
 
-        return new Linq(LinqHelper.buildRepeatGenerator(item, repetitions));
+        return new Linq(LinqInternal.buildRepeatGenerator(item, repetitions));
     }
 
     /**
@@ -471,10 +471,10 @@ export class Linq
         if (obj == null)
             return new Linq();
 
-        if (LinqHelper.isStringNullOrEmpty(keyPropertyName))
+        if (LinqInternal.isStringNullOrEmpty(keyPropertyName))
             keyPropertyName = 'key';
 
-        if (LinqHelper.isStringNullOrEmpty(valuePropertyName))
+        if (LinqInternal.isStringNullOrEmpty(valuePropertyName))
             valuePropertyName = 'value';
 
         let projection = key =>
@@ -516,10 +516,10 @@ export class Linq
      */
     aggregate(seed, operation, resultSelector)
     {
-        LinqHelper.validateRequiredFunction(operation, "Invalid operation.");
-        LinqHelper.validateOptionalFunction(resultSelector, "Invalid result selector.");
+        LinqInternal.validateRequiredFunction(operation, "Invalid operation.");
+        LinqInternal.validateOptionalFunction(resultSelector, "Invalid result selector.");
 
-        let iterator = LinqHelper.getIterator(this.toIterable());
+        let iterator = LinqInternal.getIterator(this.toIterable());
         let currentValue = null;
         let result = null;
 
@@ -556,7 +556,7 @@ export class Linq
      */
     all(predicate)
     {
-        LinqHelper.validateRequiredFunction(predicate, 'Invalid predicate.');
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
@@ -578,12 +578,12 @@ export class Linq
      */
     any(predicate)
     {
-        LinqHelper.validateOptionalFunction(predicate, 'Invalid predicate.');
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
         if (predicate == null)
-            return !LinqHelper.isEmptyIterable(iterable);
+            return !LinqInternal.isEmptyIterable(iterable);
 
         for (let item of iterable)
         {
@@ -604,7 +604,7 @@ export class Linq
      */
     average(selector)
     {
-        LinqHelper.validateOptionalFunction(selector, 'Invalid selector.');
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');
 
         let iterable = this.toIterable();
         let result = 0;
@@ -639,7 +639,7 @@ export class Linq
      */
     batch(size, resultSelector)
     {
-        LinqHelper.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
 
         if ((size == null) || isNaN(size) || (size <= 0))
             throw new Error('Invalid size.');
@@ -687,7 +687,7 @@ export class Linq
         if (second == null)
             return new Linq(this);
 
-        var secondLinq = LinqHelper.ensureLinq(second);
+        var secondLinq = LinqInternal.ensureLinq(second);
 
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
@@ -719,11 +719,11 @@ export class Linq
      */
     contains(item, comparer)
     {
-        LinqHelper.validateOptionalFunction(comparer, 'Invalid comparer.');
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
-        let normalizedComparer = LinqHelper.normalizeComparerOrDefault(comparer);
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
         let iterable = this.toIterable();
-        let evaluator = LinqHelper.buildContainsEvaluator(iterable, normalizedComparer);
+        let evaluator = LinqInternal.buildContainsEvaluator(iterable, normalizedComparer);
 
         return evaluator(item);
     }
@@ -737,12 +737,12 @@ export class Linq
      */
     count(predicate)
     {
-        LinqHelper.validateOptionalFunction(predicate, 'Invalid predicate.');
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
-        if (predicate == null && LinqHelper.isCollectionHavingExplicitCardinality(iterable))
-            return LinqHelper.getExplicitCardinality(iterable);
+        if (predicate == null && LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+            return LinqInternal.getExplicitCardinality(iterable);
 
         let counter = 0;
 
@@ -767,7 +767,7 @@ export class Linq
     {
         let iterable = this.toIterable();
 
-        if (LinqHelper.isEmptyIterable(iterable))
+        if (LinqInternal.isEmptyIterable(iterable))
             return new Linq([defaultValue]);
         else
             return new Linq(this);
@@ -797,8 +797,8 @@ export class Linq
      */
     distinctBy(keySelector, comparer)
     {
-        LinqHelper.validateRequiredFunction(keySelector, 'Invalid key selector.');
-        LinqHelper.validateOptionalFunction(comparer, 'Invalid comparer.');
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
         // So sad--ES6's Set class does not allow for custom equality comparison, so have to use
         // groupBy instead of Set, which would perform more quickly.
@@ -815,7 +815,7 @@ export class Linq
      */
     elementAt(index)
     {
-        return LinqHelper.elementAtBasedOperator(index,
+        return LinqInternal.elementAtBasedOperator(index,
             () => this.toIterable(),
             () => { throw new Error('Invalid index.'); });
     }
@@ -831,7 +831,7 @@ export class Linq
      */
     elementAtOrDefault(index, defaultValue)
     {
-        return LinqHelper.elementAtBasedOperator(index, 
+        return LinqInternal.elementAtBasedOperator(index, 
             () => this.toIterable(),
             () => defaultValue);
     }
@@ -848,26 +848,26 @@ export class Linq
      */
     equiZip(second, resultSelector)
     {
-        LinqHelper.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
 
         if (resultSelector == null)
             resultSelector = Linq.tuple;
 
-        let secondLinq = LinqHelper.ensureLinq(second);
+        let secondLinq = LinqInternal.ensureLinq(second);
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
 
-        if (LinqHelper.isCollectionHavingExplicitCardinality(firstIterable) &&
-            LinqHelper.isCollectionHavingExplicitCardinality(secondIterable) &&
-            (LinqHelper.getExplicitCardinality(firstIterable) !== LinqHelper.getExplicitCardinality(secondIterable)))
+        if (LinqInternal.isCollectionHavingExplicitCardinality(firstIterable) &&
+            LinqInternal.isCollectionHavingExplicitCardinality(secondIterable) &&
+            (LinqInternal.getExplicitCardinality(firstIterable) !== LinqInternal.getExplicitCardinality(secondIterable)))
         {
             throw new Error('The two collections being equi-zipped are not of equal lengths.');
         }
 
         function* equizipGenerator()
         {
-            let firstIterator = LinqHelper.getIterator(firstIterable);
-            let secondIterator = LinqHelper.getIterator(secondIterable);
+            let firstIterator = LinqInternal.getIterator(firstIterable);
+            let secondIterator = LinqInternal.getIterator(secondIterable);
 
             let firstState = firstIterator.next();
             let secondState = secondIterator.next();
@@ -900,15 +900,15 @@ export class Linq
      */
     except(second, comparer)
     {
-        LinqHelper.validateOptionalFunction(comparer);
+        LinqInternal.validateOptionalFunction(comparer);
 
-        let normalizedComparer = LinqHelper.normalizeComparerOrDefault(comparer);
-        let secondLinq = LinqHelper.ensureLinq(second);
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let secondLinq = LinqInternal.ensureLinq(second);
 
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
 
-        let isInSecond = LinqHelper.buildContainsEvaluator(secondIterable, normalizedComparer);
+        let isInSecond = LinqInternal.buildContainsEvaluator(secondIterable, normalizedComparer);
 
         // Unfortunately, no Set class with custom equality comparison--so has to be done in a much less-efficient way
         let seenList = [];
@@ -935,7 +935,23 @@ export class Linq
         return new Linq(exceptGenerator);
     }
 
+    /**
+     * Returns either the first element of 'this' collection (if 'predicate' is not given) or the 
+     * first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
+     * If there is no "first" element to return (either because 'this' collection is empty or no element 
+     * satisfies the 'predicate'), an error is thrown.
+     * 
+     * @param {predicate} [predicate] - The predicate function used to determine the element to return
+     * @returns {*}
+     */
+    first(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate);
 
+        let iterable = this.toIterable();
+
+        return LinqInternal.firstBasedOperator(iterable, predicate, null, true);
+    }
     
     /**
      * Returns either the first element of 'this' collection (if `predicate` is not given) or the
@@ -945,15 +961,15 @@ export class Linq
      * 
      * @param {predicate} [predicate] - The predicate function used to determine the element to return 
      * @param {*} [defaultValue] - The value to return if no "first" element is found
-     * @returns {*} - The element that was found.
+     * @returns {*}
      */
     firstOrDefault(predicate, defaultValue)
     {
-        LinqHelper.validateOptionalFunction(predicate, 'Invalid predicate.');
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
-        return LinqHelper.firstBasedOperator(iterable, predicate, defaultValue, false);
+        return LinqInternal.firstBasedOperator(iterable, predicate, defaultValue, false);
     }
 
 
@@ -975,11 +991,11 @@ export class Linq
      */
     groupBy(keySelector, elementSelector, keyComparer)
     {
-        LinqHelper.validateRequiredFunction(keySelector, 'Invalid key selector.');
-        LinqHelper.validateOptionalFunction(elementSelector, 'Invalid element selector.');
-        LinqHelper.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(elementSelector, 'Invalid element selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
 
-        let normalizedKeyComparer = LinqHelper.normalizeComparerOrDefault(keyComparer);
+        let normalizedKeyComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
 
         let iterable = this.toIterable();
         let groupings = [];
@@ -1011,7 +1027,7 @@ export class Linq
      */
     select(selector)
     {
-        LinqHelper.validateRequiredFunction(selector, 'Invalid selector.');
+        LinqInternal.validateRequiredFunction(selector, 'Invalid selector.');
 
         let iterable = this.toIterable();
 
