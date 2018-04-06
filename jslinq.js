@@ -153,10 +153,63 @@ class LinqInternal
             return false;    
         };
     }
+
+    static createDeferredSort(keySelector, comparer, isReverse)
+    {
+        return {
+            keySelector,
+            comparer,
+            isReverse,
+            parent: null
+        };
+    }
+
+    static performDeferredSort(buffer, deferredSort)
+    {
+        let sortChain = LinqInternal.buildSortChain(deferredSort);
+
+        let compare = (x, y, info) =>
+        {
+            let value;
+
+            if (info.isReverse)
+                value = info.comparer(info.keySelector(y), info.keySelector(x));
+            else
+                value = info.comparer(info.keySelector(x), info.keySelector(y));
+
+            if (value === 0)
+            {
+                if (info.next == null)
+                    return 0;
+
+                return compare(x, y, info.next);
+            }
+            else
+                return value;
+        };
+
+        buffer.sort((x, y) => compare(x, y, sortChain));
+    }
+
+    static buildSortChain(deferredSort)
+    {
+        let chainItem = {
+            keySelector: deferredSort.keySelector,
+            comparer: deferredSort.comparer,
+            isReverse: deferredSort.isReverse
+        };
+
+        if (deferredSort.parent != null)
+            chainItem.next = LinqInternal.buildSortChain(deferredSort.parent);
+
+        return chainItem;
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
 var GeneratorFunction = (function*(){}).constructor;
+
+var deferredSortSymbol = Symbol('Provides private-like access for a deferredSort property.');
 
 export class Grouping
 {
@@ -187,6 +240,12 @@ export class Linq
      * @param {*} value - The value to test
      * @returns {boolean}
      */
+
+     /**
+      * A function that acts upon a value.
+      * @callback action
+      * @param {*} value - The value upon which to act
+      */
 
     /**
      * A comparer is a function that takes two values and returns 0 if they are considered the "same" (by
@@ -972,7 +1031,24 @@ export class Linq
         return LinqInternal.firstBasedOperator(iterable, predicate, defaultValue, false);
     }
 
+    /**
+     * Executes the given `action` on each element of 'this' collection.
+     * @param {action} action - The function that is executed for each element 
+     */
+    foreach(action)
+    {
+        LinqInternal.validateRequiredFunction(action);
 
+        let iterable = this.toIterable();
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            action(item, counter);
+
+            counter += 1;
+        }
+    }
 
     /**
      * Return a collection of groupings (i.e., objects with a property called 'key' that
@@ -1015,6 +1091,35 @@ export class Linq
         }
 
         return groupingsLinq;
+    }
+
+
+
+    /**
+     * Returns the elements of 'this' collection sorted in ascending order of the projected value
+     * given by the `keySelector` function, using the `comparer` function to compare the projected
+     * values.  If the `comparer` function is not given, a comparer that uses the natural ordering 
+     * of the values will be used to compare the projected values.  Note that subsequent, immediate 
+     * calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
+     * is, sorting when two elements are determined to be equal by this orderBy call).
+     * 
+     * @param {*} keySelector 
+     * @param {comparer} [comparer] 
+     * @returns {Linq}
+     */
+    orderBy(keySelector, comparer)
+    {
+        LinqInternal.validateRequiredFunction(keySelector);
+        LinqInternal.validateOptionalFunction(comparer);
+
+        if (comparer == null)
+            comparer = Linq.generalComparer;
+
+        let linq = new Linq(this);
+
+        linq[deferredSortSymbol] = LinqInternal.createDeferredSort(keySelector, comparer, false);
+
+        return linq;
     }
 
     
@@ -1063,7 +1168,25 @@ export class Linq
                 throw new Error('Could not return an iterable because the \'source\' was not valid.');
         };
 
-        return helper(this.source);
+        let iterable = helper(this.source);
+        let deferredSort = this[deferredSortSymbol];
+
+        if (deferredSort == null)
+            return iterable;
+
+        function* deferredSortGenerator()
+        {
+            let buffer = Array.from(iterable);
+
+            LinqInternal.performDeferredSort(buffer, deferredSort);
+
+            for (let item of buffer)
+            {
+                yield item;
+            }
+        }
+
+        return deferredSortGenerator();
     }
 
     /**
