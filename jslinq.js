@@ -193,16 +193,22 @@ class LinqInternal
 
     static buildSortChain(deferredSort)
     {
-        let chainItem = {
-            keySelector: deferredSort.keySelector,
-            comparer: deferredSort.comparer,
-            isReverse: deferredSort.isReverse
+        let helper = (ds, child) =>
+        {
+            let chainItem = {
+                keySelector: deferredSort.keySelector,
+                comparer: deferredSort.comparer,
+                isReverse: deferredSort.isReverse,
+                next: child
+            };
+
+            if (ds.parent == null)
+                return chainItem;
+
+            return helper(ds.parent, chainItem);
         };
 
-        if (deferredSort.parent != null)
-            chainItem.next = LinqInternal.buildSortChain(deferredSort.parent);
-
-        return chainItem;
+        return helper(deferredSort, null);
     }
 }
 
