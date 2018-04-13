@@ -276,6 +276,14 @@ export class Linq
      */
 
     /**
+     * A function that projects two values into a third value.
+     * @callback biSourceProjection
+     * @param {*} firstValue - The first of the values to involve in the projection
+     * @param {*} secondValue - The second of the values to involve in the projection
+     * @returns {*} - The projected value.
+     */
+
+    /**
      * A function that can act as a predicate function (i.e., projects a value to a boolean value).
      * @callback predicate
      * @param {*} value - The value to test
@@ -1132,6 +1140,52 @@ export class Linq
         }
 
         return groupingsLinq;
+    }
+
+    /**
+     * Returns a "left outer" join of 'this' collection (the "outer" collection) and the `inner`
+     * collection, using the `outerKeySelector` and `innerKeySelector` to project the keys from 
+     * each collection, and using the `keyComparer` function (if it is given) to compare the
+     * projected keys.  If the `keyComparer` is not given, the "===" operator will be used to 
+     * compare the projected keys.  The `resultSelector` function is used to convert the joined 
+     * results into the results that are returned by the groupJoin function.  The `resultSelector` 
+     * takes as parameters the outer object (of the join) and an array of the joined inner objects 
+     * (this array will be an empty array if there were no inner elements associated with the outer
+     * element).
+     * 
+     * @param {LinqCompatible} inner - The collection that is "left-outer" joined with 'this' collection
+     * @param {projection} outerKeySelector - The function that projects the key for the outer elements (in 'this' collection)
+     * @param {projection} innerKeySelector - The function that projects the key for the inner elements
+     * @param {biSourceProjection} resultSelector - The function that converts the joined results into the results returned
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare the projected keys
+     * @returns {Linq}
+     */
+    groupJoin(inner, outerKeySelector, innerKeySelector, resultSelector, keyComparer)
+    {
+        if (inner == null)
+            throw new Error('Invalid inner collection.');
+
+        LinqInternal.validateRequiredFunction(outerKeySelector);
+        LinqInternal.validateRequiredFunction(innerKeySelector);
+        LinqInternal.validateRequiredFunction(resultSelector);
+        LinqInternal.validateOptionalFunction(keyComparer);
+
+        let normalizedKeyComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
+        let innerLinq = LinqInternal.ensureLinq(inner);
+        let iterable = this.toIterable();
+        let groupings = innerLinq.groupBy(innerKeySelector, null, keyComparer);
+        let results = [];
+
+        for (let item of iterable)
+        {
+            let outerKey = outerKeySelector(item);
+
+            let groupValues = groupings.firstOrDefault(x => normalizedKeyComparer(x.key, outerKey));
+
+            results.push(resultSelector(item, (groupValues == null ? [] : groupValues.values)));
+        }
+
+        return new Linq(results);
     }
 
 
