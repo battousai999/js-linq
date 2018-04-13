@@ -154,13 +154,13 @@ class LinqInternal
         };
     }
 
-    static createDeferredSort(keySelector, comparer, isReverse)
+    static createDeferredSort(keySelector, comparer, isReverse, parent = null)
     {
         return {
             keySelector,
             comparer,
             isReverse,
-            parent: null
+            parent
         };
     }
 
@@ -196,9 +196,9 @@ class LinqInternal
         let helper = (ds, child) =>
         {
             let chainItem = {
-                keySelector: deferredSort.keySelector,
-                comparer: deferredSort.comparer,
-                isReverse: deferredSort.isReverse,
+                keySelector: ds.keySelector,
+                comparer: ds.comparer,
+                isReverse: ds.isReverse,
                 next: child
             };
 
@@ -222,6 +222,26 @@ class LinqInternal
         let linq = new Linq(originalLinq);
 
         linq[deferredSortSymbol] = LinqInternal.createDeferredSort(keySelector, comparer, isReverse);
+
+        return linq;
+    }
+
+    static thenByBasedOperator(originalLinq, keySelector, comparer, isReverse)
+    {
+        LinqInternal.validateRequiredFunction(keySelector);
+        LinqInternal.validateOptionalFunction(comparer);
+
+        let parentDeferredSort = originalLinq[deferredSortSymbol];
+
+        if (parentDeferredSort == null)
+            throw new Error(`${isReverse ? 'ThenByDescending' : 'ThenBy'} can only be called following OrderBy, OrderByDescending, ThenBy, or ThenByDescending.`);
+
+        if (comparer == null)
+            comparer = Linq.generalComparer;
+
+        let linq = new Linq(originalLinq);
+
+        linq[deferredSortSymbol] = LinqInternal.createDeferredSort(keySelector, comparer, isReverse, parentDeferredSort);
 
         return linq;
     }
@@ -1175,6 +1195,44 @@ export class Linq
         return new Linq(selectGenerator);
     }
 
+
+
+    /**
+     * Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
+     * call) in ascending order of the projected value given by the `keySelector` function, using the
+     * `comparer` function to compare the projected values.  If the `comparer` function is not given,
+     * a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+     * Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+     * thenBy, or thenByDescending call.
+     * 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
+     * @returns {Linq}
+     */
+    thenBy(keySelector, comparer)
+    {
+        return LinqInternal.thenByBasedOperator(this, keySelector, comparer, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
+     * call) in descending order of the projected value given by the `keySelector` function, using the
+     * `comparer` function to compare the projected values.  If the `comparer` function is not given,
+     * a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+     * Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+     * thenBy, or thenByDescending call.
+     * 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
+     * @returns {Linq}
+     */
+    thenByDescending(keySelector, comparer)
+    {
+        return LinqInternal.thenByBasedOperator(this, keySelector, comparer, true);
+    }
+
+
+
     /**
      * Returns an iterable (as defined by the "iterable protocol"--see
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
@@ -1185,7 +1243,7 @@ export class Linq
         let helper = source =>
         {
             if (Linq.isLinq(source))
-                return source.toIterable();
+                return helper(source.source);
             else if (Linq.isIterable(source))
                 return source;
             else if (Linq.isGenerator(source))
