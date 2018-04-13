@@ -210,6 +210,21 @@ class LinqInternal
 
         return helper(deferredSort, null);
     }
+
+    static orderByBasedOperator(originalLinq, keySelector, comparer, isReverse)
+    {
+        LinqInternal.validateRequiredFunction(keySelector);
+        LinqInternal.validateOptionalFunction(comparer);
+
+        if (comparer == null)
+            comparer = Linq.generalComparer;
+
+        let linq = new Linq(originalLinq);
+
+        linq[deferredSortSymbol] = LinqInternal.createDeferredSort(keySelector, comparer, isReverse);
+
+        return linq;
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
@@ -1109,23 +1124,30 @@ export class Linq
      * calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
      * is, sorting when two elements are determined to be equal by this orderBy call).
      * 
-     * @param {*} keySelector 
-     * @param {comparer} [comparer] 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
      * @returns {Linq}
      */
     orderBy(keySelector, comparer)
     {
-        LinqInternal.validateRequiredFunction(keySelector);
-        LinqInternal.validateOptionalFunction(comparer);
+        return LinqInternal.orderByBasedOperator(this, keySelector, comparer, false);
+    }
 
-        if (comparer == null)
-            comparer = Linq.generalComparer;
-
-        let linq = new Linq(this);
-
-        linq[deferredSortSymbol] = LinqInternal.createDeferredSort(keySelector, comparer, false);
-
-        return linq;
+    /**
+     * Returns the elements of 'this' collection sorted in descending order of the projected value
+     * given by the `keySelector` function, using the `comparer` function to compare the projected
+     * values.  If the `comparer` function is not given, a comparer that uses the natural ordering 
+     * of the values will be used to compare the projected values.  Note that subsequent, immediate 
+     * calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
+     * is, sorting when two elements are determined to be equal by this orderBy call).
+     * 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
+     * @returns {Linq}
+     */
+    orderByDescending(keySelector, comparer)
+    {
+        return LinqInternal.orderByBasedOperator(this, keySelector, comparer, true);
     }
 
     
