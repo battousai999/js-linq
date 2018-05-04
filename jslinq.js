@@ -1241,6 +1241,34 @@ export class Linq
         return -1;
     }
 
+    /**
+     * Returns the index of the first element to be equal to the given `element`.  If the optional `comparer` 
+     * function is given, then the `comparer` function is used to determine equality between the elements 
+     * of 'this' collection and the given `element`.
+     * 
+     * @param {*} element - The element to find within the collection
+     * @param {comparer|equalityComparer} [comparer] = The function used to compare the elements of the collection
+     * @returns {number}
+     */
+    indexOfElement(element, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let iterable = this.toIterable();
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            if (normalizedComparer(element, item))
+                return counter;
+
+            counter += 1;
+        }
+
+        return -1;
+    }
+
 
 
     /**
