@@ -276,6 +276,15 @@ export class Linq
      */
 
     /**
+     * A function that can act as a projection function (i.e., projects a value into some other value),
+     * but also passes in the positional, zero-based index of the element.
+     * @callback indexedProjection
+     * @param {*} value - The value to be projected
+     * @param {number} [index] - The zero-based index of the value
+     * @returns {*} - The projected value.
+     */
+
+    /**
      * A function that projects two values into a third value.
      * @callback biSourceProjection
      * @param {*} firstValue - The first of the values to involve in the projection
@@ -333,7 +342,7 @@ export class Linq
         if (LinqInternal.isConstructorCompatibleSource(source))
             this.source = source;
         else
-            throw new Error('The \'source\' is not either an iterable or a generator.');
+            throw new Error('The \'source\' is neither an iterable, a generator, nor a function that returns such.');
     }
 
     // Helper functions
@@ -1188,6 +1197,25 @@ export class Linq
         return new Linq(results);
     }
 
+    /**
+     * Returns a collection of objects with the "key" property of each object equal to either the zero-based
+     * index of the element in 'this' collection (if 'startIndex' is not given) or the index, starting at
+     * 'startIndex', of the element in 'this' collection, and with the "value" property of the object equal to
+     * the element in 'this' collection.
+     * 
+     * @param {number} startIndex 
+     */
+    index(startIndex)
+    {
+        if (startIndex == null)
+            startIndex = 0;
+
+        if (isNaN(startIndex))
+            throw new Error('Invalid startIndex.');
+
+        return this.select((x, i) => ({ key: (startIndex + i), value: x }));
+    }
+
 
 
     /**
@@ -1229,7 +1257,7 @@ export class Linq
     /**
      * Returns a collection of values projected from the elements of 'this' collection.
      * 
-     * @param {projection} selector - The function that projects the values from the elements
+     * @param {indexedProjection} selector - The function that projects the values from the elements
      * @returns {Linq}
      */
     select(selector)
@@ -1237,12 +1265,15 @@ export class Linq
         LinqInternal.validateRequiredFunction(selector, 'Invalid selector.');
 
         let iterable = this.toIterable();
+        let i = 0;
 
         function* selectGenerator()
         {
             for (let item of iterable)
             {
-                yield selector(item);
+                yield selector(item, i);
+
+                i += 1;
             }
         }
 
