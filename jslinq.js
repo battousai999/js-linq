@@ -1199,11 +1199,11 @@ export class Linq
 
     /**
      * Returns a collection of objects with the "key" property of each object equal to either the zero-based
-     * index of the element in 'this' collection (if 'startIndex' is not given) or the index, starting at
-     * 'startIndex', of the element in 'this' collection, and with the "value" property of the object equal to
+     * index of the element in 'this' collection (if `startIndex` is not given) or the index, starting at
+     * `startIndex`, of the element in 'this' collection, and with the "value" property of the object equal to
      * the element in 'this' collection.
      * 
-     * @param {number} startIndex 
+     * @param {number} [startIndex] - The starting index for the results (defaults to `0`)
      */
     index(startIndex)
     {
@@ -1214,6 +1214,31 @@ export class Linq
             throw new Error('Invalid startIndex.');
 
         return this.select((x, i) => ({ key: (startIndex + i), value: x }));
+    }
+
+    /**
+     * Returns the index of the first element that satisfies the `predicate`.  Returns the value "-1" if
+     * none of the elements satisfy the `predicate`.
+     * 
+     * @param {predicate} predicate - The function used to determine which index to return
+     * @returns {number}
+     */
+    indexOf(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            if (predicate(item))
+                return counter;
+
+            counter += 1;
+        }
+
+        return -1;
     }
 
 
