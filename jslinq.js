@@ -1272,6 +1272,27 @@ export class Linq
 
 
     /**
+     * Returns the index of the last element that satisfies the `predicate`.  Returns the value "-1" if
+     * none of the elements satisfy the `predicate`.
+     * 
+     * @param {predicate} predicate 
+     * @returns {number}
+     */
+    lastIndexOf(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let element = this.index()
+            .where(x => predicate(x.value))
+            .reverse()
+            .firstOrDefault();
+
+        return (element == null ? -1 : element.key);
+    }
+
+
+
+    /**
      * Returns the elements of 'this' collection sorted in ascending order of the projected value
      * given by the `keySelector` function, using the `comparer` function to compare the projected
      * values.  If the `comparer` function is not given, a comparer that uses the natural ordering 
@@ -1303,6 +1324,31 @@ export class Linq
     orderByDescending(keySelector, comparer)
     {
         return LinqInternal.orderByBasedOperator(this, keySelector, comparer, true);
+    }
+
+
+
+    /**
+     * Returns the elements of 'this' collection in reverse order.
+     * 
+     * @returns {Linq}
+     */
+    reverse()
+    {
+        let iterable = this.toIterable();
+
+        function* gen()
+        {
+            for (let i = iterable.length - 1; i >= 0; i--)
+            {
+                yield iterable[i];
+            }
+        }
+
+        if (!LinqInternal.isIndexedCollection(iterable) || !LinqInternal.isCollectionHavingLength(iterable))
+            iterable = Array.from(iterable);
+
+        return new Linq(gen);
     }
 
     
@@ -1419,5 +1465,31 @@ export class Linq
     toArray()
     {
         return Array.from(this.toIterable());
+    }
+
+
+
+    /**
+     * Returns the elements of 'this' collection that satisfy the `predicate` function.
+     * 
+     * @param {predicate} predicate 
+     * @returns {Linq}
+     */
+    where(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        function* whereGenerator()
+        {
+            for (let item of iterable)
+            {
+                if (predicate(item))
+                    yield item;
+            }
+        }
+
+        return new Linq(whereGenerator);
     }
 }
