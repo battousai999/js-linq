@@ -1269,6 +1269,52 @@ export class Linq
         return -1;
     }
 
+    /**
+     * Returns the intersection of elements in 'this' collection and the `second` collection, using the
+     * `comparer` function to determine whether two different elements are equal.  If the `comparer` 
+     * function is not given, then the "===" operator will be used to compare elements.
+     * 
+     * @param {LinqCompatible} second - The collection of elements to test for intersection
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements
+     * @returns {Linq}
+     */
+    intersect(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        let secondLinq = LinqInternal.ensureLinq(second);
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        let isInSecond = LinqInternal.buildContainsEvaluator(secondIterable, normalizedComparer);
+
+        // Unfortunately, no Set class with custom equality comparison--so has to be done in a much less-efficient way
+        let seenList = [];
+        let seenLinq = new Linq(seenList);
+        let isAlreadySeen = x => 
+        {
+            let isSeen = seenLinq.contains(x, normalizedComparer);
+
+            if (!isSeen)
+                seenList.push(x);
+
+            return isSeen;
+        };
+
+        function* intersectGenerator()
+        {
+            for (let item of firstIterable)
+            {
+                if (isInSecond(item) && !isAlreadySeen(item))
+                    yield item;
+            }
+        }
+
+        return new Linq(intersectGenerator);
+    }
+
 
 
     /**
