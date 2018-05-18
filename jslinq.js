@@ -1315,6 +1315,56 @@ export class Linq
         return new Linq(intersectGenerator);
     }
 
+    /**
+     * Returns an "inner" join of 'this' collection (the "outer" collection) and the `inner`
+     * collection, using the `outerKeySelector` and `innerKeySelector` functions to project the
+     * keys from each collection, and using the `keyComparer` function (if it is given) to compare
+     * the projected keys.  If the `keyComparer` is not given, the "===" operator will be used to 
+     * compare the projected keys.  The `resultSelector` function is used to convert the joined
+     * results into the results that are returned by the join function.  The `resultSelector` 
+     * function takes as parameters the outer object and the inner object of the join.
+     * 
+     * @param {LinqCompatible} inner - The collection that is "inner" joined with 'this' collection
+     * @param {projection} outerKeySelector - The function that projects the key for the outer elements (in 'this' collection)
+     * @param {projection} innerKeySelector - The function that projects the key for the inner elements
+     * @param {biSourceProjection} resultSelector - The function that converts the joined results into results returned
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare the projected keys
+     */
+    join(inner, outerKeySelector, innerKeySelector, resultSelector, keyComparer)
+    {
+        if (inner == null)
+            throw new Error('Invalid inner collection.');
+
+        LinqInternal.validateRequiredFunction(outerKeySelector, 'Invalid outer key selector.');
+        LinqInternal.validateRequiredFunction(innerKeySelector, 'Invalid inner key selector.');
+        LinqInternal.validateRequiredFunction(resultSelector, 'Invalid result selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+
+        let innerLinq = LinqInternal.ensureLinq(inner);
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
+        let innerGroupings = innerLinq.groupBy(innerKeySelector, null, normalizedComparer);
+        let outerIterable = this.toIterable();
+
+        function* joinGenerator()
+        {
+            for (let item of outerIterable)
+            {
+                let outerKey = outerKeySelector(item);
+                let groupValues = innerGroupings.firstOrDefault(x => normalizedComparer(x.key, outerKey));
+
+                if ((groupValues != null) && (groupValues.values.length > 0))
+                {
+                    for (let groupItem of groupValues.values)
+                    {
+                        yield resultSelector(item, groupItem);
+                    }
+                }
+            }
+        }
+
+        return new Linq(joinGenerator);
+    }
+
 
 
     /**
