@@ -104,6 +104,44 @@ class LinqInternal
             return defaultValue;
     }
 
+    static lastBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
+    {
+        if (LinqInternal.isIndexedCollection(iterable) && LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+        {
+            let length = LinqInternal.getExplicitCardinality(iterable);
+
+            for (let i = length - 1; i >= 0; i--)
+            {
+                let item = iterable[i];
+
+                if ((predicate == null) || predicate(item))
+                    return item;
+            }
+        }
+        else
+        {
+            let foundElement;
+            let isFound = false;
+
+            for (let item of iterable)
+            {
+                if ((predicate == null) || predicate(item))
+                {
+                    foundElement = item;
+                    isFound = true;
+                }
+            }
+
+            if (isFound)
+                return foundElement;
+        }
+
+        if (throwIfNotFound)
+            throw new Error('No last item was found in the collection.');
+        else
+            return defaultValue;
+    }
+
     static elementAtBasedOperator(index, iterableFunc, outOfBoundsFunc)
     {
         if ((index == null) || isNaN(index) || (index < 0))
@@ -1365,13 +1403,29 @@ export class Linq
         return new Linq(joinGenerator);
     }
 
+    /**
+     * Returns either the last element of 'this' collection (if `predicate` is not given) or the
+     * last element of 'this' collection that satisfies the `predicate` (if `predicate` is given).
+     * If there is no "last" element to return (either because 'this' collection is empty or no element
+     * satisfies the `predicate`), an error is thrown.
+     * 
+     * @param {predicate} [predicate] - The function used to determine the element to return
+     * @returns {*}
+     */
+    last(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate);
 
+        let iterable = this.toIterable();
+
+        return LinqInternal.lastBasedOperator(iterable, predicate, null, true);
+    }
 
     /**
      * Returns the index of the last element that satisfies the `predicate`.  Returns the value "-1" if
      * none of the elements satisfy the `predicate`.
      * 
-     * @param {predicate} predicate 
+     * @param {predicate} predicate - The function used to determine which index to return
      * @returns {number}
      */
     lastIndexOf(predicate)

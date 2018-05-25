@@ -11,7 +11,7 @@ describe('lastIndexOf', () =>
         expect(results).toEqual(-1);
     });
 
-    it('when called on a collection containing at one element that satisfies the predicate then returns the index of that element', () => 
+    it('when called on a collection containing one element that satisfies the predicate then returns the index of that element', () => 
     {
         let results = col.lastIndexOf(x => x < 3);
 
