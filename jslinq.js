@@ -1458,6 +1458,25 @@ export class Linq
         return this.lastIndexOf(x => normalizedComparer(x, item));
     }
 
+    /**
+     * Returns either the last element of 'this' collection (if 'predicate' is not given) or the
+     * last element of 'this' collection that satisfies the 'predicate' (if 'predicate is given).
+     * If there is no "last" element to return (either because 'this' collection is empty or no element
+     * satisfies the 'predicate'), the 'defaultValue' is returned.
+     * 
+     * @param {predicate} [predicate] - The predicate function used to determine the element to return 
+     * @param {*} [defaultValue] - The value to return if no "last" element is found
+     * @returns {*} 
+     */
+    lastOrDefault(predicate, defaultValue)
+    {
+        LinqInternal.validateOptionalFunction(predicate);
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.lastBasedOperator(iterable, predicate, defaultValue, false);
+    }
+
 
 
     /**
