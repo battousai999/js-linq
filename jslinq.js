@@ -1440,6 +1440,24 @@ export class Linq
         return (element == null ? -1 : element.key);
     }
 
+    /**
+     * Returns the index of the last element to be equal to the given `item`.  If the optional `comparer` 
+     * function is given, then the `comparer` function is used to determine equality between the elements 
+     * of 'this' collection and the given 'item'.
+     * 
+     * @param {*} item - The item to find within 'this' collection
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare the elements of 'this' collection with the given `item`
+     * @returns {*} 
+     */
+    lastIndexOfElement(item, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer);
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+
+        return this.lastIndexOf(x => normalizedComparer(x, item));
+    }
+
 
 
     /**
