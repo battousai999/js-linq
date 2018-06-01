@@ -12,14 +12,14 @@ describe('min', () =>
         expect(results).toEqual(17);
     });
 
-    it('when called without a selector then returns the minimum value', () => 
+    it('when called without a selector then returns the minimum element', () => 
     {
         let results = col1.min();
 
         expect(results).toEqual(3);
     });
 
-    it('when called on a collection containing a single item then returns that single item', () => 
+    it('when called on a collection containing a single element then returns that single element', () => 
     {
         let value = 999;
         let results = Linq.from([value]).min();

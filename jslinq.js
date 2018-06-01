@@ -286,20 +286,15 @@ class LinqInternal
 
     static getExtremeValue(linq, iterable, compareSelector, isMoreExtremeFunc, resultSelector)
     {
-        let aggregationFunc = (acc, initialItem) =>
+        let aggregationFunc = (extremeItem, x) =>
         {
-            aggregationFunc = (extremeItem, x) =>
-            {
-                let extremeValue = compareSelector(extremeItem);
-                let tempValue = compareSelector(x);
+            let extremeValue = compareSelector(extremeItem);
+            let tempValue = compareSelector(x);
 
-                return (isMoreExtremeFunc(tempValue, extremeValue) ? x : extremeItem);
-            };
-
-            return initialItem;
+            return (isMoreExtremeFunc(tempValue, extremeValue) ? x : extremeItem);
         };
 
-        return linq.aggregate(null, (acc, x) => aggregationFunc(acc, x), resultSelector);
+        return linq.aggregate(null, aggregationFunc, resultSelector);
     }
 
     static minComparer(x, y) { return x < y; }
@@ -1510,12 +1505,12 @@ export class Linq
         LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');        
 
         let iterable = this.toIterable();
-        
-        if (selector == null)
-            selector = Linq.identity;
 
         if (LinqInternal.isEmptyIterable(iterable))
             throw new Error('No minimum element.');
+        
+        if (selector == null)
+            selector = Linq.identity;
 
         return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.minComparer, selector);
     }
@@ -1537,6 +1532,28 @@ export class Linq
             throw new Error('No minimum element.');
 
         return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.minComparer, Linq.identity);
+    }
+
+    /**
+     * Returns either the maximum element (if `selector` is not given) or the maximum element projected by 
+     * the `selector` function in 'this' collection.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} [selector] - The function that projects the value to use to determine the maximum
+     * @returns {*} 
+     */
+    max(selector)
+    {
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No maximum element.');
+
+        if (selector == null)
+            selector = Linq.identity;
+
+        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.maxComparer, selector);
     }
 
 
