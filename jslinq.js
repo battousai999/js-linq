@@ -301,6 +301,9 @@ class LinqInternal
 
         return linq.aggregate(null, (acc, x) => aggregationFunc(acc, x), resultSelector);
     }
+
+    static minComparer(x, y) { return x < y; }
+    static maxComparer(x, y) { return x > y; }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
@@ -1499,7 +1502,7 @@ export class Linq
      * Returns either the minimum element (if `selector` is not given) or the minimum element projected by 
      * the `selector` function in 'this' collection.  If 'this' collection is empty, an error is thrown.
      * 
-     * @param {projection} [selector] - The function that projects the value of which to determine a minimum
+     * @param {projection} [selector] - The function that projects the value to use to determine a minimum
      * @returns {*} 
      */
     min(selector)
@@ -1514,9 +1517,26 @@ export class Linq
         if (LinqInternal.isEmptyIterable(iterable))
             throw new Error('No minimum element.');
 
-        let minComparer = (x, y) => x < y;
+        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.minComparer, selector);
+    }
 
-        return LinqInternal.getExtremeValue(this, iterable, selector, minComparer, selector);
+    /**
+     * Returns the "minimum" element of 'this' collection, determined by the value projected by 
+     * the `selector` function.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} selector - The function that projects the value to use to determine a minimum
+     * @returns {*}
+     */
+    minBy(selector)
+    {
+        LinqInternal.validateRequiredFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No minimum element.');
+
+        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.minComparer, Linq.identity);
     }
 
 
