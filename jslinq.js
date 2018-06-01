@@ -283,6 +283,24 @@ class LinqInternal
 
         return linq;
     }
+
+    static getExtremeValue(linq, iterable, compareSelector, isMoreExtremeFunc, resultSelector)
+    {
+        let aggregationFunc = (acc, initialItem) =>
+        {
+            aggregationFunc = (extremeItem, x) =>
+            {
+                let extremeValue = compareSelector(extremeItem);
+                let tempValue = compareSelector(x);
+
+                return (isMoreExtremeFunc(tempValue, extremeValue) ? x : extremeItem);
+            };
+
+            return initialItem;
+        };
+
+        return linq.aggregate(null, (acc, x) => aggregationFunc(acc, x), resultSelector);
+    }
 }
 
 // Used in the Linq.isGenerator() function to test for being a generator.
@@ -1055,7 +1073,7 @@ export class Linq
      */
     except(second, comparer)
     {
-        LinqInternal.validateOptionalFunction(comparer);
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
         let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
         let secondLinq = LinqInternal.ensureLinq(second);
@@ -1101,7 +1119,7 @@ export class Linq
      */
     first(predicate)
     {
-        LinqInternal.validateOptionalFunction(predicate);
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
@@ -1133,7 +1151,7 @@ export class Linq
      */
     foreach(action)
     {
-        LinqInternal.validateRequiredFunction(action);
+        LinqInternal.validateRequiredFunction(action, 'Invalid action.');
 
         let iterable = this.toIterable();
         let counter = 0;
@@ -1212,10 +1230,10 @@ export class Linq
         if (inner == null)
             throw new Error('Invalid inner collection.');
 
-        LinqInternal.validateRequiredFunction(outerKeySelector);
-        LinqInternal.validateRequiredFunction(innerKeySelector);
-        LinqInternal.validateRequiredFunction(resultSelector);
-        LinqInternal.validateOptionalFunction(keyComparer);
+        LinqInternal.validateRequiredFunction(outerKeySelector, 'Invalid outer key selector.');
+        LinqInternal.validateRequiredFunction(innerKeySelector, 'Invalid inner key selector.');
+        LinqInternal.validateRequiredFunction(resultSelector, 'Invalid result selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
 
         let normalizedKeyComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
         let innerLinq = LinqInternal.ensureLinq(inner);
@@ -1414,7 +1432,7 @@ export class Linq
      */
     last(predicate)
     {
-        LinqInternal.validateOptionalFunction(predicate);
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
@@ -1451,7 +1469,7 @@ export class Linq
      */
     lastIndexOfElement(item, comparer)
     {
-        LinqInternal.validateOptionalFunction(comparer);
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
         let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
 
@@ -1470,11 +1488,35 @@ export class Linq
      */
     lastOrDefault(predicate, defaultValue)
     {
-        LinqInternal.validateOptionalFunction(predicate);
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
         return LinqInternal.lastBasedOperator(iterable, predicate, defaultValue, false);
+    }
+
+    /**
+     * Returns either the minimum element (if `selector` is not given) or the minimum element projected by 
+     * the `selector` function in 'this' collection.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} [selector] - The function that projects the value of which to determine a minimum
+     * @returns {*} 
+     */
+    min(selector)
+    {
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');        
+
+        let iterable = this.toIterable();
+        
+        if (selector == null)
+            selector = Linq.identity;
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No minimum element.');
+
+        let minComparer = (x, y) => x < y;
+
+        return LinqInternal.getExtremeValue(this, iterable, selector, minComparer, selector);
     }
 
 
