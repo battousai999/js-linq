@@ -1556,7 +1556,24 @@ export class Linq
         return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.maxComparer, selector);
     }
 
+    /**
+     * Returns the "maximum" element of 'this' collection, determined by the value projected by 
+     * the `selector` function.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} selector - The function that projects the value to use to determine the maximum
+     * @returns {*} 
+     */
+    maxBy(selector)
+    {
+        LinqInternal.validateRequiredFunction(selector, 'Invalid selector.');
 
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No maximum element.');
+
+        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.maxComparer, Linq.identity);
+    }
 
     /**
      * Returns the elements of 'this' collection sorted in ascending order of the projected value
