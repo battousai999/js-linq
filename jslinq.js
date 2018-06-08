@@ -1609,6 +1609,60 @@ export class Linq
         return LinqInternal.orderByBasedOperator(this, keySelector, comparer, true);
     }
 
+    /**
+     * Returns a collection the same elements as 'this' collection but with extra elements added 
+     * to the end so that the results collection has a length of at least `width`.  The extra
+     * elements that are added are equal to the `padding` value.
+     * 
+     * @param {number} width - The length that the results collection will be at least equal to
+     * @param {*} padding - The value that is added to the results collection to fill it out
+     * @returns {Linq}
+     */
+    pad(width, padding)
+    {
+        return this.padWith(width, () => padding);
+    }
+
+    /**
+     * Returns a collection the same elements as 'this' collection but with extra elements added 
+     * to the end so that the results collection has a length of at least `width`.  The extra
+     * elements that are added are determined by the `paddingSelector` function—a function that 
+     * takes an integer as a parameter (i.e., the position/index that the element returned by the 
+     * `paddingSelector` function will have in the results collection .  
+     * 
+     * @param {number} width - The length that the results collection will be at least equal to
+     * @param {projection} paddingSelector - The function that indicates the value to add to the results collection
+     * @returns {Linq}
+     */
+    padWith(width, paddingSelector)
+    {
+        if ((width == null) || isNaN(width))
+            throw new Error('Invalid width.');
+
+        LinqInternal.validateRequiredFunction(paddingSelector, 'Invalid padding selector.');
+
+        let iterable = this.toIterable();
+
+        function* padWithGenerator()
+        {
+            let counter = 0;
+
+            for (let item of iterable)
+            {
+                yield item;
+                counter += 1;
+            }
+
+            while (counter < width)
+            {
+                yield paddingSelector(counter);
+                counter += 1;
+            }
+        }
+
+        return new Linq(padWithGenerator);
+    }
+
 
 
     /**
