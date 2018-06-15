@@ -378,6 +378,14 @@ export class Linq
      */
 
     /**
+     * A function that aggregates two values into a single value.
+     * @callback aggregator
+     * @param {*} acc - The seed or previously-accumulated value
+     * @param {*} value - The new value to aggregate
+     * @returns {*} - The new, accumulated value
+     */
+
+    /**
      * Creates a new linq object.  If `source` is a function, then it is expected to return an iterable, a generator
      * or another function that returns either an iterable or a generator.
      * 
@@ -681,7 +689,7 @@ export class Linq
      * function and the return value from that function is returned.
      * 
      * @param {*} seed - The initial value of the aggregation 
-     * @param {*} operation - The function to use to aggregate the values of 'this' collection
+     * @param {aggregator} operation - The function to use to aggregate the values of 'this' collection
      * @param {projection} [resultSelector] - The function that projects the final value to the returned result
      * @returns {*} - The aggregate value.
      */
@@ -1710,7 +1718,47 @@ export class Linq
         return new Linq(prependGenerator);
     }
 
+    /**
+     * Returns an equal-length collection where the N-th element is the aggregate of the
+     * `operation` function performed on the first N-1 elements of 'this' collection (the
+     * first element of the results is set to the `identity` value).  The `operation` 
+     * function should be a commutative, binary operation (e.g., sum, multiplication, etc.)
+     * Also, the `identity` parameter should be passed the value that is the "identity" for
+     * the `operation`—that is, when the `operator` is applied to the `identity` value and 
+     * any other value, the results is that same value (e.g., for addition, 0 + n = n; for
+     * multiplication, 1 * n = n; for string concatenation, "" + str = str; etc.)
+     * 
+     * @param {aggregator} operation - The function that aggregates the values of 'this' collection 
+     * @param {*} identity - The identity value of the operation
+     * @returns {Linq}
+     */
+    prescan(operation, identity)
+    {
+        LinqInternal.validateRequiredFunction(operation, 'Invalid operation.');
 
+        let iterable = this.toIterable();
+        let iterator = LinqInternal.getIterator(iterable);
+
+        function* prescanGenerator()
+        {
+            let acc = identity;
+            let state = iterator.next();
+
+            while (!state.done)
+            {
+                yield acc;
+
+                let {value} = state;
+
+                state = iterator.next();
+
+                if (!state.done)
+                    acc = operation(acc, value);
+            }
+        }
+
+        return new Linq(prescanGenerator);
+    }
 
     /**
      * Returns the elements of 'this' collection in reverse order.
@@ -1735,7 +1783,56 @@ export class Linq
         return new Linq(gen);
     }
 
-    
+    /**
+     * If the `seed` is not given, returns an equal-length collection where the N-th element
+     * is the aggregate of the `operation` function performed on the first N elements of
+     * 'this' collection.  
+     * 
+     * If the `seed` is given, then the same as the if the `seed` where not given but on 
+     * 'this' collection with the `seed` prepended to it.  Note, that with the `seed` given,
+     * this function returns the result of calling `aggregate` (with the same `operation` and
+     * `seed`) but with the intermediate aggregation results included with the final aggregation
+     * result.
+     *   
+     * The `operation` function should be a commutative, binary operation (e.g., sum, 
+     * multiplication, etc.).
+     * 
+     * @param {aggregator} operation - The function that aggregates the values of 'this' collection
+     * @param {*} [seed] - An initial, seed value that causes scan to generate intermediate values of aggregate function
+     * @returns {Linq}
+     */
+    scan(operation, seed)
+    {
+        LinqInternal.validateRequiredFunction(operation, 'Invalid operation.');
+
+        let col = (seed === undefined ? this : this.prepend(seed));
+
+        function* scanGenerator()
+        {
+            let iterable = col.toIterable();
+            let iterator = LinqInternal.getIterator(iterable);
+            let state = iterator.next();
+
+            if (state.done)
+                return;
+
+            let acc = state.value;
+
+            yield acc;
+
+            state = iterator.next();
+
+            while (!state.done)
+            {
+                acc = operation(acc, state.value);
+                yield acc;
+
+                state = iterator.next();
+            }
+        }
+
+        return new Linq(scanGenerator);
+    }
 
     /**
      * Returns a collection of values projected from the elements of 'this' collection.
@@ -1875,5 +1972,45 @@ export class Linq
         }
 
         return new Linq(whereGenerator);
+    }
+
+
+
+    /**
+     * Returns 'this' collection "zipped-up" with the `second` collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the `second` collection.  If the size of 'this' collection and the `second` 
+     * collection are not equal, the size of the returned collection will equal the minimum of the
+     * sizes of 'this' collection and the `second` collection.
+     * 
+     * @param {LinqCompatible} second 
+     * @param {biSourceProjection} [resultSelector] 
+     */
+    zip(second, resultSelector)
+    {
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        if (resultSelector == null)
+            resultSelector = Linq.tuple;
+
+        let secondLinq = LinqInternal.ensureLinq(second);
+        let firstIterator = LinqInternal.getIterator(this.toIterable());
+        let secondIterator = LinqInternal.getIterator(secondLinq.toIterable());
+
+        function* zipGenerator()
+        {
+            let firstState = firstIterator.next();
+            let secondState = secondIterator.next();
+
+            while (!firstState.done && !secondState.done)
+            {
+                yield resultSelector(firstState.value, secondState.value);
+
+                firstState = firstIterator.next();
+                secondState = secondIterator.next();
+            }
+        }
+
+        return new Linq(zipGenerator);
     }
 }
