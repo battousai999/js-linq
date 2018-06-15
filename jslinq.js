@@ -1663,6 +1663,30 @@ export class Linq
         return new Linq(padWithGenerator);
     }
 
+    /**
+     * Returns the same elements as 'this' collection, but first executes an 'action' on
+     * each element of 'this' collection.
+     * 
+     * @param {action} action - The function to execute on each element of 'this' collection
+     * @returns {Linq}
+     */
+    pipe(action)
+    {
+        LinqInternal.validateRequiredFunction(action, 'Invalid action.');
+
+        let iterable = this.toIterable();
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            action(item, counter);
+
+            counter += 1;
+        }
+
+        return new Linq(this.source);
+    }
+
 
 
     /**
