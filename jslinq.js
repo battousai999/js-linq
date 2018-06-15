@@ -1664,7 +1664,7 @@ export class Linq
     }
 
     /**
-     * Returns the same elements as 'this' collection, but first executes an 'action' on
+     * Returns the same elements as 'this' collection, but first executes an `action` on
      * each element of 'this' collection.
      * 
      * @param {action} action - The function to execute on each element of 'this' collection
@@ -1685,6 +1685,29 @@ export class Linq
         }
 
         return new Linq(this.source);
+    }
+
+    /**
+     * Returns 'this' collection with the `value` prepended (i.e, added to the front).
+     * 
+     * @param {*} value - The value to be prepended to 'this' collection
+     * @returns {Linq}
+     */
+    prepend(value)
+    {
+        let iterable = this.toIterable();
+
+        function* prependGenerator()
+        {
+            yield value;
+
+            for (let item of iterable)
+            {
+                yield item;
+            }
+        }
+
+        return new Linq(prependGenerator);
     }
 
 
