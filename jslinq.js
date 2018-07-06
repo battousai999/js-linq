@@ -1980,6 +1980,52 @@ export class Linq
         return true;
     }
 
+    /**
+     * Returns whether 'this' collection is equivalent to the `second` collection (that is, has the 
+     * same elements regardless of order).  If the `comparer` function is given, it is used to determine
+     * whether elements from each of the two collections are equal.  Otherwise, the "===" operator is
+     * used to determine equality.
+     * 
+     * @param {LinqCompatible} second - The collection to which 'this' collection is compared
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements of the two collections
+     * @returns {boolean} 
+     */
+    sequenceEquivalent(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        if (second == null)
+            return false;
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let secondLinq = LinqInternal.ensureLinq(second);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+        let firstLength = LinqInternal.getExplicitCardinality(firstIterable);
+        let secondLength = LinqInternal.getExplicitCardinality(secondIterable);
+
+        if (firstLength != null && secondLength != null && firstLength !== secondLength)
+            return false;
+
+        let firstLookup = this.toLookup(Linq.identity, comparer);
+        let secondLookup = secondLinq.toLookup(Linq.identity, comparer);
+
+        let haveSameCount = firstLookup.count() === secondLookup.count();
+
+        let predicate = x =>
+        {
+            let lookupNode = secondLookup.firstOrDefault(y => normalizedComparer(y.key, x.key));                
+
+            if (lookupNode == null)
+                return false;
+
+            return (x.values.length === lookupNode.values.length);
+        };
+
+        return (haveSameCount && firstLookup.all(predicate));
+    }
+
 
 
     /**
@@ -2066,6 +2112,46 @@ export class Linq
     toArray()
     {
         return Array.from(this.toIterable());
+    }
+
+
+
+    /**
+     * Returns a lookup-collection with the elements of 'this' collection grouped by a key
+     * projected by the `keySelector` function.  If the optional `comparer` is provided, then
+     * the comparer will be used to determine equality between keys.  If the `comparer` is not
+     * provided, the '===' operator will be used to determine equality between keys.
+     * 
+     * @param {projection} keySelector - The function used to project keys from the elements of 'this' collection 
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare keys 
+     * @returns {Linq}
+     */
+    toLookup(keySelector, keyComparer)
+    {
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
+
+        let iterable = this.toIterable();
+        let resultsArray = [];
+        let results = new Linq(resultsArray);
+
+        for (let item of iterable)
+        {
+            let key = keySelector(item);
+            let lookupNode = results.firstOrDefault(x => normalizedComparer(x.key, key));
+
+            if (lookupNode == null)
+            {
+                lookupNode = { key, values: [] };
+                resultsArray.push(lookupNode);
+            }
+            
+            lookupNode.values.push(item);
+        }
+
+        return results;
     }
 
 
