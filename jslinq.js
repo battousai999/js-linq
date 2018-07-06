@@ -1893,7 +1893,7 @@ export class Linq
 
     /**
      * Returns the concatenation of values projected from the elements of 'this' collection by the
-     * 'collectionSelector' function.  If the 'resultSelector' function is given, then the results
+     * `collectionSelector` function.  If the `resultSelector` function is given, then the results
      * returned by this function will be projected from an element in the concatenation and the 
      * element that originated the part of the concatenation.  Otherwise, the results returned by
      * this function will be the element of the concatenation.
@@ -1932,6 +1932,52 @@ export class Linq
         }
 
         return new Linq(selectManyGenerator);
+    }
+
+    /**
+     * Returns whether 'this' collection is equal to the `second` collection (that is, has the same elements in the
+     * same order).  If the `comparer` function is given, it is used to determine whether elements from each of the
+     * two collections are equal.  Otherwise, the "===" operator is used to determine equality.
+     * 
+     * @param {LinqCompatible} second - The collection to which 'this' collection is compared
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements of the two collections
+     * @returns {boolean}
+     */
+    sequenceEqual(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        if (second == null)
+            return false;
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = LinqInternal.ensureLinq(second).toIterable();
+        let firstLength = LinqInternal.getExplicitCardinality(firstIterable);
+        let secondLength = LinqInternal.getExplicitCardinality(secondIterable);
+        
+        if (firstLength != null && secondLength != null && firstLength !== secondLength)
+            return false;
+
+        let firstIterator = LinqInternal.getIterator(firstIterable);
+        let secondIterator = LinqInternal.getIterator(secondIterable);
+        let firstState = firstIterator.next();
+        let secondState = secondIterator.next();
+        
+        while (!firstState.done && !secondState.done)
+        {
+            if (!normalizedComparer(firstState.value, secondState.value))
+                return false;
+
+            firstState = firstIterator.next();
+            secondState = secondIterator.next();
+        }
+
+        if (!firstState.done || !secondState.done)
+            return false;
+
+        return true;
     }
 
 
