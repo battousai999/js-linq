@@ -347,6 +347,13 @@ export class Linq
      */
 
     /**
+     * A function that projects a value into a LinqCompatible value
+     * @callback collectionProjection
+     * @param {*} value - The value to be projected
+     * @returns {LinqCompatible} - The projected set of values
+     */
+
+    /**
      * A function that can act as a predicate function (i.e., projects a value to a boolean value).
      * @callback predicate
      * @param {*} value - The value to test
@@ -771,6 +778,30 @@ export class Linq
         }
 
         return false;
+    }
+
+    /**
+     * Returns a collection containing the same elements as the 'this' collection but also including
+     * the `value` element appended to the end.
+     * 
+     * @param {*} value - The value to append to the 'this' collection
+     * @returs {Linq}
+     */
+    append(value)
+    {
+        let iterable = this.toIterable();
+
+        function* appendGenerator()
+        {
+            for (let item of iterable)
+            {
+                yield item;
+            }
+
+            yield value;
+        }
+
+        return new Linq(appendGenerator);
     }
 
     /**
@@ -1858,6 +1889,49 @@ export class Linq
         }
 
         return new Linq(selectGenerator);
+    }
+
+    /**
+     * Returns the concatenation of values projected from the elements of 'this' collection by the
+     * 'collectionSelector' function.  If the 'resultSelector' function is given, then the results
+     * returned by this function will be projected from an element in the concatenation and the 
+     * element that originated the part of the concatenation.  Otherwise, the results returned by
+     * this function will be the element of the concatenation.
+     * 
+     * @param {collectionProjection} collectionSelector - The function that projects a collection of values from an element
+     * @param {projection} [resultSelector] - The function that projects the results from the concatenated results
+     * @returns {Linq}
+     */
+    selectMany(collectionSelector, resultSelector)
+    {
+        LinqInternal.validateRequiredFunction(collectionSelector, 'Invalid collection selector.');
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        var iterable = this.toIterable();
+
+        function* selectManyGenerator()
+        {
+            let i = 0;
+
+            for (let outerItem of iterable)
+            {
+                let projectedItems = collectionSelector(outerItem, i);
+
+                i += 1;
+
+                if (projectedItems == null)
+                    continue;
+
+                let innerIterable = LinqInternal.ensureLinq(projectedItems).toIterable();
+
+                for (let innerItem of innerIterable)
+                {
+                    yield (resultSelector == null ? innerItem : resultSelector(innerItem, outerItem));
+                }
+            }
+        }
+
+        return new Linq(selectManyGenerator);
     }
 
 
