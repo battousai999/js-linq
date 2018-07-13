@@ -104,7 +104,7 @@ class LinqInternal
             return defaultValue;
     }
 
-    static singleBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
+    static singleBasedOperator(iterable, predicate, defaultValueFunc, throwIfNotFound)
     {
         let isFound = false;
         let foundItem;
@@ -137,7 +137,7 @@ class LinqInternal
                 throw new Error('No single element in the collection satisfied the predicate.');
         }
 
-        return defaultValue;
+        return defaultValueFunc();
     }
 
     static lastBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
@@ -425,7 +425,14 @@ export class Linq
      * @callback aggregator
      * @param {*} acc - The seed or previously-accumulated value
      * @param {*} value - The new value to aggregate
-     * @returns {*} - The new, accumulated value
+     * @returns {*} - The new, accumulated value.
+     */
+
+    /**
+     * A function that returns a value given no input.  In function programming terms (i.e., if assuming a 
+     * pure function), this could be called a "constant" function.
+     * @callback constantFunction
+     * @returns {*} - The returned value.
      */
 
     /**
@@ -2101,7 +2108,23 @@ export class Linq
 
         let iterable = this.toIterable();
 
-        return LinqInternal.singleBasedOperator(iterable, predicate, defaultValue, false);
+        return LinqInternal.singleBasedOperator(iterable, predicate, () => defaultValue, false);
+    }
+
+    /**
+     * Returns either the only element of 'this' collection or the value returned by the `fallback`
+     * function if 'this' collection is empty.  If there are more than one element in 'this' collection,
+     * then an exception will be thrown.
+     * 
+     * @param {constantFunction} fallback 
+     */
+    singleOrFallback(fallback)
+    {
+        LinqInternal.validateRequiredFunction(fallback, 'Invalid fallback function.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.singleBasedOperator(iterable, null, fallback, false);
     }
 
 
