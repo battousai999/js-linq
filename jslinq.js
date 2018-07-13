@@ -99,9 +99,45 @@ class LinqInternal
         }
 
         if (throwIfNotFound)
-            throw new Error('No first item was found in the collection.');
+            throw new Error('No first element was found in the collection.');
         else
             return defaultValue;
+    }
+
+    static singleBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
+    {
+        let isFound = false;
+        let foundItem;
+
+        for (let item of iterable)
+        {
+            if ((predicate == null) || predicate(item))
+            {
+                if (isFound)
+                {
+                    if (predicate == null)
+                        throw new Error('There was more than one element in the collection.');
+                    else
+                        throw new Error('More than one element in the collection satisfied the predicate');
+                }
+
+                foundItem = item;
+                isFound = true;
+            }
+        }
+
+        if (isFound)
+            return foundItem;
+
+        if (throwIfNotFound)
+        {
+            if (predicate == null)
+                throw new Error('There were no elements in the collection.');
+            else
+                throw new Error('No single element in the collection satisfied the predicate.');
+        }
+
+        return defaultValue;
     }
 
     static lastBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
@@ -137,7 +173,7 @@ class LinqInternal
         }
 
         if (throwIfNotFound)
-            throw new Error('No last item was found in the collection.');
+            throw new Error('No last element was found in the collection.');
         else
             return defaultValue;
     }
@@ -2024,6 +2060,26 @@ export class Linq
         };
 
         return (haveSameCount && firstLookup.all(predicate));
+    }
+
+    /**
+     * Returns either the only element of 'this' collection (if `predicate` is not given) or the
+     * first (and only) element of 'this' collection that satisfies the `predicate` (if 'predicate' is 
+     * given).  If there are either multiple elements in 'this' collection (if `predicate` is not given)
+     * or there are multiple elements that satisfy the 'predicate' (if `predicate` is given), then an
+     * error is thrown.  If there is no "single" element (either because 'this' collection is empty or
+     * no element satisfies the `predicate`), an error is thrown.
+     * 
+     * @param {predicate} [predicate] - The function used to determine the element to return
+     * @returns {*} 
+     */
+    single(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate);
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.singleBasedOperator(iterable, predicate, null, true);
     }
 
 
