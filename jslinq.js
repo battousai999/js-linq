@@ -36,40 +36,6 @@ class LinqInternal
         return state.done;
     }
 
-    static buildRangeGenerator(from, to, step)
-    {
-        function compare(x, y)
-        {
-            if (step > 0)
-                return (x <= y);
-            else
-                return (x >= y);
-        }
-
-        function *gen()
-        {
-            for (let i = from; compare(i, to); i += step)
-            {
-                yield i;
-            }
-        }
-
-        return gen;
-    }
-
-    static buildRepeatGenerator(item, repetitions)
-    {
-        function *gen()
-        {
-            for (let i = 0; i < repetitions; i++)
-            {
-                yield item;
-            }
-        }
-
-        return gen;
-    }
-
     static validateRequiredFunction(func, message)
     {
         if ((func == null) || !Linq.isFunction(func))
@@ -180,7 +146,7 @@ class LinqInternal
 
     static elementAtBasedOperator(index, iterableFunc, outOfBoundsFunc)
     {
-        if ((index == null) || isNaN(index) || (index < 0))
+        if (!LinqInternal.isValidNumber(index, x => x >= 0))
             return outOfBoundsFunc();
 
         let iterable = iterableFunc();
@@ -331,6 +297,17 @@ class LinqInternal
         };
 
         return linq.aggregate(null, aggregationFunc, resultSelector);
+    }
+
+    static isValidNumber(value, furtherPredicate)
+    {
+        if ((value == null) || isNaN(value))
+            return false;
+
+        if (furtherPredicate != null)
+            return furtherPredicate(value);
+
+        return true;
     }
 
     static minComparer(x, y) { return x < y; }
@@ -603,19 +580,34 @@ export class Linq
      */
     static range(from, to, step)
     {
-        if ((from == null) || isNaN(from))
+        if (!LinqInternal.isValidNumber(from))
             throw new Error("Invalid 'from' value.");
 
-        if ((to == null) || isNaN(to))
+        if (!LinqInternal.isValidNumber(to))
             throw new Error("Invalid 'to' value.");
 
-        if ((step == null) || isNaN(step))
+        if (!LinqInternal.isValidNumber(step))
             step = 1;
 
         if (step == 0)
             throw new Error("Invalid 'step' value--cannot be zero.");
 
-        return new Linq(LinqInternal.buildRangeGenerator(from, to, step));
+        let compare;
+
+        if (step > 0)
+            compare = (x, y) => x <= y;
+        else
+            compare = (x, y) => x >= y;
+
+        function* rangeGenerator()
+        {
+            for (let i = from; compare(i, to); i += step)
+            {
+                yield i;
+            }
+        }    
+
+        return new Linq(rangeGenerator);
     }
 
     /**
@@ -627,10 +619,18 @@ export class Linq
      */
     static repeat(item, repetitions)
     {
-        if ((repetitions == null) || isNaN(repetitions))
+        if (!LinqInternal.isValidNumber(repetitions))
             repetitions = 1;
 
-        return new Linq(LinqInternal.buildRepeatGenerator(item, repetitions));
+        function* repeatGenerator()
+        {
+            for (let i = 0; i < repetitions; i++)
+            {
+                yield item;
+            }
+        }
+
+        return new Linq(repeatGenerator);
     }
 
     /**
@@ -894,7 +894,7 @@ export class Linq
     {
         LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
 
-        if ((size == null) || isNaN(size) || (size <= 0))
+        if (!LinqInternal.isValidNumber(size, x => x > 0))
             throw new Error('Invalid size.');
 
         let iterable = this.toIterable();
@@ -1718,7 +1718,7 @@ export class Linq
      */
     padWith(width, paddingSelector)
     {
-        if ((width == null) || isNaN(width))
+        if (!LinqInternal.isValidNumber(width))
             throw new Error('Invalid width.');
 
         LinqInternal.validateRequiredFunction(paddingSelector, 'Invalid padding selector.');
@@ -2125,6 +2125,35 @@ export class Linq
         let iterable = this.toIterable();
 
         return LinqInternal.singleBasedOperator(iterable, null, fallback, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection with the first `count` number of elements skipped.
+     * 
+     * @param {number} count - The number of elements to skip from 'this' collection
+     * @returns {Linq}
+     */
+    skip(count)
+    {
+        if (!LinqInternal.isValidNumber(count))
+            throw new Error('Invalid count.');
+        
+        let iterable = this.toIterable();
+
+        function* skipGenerator()
+        {
+            let counter = 1;
+
+            for (let item of iterable)
+            {
+                if (counter > count)
+                    yield item;
+
+                counter += 1;
+            }
+        }
+
+        return new Linq(skipGenerator);
     }
 
 
