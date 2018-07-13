@@ -2156,6 +2156,54 @@ export class Linq
         return new Linq(skipGenerator);
     }
 
+    /**
+     * Returns the elements of 'this' collection, skipping initial elements until an element satisfies
+     * the `predicate` function (that first element that satisfies the `predicate` function is 
+     * included in the results).
+     * 
+     * @param {predicate} predicate - The function that indicates when to stop skipping elements
+     * @returns {Linq}
+     */
+    skipUntil(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        return this.skipWhile(x => !predicate(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection skipping initial elements until an element does not
+     * satisfy the `predicate` function (that first element that fails to satisfy the `predicate` function
+     * is included in the results).
+     * 
+     * @param {predicate} predicate = The function that indicates which of the initial elements to skip
+     * @returns {Linq} 
+     */
+    skipWhile(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        function* skipWhileGenerator()
+        {
+            let isSkipping = true;
+
+            for (let item of iterable)
+            {
+                if (!isSkipping)
+                    yield item;
+                else if (!predicate(item))
+                {
+                    isSkipping = false;
+                    yield item;
+                }
+            }
+        }
+
+        return new Linq(skipWhileGenerator);
+    }
+
 
 
     /**
