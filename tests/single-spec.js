@@ -21,7 +21,7 @@ describe('single', () =>
     it('when called with a predicate and with a collection containing a single element that satisfies the predicate then reutrns the satisfying element', () =>
     {
         let element = 42;
-        let results = Linq.from([element]).single(x => x > 10);
+        let results = Linq.from([element, -element]).single(x => x > 10);
 
         expect(results).toEqual(element);
     });

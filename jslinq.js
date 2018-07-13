@@ -2075,11 +2075,33 @@ export class Linq
      */
     single(predicate)
     {
-        LinqInternal.validateOptionalFunction(predicate);
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
 
         let iterable = this.toIterable();
 
         return LinqInternal.singleBasedOperator(iterable, predicate, null, true);
+    }
+
+    /**
+     * Returns either the only element of 'this' collection (if `predicate` is not given) or the
+     * first (and only) element of 'this' collection that satisfies the `predicate` (if 'predicate' is 
+     * given).  If there are either multiple elements in 'this' collection (if `predicate` is not given)
+     * or there are multiple elements that satisfy the `predicate` (if `predicate` is given), then an
+     * error is thrown.  If there is no "single" element (either because 'this' collection is empty or
+     * no element satisfies the `predicate`), the `defaultValue` is returned (or `undefined` if `defaultValue`
+     * is not given).
+     * 
+     * @param {predicate} [predicate] - The function used to determine the element to return 
+     * @param {*} [defaultValue] - The default value that is returned if no single element is found
+     * @returns {*} 
+     */
+    singleOrDefault(predicate, defaultValue)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.singleBasedOperator(iterable, predicate, defaultValue, false);
     }
 
 
