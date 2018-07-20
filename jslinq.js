@@ -352,6 +352,13 @@ export class Linq
      */
 
     /**
+     * A function that projects a value to a numeric value.
+     * @callback numericProjection
+     * @param {*} value - The value to be projected
+     * @returns {number} - The projected numeric value.
+     */
+
+    /**
      * A function that projects two values into a third value.
      * @callback biSourceProjection
      * @param {*} firstValue - The first of the values to involve in the projection
@@ -2202,6 +2209,32 @@ export class Linq
         }
 
         return new Linq(skipWhileGenerator);
+    }
+
+    /**
+     * Returns either the sum of the elements of 'this' collection (if 'selector' is not given) or the
+     * sum of the projected value of each element of 'this' collection (if 'selector' is given).
+     * 
+     * @param {numericProjection} [selector] - The function that projects the values to be summed
+     * @returns {number}
+     */
+    sum(selector) 
+    {
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');
+        
+        let normalizingSelector = x =>
+        {
+            let value = (selector == null ? x : selector(x));
+
+            if (value == null)
+                value = 0;
+            else if (isNaN(value))
+                throw new Error('Encountered an element that is not a number.');
+
+            return value;
+        };
+
+        return this.aggregate(0, (acc, x) => acc + normalizingSelector(x));
     }
 
 
