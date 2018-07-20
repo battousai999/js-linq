@@ -2212,8 +2212,8 @@ export class Linq
     }
 
     /**
-     * Returns either the sum of the elements of 'this' collection (if 'selector' is not given) or the
-     * sum of the projected value of each element of 'this' collection (if 'selector' is given).
+     * Returns either the sum of the elements of 'this' collection (if `selector` is not given) or the
+     * sum of the projected value of each element of 'this' collection (if `selector` is given).
      * 
      * @param {numericProjection} [selector] - The function that projects the values to be summed
      * @returns {number}
@@ -2235,6 +2235,36 @@ export class Linq
         };
 
         return this.aggregate(0, (acc, x) => acc + normalizingSelector(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking only the first `count` number of elements.
+     * 
+     * @param {number} count - The number of elements to take from the beginning of the collection
+     * @returns {Linq} 
+     */
+    take(count)
+    {
+        if (!LinqInternal.isValidNumber(count))
+            throw new Error('Invalid count.');
+
+        let iterable = this.toIterable();
+
+        function* takeGenerator()
+        {
+            let counter = 0;
+
+            for (let item of iterable)
+            {
+                if (counter >= count)
+                    return;
+
+                yield item;
+                counter += 1;
+            }
+        }
+
+        return new Linq(takeGenerator);
     }
 
 
