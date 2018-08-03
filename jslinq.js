@@ -2267,6 +2267,20 @@ export class Linq
         return new Linq(takeGenerator);
     }
 
+    /**
+     * Returns every n-th (n = step) element of 'this' collection.
+     * 
+     * @param {number} step - The number of elements to bypass before returning the next element
+     * @returns {Linq}
+     */
+    takeEvery(step)
+    {
+        if (!LinqInternal.isValidNumber(step, x => x > 0))
+            throw new Error("Invalid count.");
+
+        return this.where((x, i) => (i % step) === 0);
+    }
+
 
 
     /**
@@ -2400,7 +2414,7 @@ export class Linq
     /**
      * Returns the elements of 'this' collection that satisfy the `predicate` function.
      * 
-     * @param {predicate} predicate 
+     * @param {indexedProjection} predicate 
      * @returns {Linq}
      */
     where(predicate)
@@ -2411,10 +2425,14 @@ export class Linq
 
         function* whereGenerator()
         {
+            let i = 0;
+
             for (let item of iterable)
             {
-                if (predicate(item))
+                if (predicate(item, i))
                     yield item;
+
+                i += 1;
             }
         }
 

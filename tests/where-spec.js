@@ -41,6 +41,15 @@ describe('where', () =>
         expect(results).toEqual([3, 4, 5]);
     });
 
+    it('when called with a predicate that takes an index then passes the index to the predicate', () =>
+    {
+        let results = [];
+        
+        col.where((x, i) => results.push(i)).toArray();
+
+        expect(results).toEqual([0, 1, 2, 3, 4]);
+    });
+
     it('when called without a predicate then throws an exception', () => 
     {
         expect(() => { col.where(); }).toThrow();
