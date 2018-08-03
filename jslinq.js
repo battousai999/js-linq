@@ -2276,9 +2276,46 @@ export class Linq
     takeEvery(step)
     {
         if (!LinqInternal.isValidNumber(step, x => x > 0))
-            throw new Error("Invalid count.");
+            throw new Error('Invalid step.');
 
         return this.where((x, i) => (i % step) === 0);
+    }
+
+    /**
+     * Returns the elements of 'this' collection, taking only the last 'count' number of elements.
+     * 
+     * @param {number} count - The number of elements to take from the end of the collection
+     * @returns {Linq}
+     */
+    takeLast(count)
+    {
+        if (!LinqInternal.isValidNumber(count, x => x >= 0))
+            throw new Error('Invalid count');
+
+        if (count === 0)
+            return Linq.empty();
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+        {
+            let length = LinqInternal.getExplicitCardinality(iterable);
+
+            if (length != null)
+                return this.skip(length - count);
+        }
+
+        let aggregationFunc = (acc, x) =>
+        {
+            if (acc.length === count)
+                acc.shift();
+
+            acc.push(x);
+
+            return acc;
+        };
+
+        return new Linq(this.aggregate([], aggregationFunc));
     }
 
 
