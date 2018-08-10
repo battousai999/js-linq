@@ -2361,8 +2361,6 @@ export class Linq
         return new Linq(takeWhileGenerator);
     }
 
-
-
     /**
      * Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
      * call) in ascending order of the projected value given by the `keySelector` function, using the
@@ -2395,6 +2393,24 @@ export class Linq
     thenByDescending(keySelector, comparer)
     {
         return LinqInternal.thenByBasedOperator(this, keySelector, comparer, true);
+    }
+
+    /**
+     * Returns a string consisting of all of the elements of 'this' collection delimited by the given
+     * 'delimiter' value.  If a `delimiter` value is not given, then the delimiter "," is used.
+     * 
+     * @param {string} [delimiter] - The delimiter separating the elements in the results
+     * @returns {string} 
+     */
+    toDelimitedString(delimiter)
+    {
+        if (LinqInternal.isEmptyIterable(this.toIterable()))
+            return '';
+
+        if (delimiter == null)
+            delimiter = ',';
+
+        return this.aggregate(null, (acc, x) => `${acc}${delimiter}${x}`);   
     }
 
 
