@@ -2318,6 +2318,49 @@ export class Linq
         return new Linq(this.aggregate([], aggregationFunc));
     }
 
+    /**
+     * Returns the elements of 'this' collection taking element until an element satisfies the
+     * `predicate` function (that first element that satisfies the `predicate` function is not
+     * included in the results).
+     * 
+     * @param {predicate} predicate - The function that indicates when to stop including elements in the results
+     * @returns {Linq}
+     */
+    takeUntil(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        return this.takeWhile(x => !predicate(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking elements until an element does not satisfy
+     * the `predicate` function (that first element that fails to satisfy the `predicate` function
+     * is not included in the results).
+     * 
+     * @param {predicate} predicate - The function that indicates which of the initial elements to include in the results
+     * @returns {Linq}
+     */
+    takeWhile(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        var iterable = this.toIterable();
+
+        function* takeWhileGenerator()
+        {
+            for (let item of iterable)
+            {
+                if (!predicate(item))
+                    return;
+
+                yield item;
+            }
+        }
+
+        return new Linq(takeWhileGenerator);
+    }
+
 
 
     /**
