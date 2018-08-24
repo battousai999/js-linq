@@ -2413,6 +2413,39 @@ export class Linq
         return this.aggregate(null, (acc, x) => `${acc}${delimiter}${x}`);   
     }
 
+    /**
+     * Returns an object that represents a "dictionary" of the elements of 'this' collection.  The
+     * `keySelector` function is used to project the "key" value for each element of 'this' collection.
+     * If the `elementSelector` function is given, the "value" associated with each "key" value is the
+     * value projected by the `elementSelector` function.  If the `elementSelector` function is not 
+     * given, the "value" associated with each "key" value is the element, itself.
+     * 
+     * @param {projection} keySelector - The function that projects the key for each element
+     * @param {projection} [elementSelector] - The function that projects the value for each key
+     * @returns {Linq}
+     */
+    toDictionary(keySelector, elementSelector)
+    {
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(elementSelector, 'Invalid element selector.');
+
+        let normalizedElementSelector = (elementSelector == null ? Linq.identity : elementSelector);
+        let iterable = this.toIterable();
+        let results = {};
+
+        for (let item of iterable)
+        {
+            let key = keySelector(item);
+
+            if (key in results)
+                throw new Error('Duplicate key in collection.');
+
+            results[key] = normalizedElementSelector(item);
+        }
+
+        return results;
+    }
+
 
 
     /**
