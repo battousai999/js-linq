@@ -314,10 +314,10 @@ class LinqInternal
     static maxComparer(x, y) { return x > y; }
 }
 
-// Unfortunately, there's no Set class with custom equality comparison.  So, using a simple
+// Unfortunately, there's no Set class with custom equality comparison.  So, instead using a simple
 // version of a Set that is not as efficient as a native Set (with custom equality comparison) 
 // would be.  Also, this only implements the operations that we need, including adding to the 
-// Set and checking for membership.
+// Set, removing from the Set, and checking for membership.
 class SimpleSet
 {
     constructor(equalityComparer)
@@ -326,6 +326,18 @@ class SimpleSet
         this.comparer = equalityComparer;
         this.usesComparer = (equalityComparer != null);
         this.containsOnlyPrimitives = true;
+    }
+
+    static initialize(iterable, equalityComparer)
+    {
+        let set = new SimpleSet(equalityComparer);
+
+        for (let item of iterable)
+        {
+            set.add(item);
+        }
+
+        return set;
     }
 
     add(item)
@@ -340,6 +352,26 @@ class SimpleSet
         }
         else if (this.containsOnlyPrimitives || !this.has(item))
             this.set.add(item);
+    }
+
+    remove(item)
+    {
+        if (!this.usesComparer && this.containsOnlyPrimitives)
+            return this.set.delete(item);
+
+        let normalizedComparer = (this.usesComparer ? this.comparer : Linq.strictComparer);
+
+        for (let value of this.set.values())
+        {
+            if (normalizedComparer(item, value))
+            {
+                this.set.delete(value);
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     has(item)
@@ -1218,33 +1250,25 @@ export class Linq
     {
         LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
-        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
         let secondLinq = LinqInternal.ensureLinq(second);
 
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
 
-        let isInSecond = LinqInternal.buildContainsEvaluator(secondIterable, normalizedComparer);
-
-        // Unfortunately, no Set class with custom equality comparison--so has to be done in a much less-efficient way
-        let seenList = [];
-        let seenLinq = new Linq(seenList);
-        let isAlreadySeen = x => 
-        {
-            let isSeen = seenLinq.contains(x, normalizedComparer);
-
-            if (!isSeen)
-                seenList.push(x);
-
-            return isSeen;
-        };
+        let disqualifiedSet = SimpleSet.initialize(secondIterable, normalizedComparer);
 
         function* exceptGenerator()
         {
             for (let item of firstIterable)
             {
-                if (!isInSecond(item) && !isAlreadySeen(item))
+                let isDisqualified = disqualifiedSet.has(item);
+
+                if (!isDisqualified)
+                {
+                    disqualifiedSet.add(item);
                     yield item;
+                }
             }
         }
 
@@ -1482,31 +1506,20 @@ export class Linq
         LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
         let secondLinq = LinqInternal.ensureLinq(second);
-        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
 
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
 
-        let isInSecond = LinqInternal.buildContainsEvaluator(secondIterable, normalizedComparer);
-
-        // Unfortunately, no Set class with custom equality comparison--so has to be done in a much less-efficient way
-        let seenList = [];
-        let seenLinq = new Linq(seenList);
-        let isAlreadySeen = x => 
-        {
-            let isSeen = seenLinq.contains(x, normalizedComparer);
-
-            if (!isSeen)
-                seenList.push(x);
-
-            return isSeen;
-        };
+        let includedSet = SimpleSet.initialize(secondIterable, normalizedComparer);
 
         function* intersectGenerator()
         {
             for (let item of firstIterable)
             {
-                if (isInSecond(item) && !isAlreadySeen(item))
+                let wasRemoved = includedSet.remove(item);
+
+                if (wasRemoved)
                     yield item;
             }
         }
