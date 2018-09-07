@@ -314,6 +314,51 @@ class LinqInternal
     static maxComparer(x, y) { return x > y; }
 }
 
+// Unfortunately, there's no Set class with custom equality comparison.  So, using a simple
+// version of a Set that is not as efficient as a native Set (with custom equality comparison) 
+// would be.  Also, this only implements the operations that we need, including adding to the 
+// Set and checking for membership.
+class SimpleSet
+{
+    constructor(equalityComparer)
+    {
+        this.set = new Set();
+        this.comparer = equalityComparer;
+        this.usesComparer = (equalityComparer != null);
+        this.containsOnlyPrimitives = true;
+    }
+
+    add(item)
+    {
+        if (this.containsOnlyPrimitives && !Linq.isPrimitive(item))
+            this.containsOnlyPrimitives = false;
+
+        if (this.usesComparer)
+        {
+            if (!this.has(item))
+                this.set.add(item);
+        }
+        else if (this.containsOnlyPrimitives || !this.has(item))
+            this.set.add(item);
+    }
+
+    has(item)
+    {
+        if (!this.usesComparer && this.containsOnlyPrimitives)
+            return this.set.has(item);
+
+        let normalizedComparer = (this.usesComparer ? this.comparer : Linq.strictComparer);
+
+        for (let value of this.set.values())
+        {
+            if (normalizedComparer(item, value))
+                return true;
+        }
+
+        return false;
+    }
+}
+
 // Used in the Linq.isGenerator() function to test for being a generator.
 var GeneratorFunction = (function*(){}).constructor;
 
@@ -447,9 +492,20 @@ export class Linq
     static isString(obj) { return (typeof obj === 'string' || obj instanceof String); }
     static isBoolean(obj) { return (typeof obj === 'boolean' || obj instanceof Boolean); }
     static isNumber(obj) { return (typeof obj === 'number' || obj instanceof Number); }
+    static isSymbol(obj) { return (typeof obj === 'symbol'); }    
     static isIterable(obj) { return obj != null && typeof obj[Symbol.iterator] === 'function'; }
     static isGenerator(obj) { return (obj instanceof GeneratorFunction); }
     static isLinq(obj) { return (obj instanceof Linq); }
+
+    static isPrimitive(obj) 
+    { 
+        return Linq.isString(obj) || 
+            Linq.isNumber(obj) || 
+            Linq.isBoolean(obj) || 
+            Linq.isSymbol(obj) ||
+            (obj === null) ||
+            (obj === undefined);
+    }
 
     static identity(x) { return x; }
     static tuple(x, y) { return [x, y]; }
@@ -2396,6 +2452,14 @@ export class Linq
     }
 
     /**
+     * Returns an array that represents the contents of the Linq object.
+     */
+    toArray()
+    {
+        return Array.from(this.toIterable());
+    }
+
+    /**
      * Returns a string consisting of all of the elements of 'this' collection delimited by the given
      * 'delimiter' value.  If a `delimiter` value is not given, then the delimiter "," is used.
      * 
@@ -2446,8 +2510,6 @@ export class Linq
         return results;
     }
 
-
-
     /**
      * Returns an iterable (as defined by the "iterable protocol"--see
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
@@ -2491,16 +2553,6 @@ export class Linq
     }
 
     /**
-     * Returns an array that represents the contents of the Linq object.
-     */
-    toArray()
-    {
-        return Array.from(this.toIterable());
-    }
-
-
-
-    /**
      * Returns a lookup-collection with the elements of 'this' collection grouped by a key
      * projected by the `keySelector` function.  If the optional `comparer` is provided, then
      * the comparer will be used to determine equality between keys.  If the `comparer` is not
@@ -2536,6 +2588,19 @@ export class Linq
         }
 
         return results;
+    }
+
+    /**
+     * Returns the union of elements in 'this' collection and the `second` collection, using the
+     * `comparer` function to determine whether two different elements are equal.  If the `comparer`
+     * function is not given, then the "===" operator will be used to compare elements.
+     * 
+     * @param {*} second 
+     * @param {*} comparer 
+     */
+    union(second, comparer)
+    {
+
     }
 
 
