@@ -2613,7 +2613,42 @@ export class Linq
      */
     union(second, comparer)
     {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+        let secondLinq = LinqInternal.ensureLinq(second);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        let disqualifiedSet = new SimpleSet(normalizedComparer);
+
+        function* unionGenerator()
+        {
+            for (let item of firstIterable)
+            {
+                let isDisqualified = disqualifiedSet.has(item);
+
+                if (!isDisqualified)
+                {
+                    disqualifiedSet.add(item);
+                    yield item;
+                }
+            }
+
+            for (let item of secondIterable)
+            {
+                let isDisqualified = disqualifiedSet.has(item);
+
+                if (!isDisqualified)
+                {
+                    disqualifiedSet.add(item);
+                    yield item;
+                }
+            }
+        }
+
+        return new Linq(unionGenerator);
     }
 
 
