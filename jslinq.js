@@ -2608,8 +2608,9 @@ export class Linq
      * `comparer` function to determine whether two different elements are equal.  If the `comparer`
      * function is not given, then the "===" operator will be used to compare elements.
      * 
-     * @param {*} second 
-     * @param {*} comparer 
+     * @param {LinqCompatible} second - The collection of elements to union
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements
+     * @returns {Linq} 
      */
     union(second, comparer)
     {
@@ -2651,12 +2652,10 @@ export class Linq
         return new Linq(unionGenerator);
     }
 
-
-
     /**
      * Returns the elements of 'this' collection that satisfy the `predicate` function.
      * 
-     * @param {indexedProjection} predicate 
+     * @param {indexedProjection} predicate - The function that determines which elements to return
      * @returns {Linq}
      */
     where(predicate)
@@ -2681,8 +2680,6 @@ export class Linq
         return new Linq(whereGenerator);
     }
 
-
-
     /**
      * Returns 'this' collection "zipped-up" with the `second` collection such that each value of the
      * returned collection is the value projected from the corresponding element from each of 'this'
@@ -2690,8 +2687,9 @@ export class Linq
      * collection are not equal, the size of the returned collection will equal the minimum of the
      * sizes of 'this' collection and the `second` collection.
      * 
-     * @param {LinqCompatible} second 
-     * @param {biSourceProjection} [resultSelector] 
+     * @param {LinqCompatible} second - The collection to zip with 'this' collection
+     * @param {biSourceProjection} [resultSelector] - The function to use to project the result values
+     * @returns {Linq}
      */
     zip(second, resultSelector)
     {
@@ -2715,6 +2713,55 @@ export class Linq
 
                 firstState = firstIterator.next();
                 secondState = secondIterator.next();
+            }
+        }
+
+        return new Linq(zipGenerator);
+    }
+
+    /**
+     * Returns 'this' collection "zipped-up" with the `second` collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the `second` collection.  If the size of 'this' collection and the `second` 
+     * collection are not equal, the size of the returned collection will equal the maximum of the
+     * sizes of 'this' collection and the `second` collection, and the shorter collection with use
+     * values given by the `defaultForFirst` and `defaultForSecond` parameters (corresponding with
+     * which corresponding list is shorter).
+     * 
+     * @param {LinqCompatible} second - The collection to zip with 'this' collection
+     * @param {*} defaultForFirst - The value used for 'this' collection when shorter
+     * @param {*} defaultForSecond - The value used for the 'second' collecction when shorter
+     * @param {biSourceProjection} [resultSelector] - The function to use to project the result values
+     * @returns {Linq}
+     */
+    zipLongest(second, defaultForFirst, defaultForSecond, resultSelector)
+    {
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        if (resultSelector == null)
+            resultSelector = Linq.tuple;
+
+        let secondLinq = LinqInternal.ensureLinq(second);
+        let firstIterator = LinqInternal.getIterator(this.toIterable());
+        let secondIterator = LinqInternal.getIterator(secondLinq.toIterable());
+
+        function* zipGenerator()
+        {
+            let firstState = firstIterator.next();
+            let secondState = secondIterator.next();
+
+            while (!firstState.done || !secondState.done)
+            {
+                let firstValue = (firstState.done ? defaultForFirst : firstState.value);
+                let secondValue = (secondState.done ? defaultForSecond : secondState.value);
+
+                yield resultSelector(firstValue, secondValue);
+
+                if (!firstState.done)
+                    firstState = firstIterator.next();
+
+                if (!secondState.done)
+                    secondState = secondIterator.next();
             }
         }
 
