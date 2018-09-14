@@ -286,7 +286,7 @@ class LinqInternal
         return linq;
     }
 
-    static getExtremeValue(linq, iterable, compareSelector, isMoreExtremeFunc, resultSelector)
+    static getExtremeValue(linq, compareSelector, isMoreExtremeFunc, resultSelector)
     {
         let aggregationFunc = (extremeItem, x) =>
         {
@@ -1670,7 +1670,7 @@ export class Linq
         if (selector == null)
             selector = Linq.identity;
 
-        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.minComparer, selector);
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.minComparer, selector);
     }
 
     /**
@@ -1689,7 +1689,7 @@ export class Linq
         if (LinqInternal.isEmptyIterable(iterable))
             throw new Error('No minimum element.');
 
-        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.minComparer, Linq.identity);
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.minComparer, Linq.identity);
     }
 
     /**
@@ -1711,7 +1711,7 @@ export class Linq
         if (selector == null)
             selector = Linq.identity;
 
-        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.maxComparer, selector);
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.maxComparer, selector);
     }
 
     /**
@@ -1730,7 +1730,7 @@ export class Linq
         if (LinqInternal.isEmptyIterable(iterable))
             throw new Error('No maximum element.');
 
-        return LinqInternal.getExtremeValue(this, iterable, selector, LinqInternal.maxComparer, Linq.identity);
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.maxComparer, Linq.identity);
     }
 
     /**
