@@ -180,20 +180,6 @@ class LinqInternal
         return (Linq.isLinq(collection) ? collection : new Linq(collection));
     }
 
-    static buildContainsEvaluator(iterable, normalizedComparer)
-    {
-        return x =>
-        {
-            for (let item of iterable)
-            {
-                if (normalizedComparer(x, item))
-                    return true;
-            }
-
-            return false;    
-        };
-    }
-
     static createDeferredSort(keySelector, comparer, isReverse, parent = null)
     {
         return {
@@ -314,7 +300,7 @@ class LinqInternal
     static maxComparer(x, y) { return x > y; }
 }
 
-// Unfortunately, there's no Set class with custom equality comparison.  So, instead using a simple
+// Unfortunately, there's no Set class with custom equality comparison.  So instead, using a simple
 // version of a Set that is not as efficient as a native Set (with custom equality comparison) 
 // would be.  Also, this only implements the operations that we need, including adding to the 
 // Set, removing from the Set, and checking for membership.
@@ -1071,9 +1057,14 @@ export class Linq
 
         let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
         let iterable = this.toIterable();
-        let evaluator = LinqInternal.buildContainsEvaluator(iterable, normalizedComparer);
 
-        return evaluator(item);
+        for (let iItem of iterable)
+        {
+            if (normalizedComparer(item, iItem))
+                return true;
+        }
+
+        return false;
     }
 
     /**
