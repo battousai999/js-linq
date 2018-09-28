@@ -1,6 +1,6 @@
 import {Linq, SimpleSet} from '../jslinq';
 
-// The SimpleSet class needs to be exported in order for these tests to be applicable.
+// The SimpleSet class needs to be exported in order for these tests to be run.
 xdescribe('SimpleSet', () =>
 {
     let comparer = Linq.normalizeComparer(Linq.caseInsensitiveStringComparer);
