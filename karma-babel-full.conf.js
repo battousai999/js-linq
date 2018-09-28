@@ -1,6 +1,6 @@
 module.exports = function(config) {
     config.set({
-        browsers: ['Chrome'],
+        browsers: ['Chrome', 'Firefox', 'Edge', 'IE'],
         files: [
             { pattern: 'test-context.js', watched: false }
         ],
@@ -11,13 +11,16 @@ module.exports = function(config) {
         webpack: {
             module: {
                 loaders: [
-                    { test: /\.js$/, exclude: /node_modules/ } 
+                    { test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader?presets[]=es2015' }
                 ]
             },
             watch: true
         },
         webpackServer: {
             noInfo: false
-        }
+        },
+        singleRun: true,
+        concurrency: 1,
+        browserDisconnectTimeout: 10000
     });
 };

@@ -304,7 +304,7 @@ class LinqInternal
 // version of a Set that is not as efficient as a native Set (with custom equality comparison) 
 // would be.  Also, this only implements the operations that we need, including adding to the 
 // Set, removing from the Set, and checking for membership.
-class SimpleSet
+export class SimpleSet
 {
     constructor(equalityComparer)
     {
