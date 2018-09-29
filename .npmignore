@@ -4,6 +4,8 @@ testing/
 coverage/
 spec/
 spec-ts/
+tests/
+.vscode/
 todo.txt
 gruntfile.js
 karma_ts.conf.js
