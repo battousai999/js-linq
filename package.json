@@ -2,29 +2,48 @@
   "name": "js-linq",
   "version": "2.0.0",
   "description": "A Javascript version of .NET's LINQ to Objects, with some query operations inspired by MoreLinq.",
-  "main": "jslinq.js",
+  "author": "Kurtis Jones <battousai999@gmail.com>",
+  "homepage": "https://github.com/battousai999/js-linq",
+  "license": "MIT",
+  "main": "dist-node/jslinq.js",
+  "module": "jslinq.js",
+  "jspm": {
+    "main": "dist/jslinq.js"
+  },
+  "config": {
+    "banner": "/* $linq Version $npm_package_version (by Kurtis Jones @ $npm_package_homepage) */"
+  },
   "scripts": {
+    "build-node": "npx babel --presets es2015 --plugins transform-es2015-modules-commonjs jslinq.js --out-file dist-node/jslinq.js",
+    "build-browser": "npm run browserify && npm run uglify-browser",
+    "browserify": "npx browserify --standalone Linq dist-node/jslinq.js > dist/jslinq.js",
+    "uglify-browser": "cross-var npx uglifyjs -mc -b \"beautify=false,preamble='$npm_package_config_banner'\" -- dist/jslinq.js > dist/jslinq.min.js",
+    "uglify": "cross-var npx uglifyes -mc -b \"beautify=false,preamble='$npm_package_config_banner'\" -- jslinq.js > jslinq.min.js",
+    "clean": "rimraf dist dist-node && mkdirp dist dist-node",
+    "build": "npm run clean && npm run build-node && npm run build-browser",
+    "prepublish": "npm run build",
     "test": "karma start",
     "test-babel-full": "karma start karma-babel-full.conf.js",
     "test-full": "karma start karma-full.conf.js",
-    "uglify": "grunt uglify-both"
+    "uglify-grunt": "grunt uglify-both"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/battousai999/js-linq.git"
   },
-  "author": "Kurtis Jones",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/battousai999/js-linq/issues"
   },
-  "homepage": "https://github.com/battousai999/js-linq",
   "devDependencies": {
     "@types/jasmine": "^2.5.35",
+    "babel-cli": "^6.26.0",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.2",
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
+    "browserify": "^16.2.3",
+    "cross-var": "^1.1.0",
+    "derequire": "^2.0.6",
     "eslint": "^4.19.1",
     "grunt": "^1.0.3",
     "grunt-babel": "^7.0.0",
@@ -41,7 +60,11 @@
     "karma-phantomjs-launcher": "^1.0.4",
     "karma-webpack": "^3.0.5",
     "load-grunt-tasks": "^3.4.1",
+    "mkdirp": "^0.5.1",
     "phantomjs-prebuilt": "^2.1.16",
+    "rimraf": "^2.6.2",
+    "uglify-es": "^3.3.9",
+    "uglify-js": "^3.4.9",
     "webpack": "^3.10.0"
   }
 }
