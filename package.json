@@ -14,7 +14,7 @@
     "banner": "/* $linq Version $npm_package_version (by Kurtis Jones @ $npm_package_homepage) */"
   },
   "scripts": {
-    "build-node": "npx babel --presets es2015 --plugins transform-es2015-modules-commonjs jslinq.js --out-file dist-node/jslinq.js",
+    "build-node": "npx babel --presets es2015 --plugins=transform-es2015-modules-commonjs,transform-runtime jslinq.js --out-file dist-node/jslinq.js",
     "build-browser": "npm run browserify && npm run uglify-browser",
     "browserify": "npx browserify --standalone Linq dist-node/jslinq.js > dist/jslinq.js",
     "uglify-browser": "cross-var npx uglifyjs -mc -b \"beautify=false,preamble='$npm_package_config_banner'\" -- dist/jslinq.js > dist/jslinq.min.js",
@@ -34,11 +34,15 @@
   "bugs": {
     "url": "https://github.com/battousai999/js-linq/issues"
   },
+  "dependencies": {
+    "babel-runtime": "^6.26.0"
+  },
   "devDependencies": {
     "@types/jasmine": "^2.5.35",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.2",
+    "babel-plugin-transform-runtime": "^6.23.0",
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "browserify": "^16.2.3",
