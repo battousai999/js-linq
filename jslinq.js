@@ -2759,3 +2759,5 @@ export class Linq
         return new Linq(zipGenerator);
     }
 }
+
+export let $linq = Linq.from;
