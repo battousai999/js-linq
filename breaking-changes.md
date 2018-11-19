@@ -117,7 +117,7 @@ var results3 = col.lastOrDefault(77, function (x) { return x > 0; });
 
 Note, that with version 1.4.0, the `firstOrDefault` function (and with a later version, `lastOrDefault` and `singleOrDefault`) was modified to use the first parameter as the predicate if only one parameter was given and that parameter was a function.
 
-In version 2.0.0, the parameters for these three function have been reversed to match the parameter order of these functions in .NET's Linq-to-objects:
+In version 2.0.0, the parameters for these three function have been reversed to better match the parameter order of these functions in .NET's Linq-to-objects:
 
 ```
 let col = Linq.from([1, 2, 3]);
