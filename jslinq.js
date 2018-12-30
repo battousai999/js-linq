@@ -10,16 +10,16 @@ class LinqInternal
     static isStringNullOrEmpty(str) { return (str == null || str === ''); }
     static isTypedArray(x) { return ArrayBuffer.isView(x) && !(x instanceof DataView); }
     static isIndexedCollection(x) { return Array.isArray(x) || Linq.isString(x) || LinqInternal.isTypedArray(x); }
-    static isCollectionHavingLength(x) { return LinqInternal.isIndexedCollection(x); }
-    static isCollectionHavingSize(x) { return (x instanceof Set) || (x instanceof Map); }
-    static isCollectionHavingExplicitCardinality(x) { return LinqInternal.isCollectionHavingLength(x) || LinqInternal.isCollectionHavingSize(x); }
+    static doesCollectionHaveLength(x) { return LinqInternal.isIndexedCollection(x); }
+    static doesCollectionHaveSize(x) { return (x instanceof Set) || (x instanceof Map); }
+    static doesCollectionHaveExplicitCardinality(x) { return LinqInternal.doesCollectionHaveLength(x) || LinqInternal.doesCollectionHaveSize(x); }
     
     static getExplicitCardinality(x) 
     {
-        if (LinqInternal.isCollectionHavingLength(x))
+        if (LinqInternal.doesCollectionHaveLength(x))
             return x.length;
             
-        if (LinqInternal.isCollectionHavingSize(x))
+        if (LinqInternal.doesCollectionHaveSize(x))
             return x.size;
 
         return null;
@@ -27,7 +27,7 @@ class LinqInternal
 
     static isEmptyIterable(iterable)
     {
-        if (LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
             return (LinqInternal.getExplicitCardinality(iterable) === 0);
 
         let iterator = LinqInternal.getIterator(iterable);
@@ -108,7 +108,7 @@ class LinqInternal
 
     static lastBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
     {
-        if (LinqInternal.isIndexedCollection(iterable) && LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+        if (LinqInternal.isIndexedCollection(iterable) && LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
         {
             let length = LinqInternal.getExplicitCardinality(iterable);
 
@@ -151,7 +151,7 @@ class LinqInternal
 
         let iterable = iterableFunc();
 
-        if (LinqInternal.isCollectionHavingExplicitCardinality(iterable) && (index >= LinqInternal.getExplicitCardinality(iterable)))
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(iterable) && (index >= LinqInternal.getExplicitCardinality(iterable)))
             return outOfBoundsFunc();
 
         if (LinqInternal.isIndexedCollection(iterable))
@@ -1080,7 +1080,7 @@ export class Linq
 
         let iterable = this.toIterable();
 
-        if (predicate == null && LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+        if (predicate == null && LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
             return LinqInternal.getExplicitCardinality(iterable);
 
         let counter = 0;
@@ -1196,8 +1196,8 @@ export class Linq
         let firstIterable = this.toIterable();
         let secondIterable = secondLinq.toIterable();
 
-        if (LinqInternal.isCollectionHavingExplicitCardinality(firstIterable) &&
-            LinqInternal.isCollectionHavingExplicitCardinality(secondIterable) &&
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(firstIterable) &&
+            LinqInternal.doesCollectionHaveExplicitCardinality(secondIterable) &&
             (LinqInternal.getExplicitCardinality(firstIterable) !== LinqInternal.getExplicitCardinality(secondIterable)))
         {
             throw new Error('The two collections being equi-zipped are not of equal lengths.');
@@ -1918,7 +1918,7 @@ export class Linq
             }
         }
 
-        if (!LinqInternal.isIndexedCollection(iterable) || !LinqInternal.isCollectionHavingLength(iterable))
+        if (!LinqInternal.isIndexedCollection(iterable) || !LinqInternal.doesCollectionHaveLength(iterable))
             iterable = Array.from(iterable);
 
         return new Linq(gen);
@@ -2357,7 +2357,7 @@ export class Linq
 
         let iterable = this.toIterable();
 
-        if (LinqInternal.isCollectionHavingExplicitCardinality(iterable))
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
         {
             let length = LinqInternal.getExplicitCardinality(iterable);
 
