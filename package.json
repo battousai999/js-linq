@@ -25,7 +25,11 @@
     "test": "karma start",
     "test-babel-full": "karma start karma-babel-full.conf.js",
     "test-full": "karma start karma-full.conf.js",
-    "uglify-grunt": "grunt uglify-both"
+    "uglify-grunt": "grunt uglify-both",
+    "nuget-clean": "rimraf nuget-pub/content && mkdirp nuget-pub/content/Scripts",
+    "nuget-copy-es6": "npx cpy jslinq.js jslinq.min.js nuget-pub/content/Scripts",
+    "nuget-copy-amd": "npx cpy dist/jslinq.js nuget-pub/content/Scripts --rename=jslinq.amd.js && npx cpy dist/jslinq.min.js nuget-pub/content/Scripts --rename=jslinq.amd.min.js",
+    "nuget-build": "npm run build && npm run nuget-clean && npm run nuget-copy-es6 && npm run nuget-copy-amd"
   },
   "repository": {
     "type": "git",
@@ -46,6 +50,7 @@
     "babel-polyfill": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
     "browserify": "^16.2.3",
+    "cpy-cli": "^2.0.0",
     "cross-var": "^1.1.0",
     "derequire": "^2.0.6",
     "eslint": "^4.19.1",
