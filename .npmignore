@@ -4,6 +4,15 @@ testing/
 coverage/
 spec/
 spec-ts/
+tests/
+.vscode/
+.git/
 todo.txt
 gruntfile.js
 karma_ts.conf.js
+.eslintignore
+.eslintrc.json
+karma-babel-full.conf.js
+karma-full.conf.js
+karma.conf.js
+test-context.js

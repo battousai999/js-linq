@@ -1,5 +1,5 @@
 /*
-    $linq Version 1.5.2 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
+    $linq Version 1.6.0 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
 */
 
 (function (root, undefined)
@@ -470,7 +470,7 @@
 
         /**
             Returns a boolean value indicating whether any of the elements of the collection satisfy the 
-            predicate.  Returns 'true' if the collection is empty.
+            predicate.  Returns 'false' if the collection is empty.
             @param predicate The predicate applied to the collection
         */
         any: function (predicate)

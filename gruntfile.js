@@ -4,6 +4,16 @@ module.exports = function (grunt)
     
     grunt.initConfig({
         pkg: grunt.file.readJSON('package.json'),
+        babel: {
+            options: {
+                presets: ['es2015'],
+                plugins: ['transform-es2015-modules-amd']
+            },
+            build: {
+                src: 'jslinq.js',
+                dest: 'jslinq.amd.js'
+            }
+        },
         uglify: {
             options: {
                 banner: '/* $linq Version <%= pkg.version %> (by Kurtis Jones @ <%= pkg.homepage %>) */'
@@ -11,30 +21,14 @@ module.exports = function (grunt)
             build: {
                 src: 'jslinq.js',
                 dest: 'jslinq.min.js'
-            }
-        },
-        karma: {
-            unit: {
-                options: {
-                    frameworks: ['jasmine'],
-                    files: ['testing/lib/jquery-1.8.0.min.js', 'jslinq.js', 'spec/jslinqSpec.js'],
-                    plugins: ['karma-chrome-launcher', 'karma-jasmine', 'karma-phantomjs-launcher']
-                },
-                singleRun: true,
-                browsers: ['Chrome']
             },
-            unitMin: {
-                options: {
-                    frameworks: ['jasmine'],
-                    files: ['testing/lib/jquery-1.8.0.min.js', 'jslinq.min.js', 'spec/jslinqSpec.js'],
-                    plugins: ['karma-chrome-launcher', 'karma-jasmine', 'karma-phantomjs-launcher']
-                },
-                singleRun: true,
-                browsers: ['Chrome']
+            amd: {
+                src: 'jslinq.amd.js',
+                dest: 'jslinq.amd.min.js'
             }
         }
     });
     
-    grunt.registerTask('default', ['uglify']);
-    grunt.registerTask('test', ['karma:unit', 'uglify', 'karma:unitMin']);
+    grunt.registerTask('default', ['uglify:build']);
+    grunt.registerTask('uglify-both', ['babel', 'uglify']);
 };

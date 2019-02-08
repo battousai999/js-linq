@@ -1,365 +1,753 @@
 /*
-    $linq Version 1.6.0 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
+    $linq Version 2.0.0 (by Kurtis Jones @ https://github.com/battousai999/js-linq)
 */
 
-(function (root, undefined)
+class LinqInternal
 {
-    var linq_helper = {};
-
-    linq_helper.map = function (array, func /*, thisp*/)
+    static convertToString(value) { return (value == null ? null : value.toString()); }
+    static convertToNumber(value) { return (Linq.isNumber(value) ? value : NaN); }    
+    static isConstructorCompatibleSource(source) { return Linq.isIterable(source) || Linq.isGenerator(source) || Linq.isFunction(source) || Linq.isLinq(source); }
+    static isStringNullOrEmpty(str) { return (str == null || str === ''); }
+    static isTypedArray(x) { return ArrayBuffer.isView(x) && !(x instanceof DataView); }
+    static isIndexedCollection(x) { return Array.isArray(x) || Linq.isString(x) || LinqInternal.isTypedArray(x); }
+    static doesCollectionHaveLength(x) { return LinqInternal.isIndexedCollection(x); }
+    static doesCollectionHaveSize(x) { return (x instanceof Set) || (x instanceof Map); }
+    static doesCollectionHaveExplicitCardinality(x) { return LinqInternal.doesCollectionHaveLength(x) || LinqInternal.doesCollectionHaveSize(x); }
+    
+    static getExplicitCardinality(x) 
     {
-        var thisp = arguments[2];
+        if (LinqInternal.doesCollectionHaveLength(x))
+            return x.length;
+            
+        if (LinqInternal.doesCollectionHaveSize(x))
+            return x.size;
 
-        if (array.map !== undefined)
-            return array.map(func, thisp);
+        return null;
+    }
 
-        var len = array.length;
+    static isEmptyIterable(iterable)
+    {
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
+            return (LinqInternal.getExplicitCardinality(iterable) === 0);
 
-        if (!linq_helper.isFunction(func))
-            throw new TypeError();
+        let iterator = LinqInternal.getIterator(iterable);
+        let state = iterator.next();
 
-        var res = new Array(len);
+        return state.done;
+    }
 
-        for (var i = 0; i < len; i++)
+    static validateRequiredFunction(func, message)
+    {
+        if ((func == null) || !Linq.isFunction(func))
+            throw new Error(message);
+    }
+
+    static validateOptionalFunction(func, message)
+    {
+        if ((func != null) && !Linq.isFunction(func))
+            throw new Error(message);
+    }
+
+    static getIterator(iterable)
+    {        
+        if (!Linq.isIterable(iterable))
+            return new Error('Value is not an iterable.');
+
+        return iterable[Symbol.iterator]();
+    }
+
+    static firstBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
+    {
+        for (let item of iterable)
         {
-            if (i in array)
-                res[i] = func.call(thisp, array[i], i, array);
+            if ((predicate == null) || predicate(item))
+                return item;
         }
 
-        return res;
-    };
+        if (throwIfNotFound)
+            throw new Error('No first element was found in the collection.');
+        else
+            return defaultValue;
+    }
 
-    linq_helper.filter = function (array, func /*, thisp */)
+    static singleBasedOperator(iterable, predicate, defaultValueFunc, throwIfNotFound)
     {
-        var thisp = arguments[2];
+        let isFound = false;
+        let foundItem;
 
-        if (array.filter !== undefined)
-            return array.filter(func, thisp);
-
-        var len = array.length;
-
-        if (!linq_helper.isFunction(func))
-            throw new TypeError();
-
-        var res = new Array();
-
-        for (var i = 0; i < len; i++)
+        for (let item of iterable)
         {
-            if (i in array)
+            if ((predicate == null) || predicate(item))
             {
-                var val = array[i]; // in case fun mutates this
-                if (func.call(thisp, val, i, array))
-                    res.push(val);
+                if (isFound)
+                {
+                    if (predicate == null)
+                        throw new Error('There was more than one element in the collection.');
+                    else
+                        throw new Error('More than one element in the collection satisfied the predicate');
+                }
+
+                foundItem = item;
+                isFound = true;
             }
         }
 
-        return res;
-    };
+        if (isFound)
+            return foundItem;
 
-    linq_helper.every = function (array, func /*, thisp */)
-    {
-        var thisp = arguments[2];
-
-        if (array.every !== undefined)
-            return array.every(func, thisp);
-
-        var len = array.length;
-
-        if (!linq_helper.isFunction(func))
-            throw new TypeError();
-
-        for (var i = 0; i < len; i++)
+        if (throwIfNotFound)
         {
-            if ((i in array) && !func.call(thisp, array[i], i, array))
-                return false;
+            if (predicate == null)
+                throw new Error('There were no elements in the collection.');
+            else
+                throw new Error('No single element in the collection satisfied the predicate.');
         }
 
-        return true;
-    };
+        return defaultValueFunc();
+    }
 
-    linq_helper.some = function (array, func /*, thisp */)
+    static lastBasedOperator(iterable, predicate, defaultValue, throwIfNotFound)
     {
-        var thisp = arguments[2];
-
-        if (array.some !== undefined)
-            return array.some(func, thisp);
-
-        var len = array.length;
-
-        for (var i = 0; i < len; i++)
+        if (LinqInternal.isIndexedCollection(iterable) && LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
         {
-            if ((i in array) && func.call(thisp, array[i], i, array))
-                return true;
+            let length = LinqInternal.getExplicitCardinality(iterable);
+
+            for (let i = length - 1; i >= 0; i--)
+            {
+                let item = iterable[i];
+
+                if ((predicate == null) || predicate(item))
+                    return item;
+            }
+        }
+        else
+        {
+            let foundElement;
+            let isFound = false;
+
+            for (let item of iterable)
+            {
+                if ((predicate == null) || predicate(item))
+                {
+                    foundElement = item;
+                    isFound = true;
+                }
+            }
+
+            if (isFound)
+                return foundElement;
         }
 
-        return false;
-    };
-    
-    linq_helper.object_keys = function (obj)
+        if (throwIfNotFound)
+            throw new Error('No last element was found in the collection.');
+        else
+            return defaultValue;
+    }
+
+    static elementAtBasedOperator(index, iterableFunc, outOfBoundsFunc)
     {
-        if (Object.keys !== undefined)
-            return Object.keys(obj);
-        
-        if (obj !== Object(obj))
-            throw new TypeError('object_keys called on a non-object.');
-            
-        var arr = [], property;
-        
-        for (property in obj)
+        if (!LinqInternal.isValidNumber(index, x => x >= 0))
+            return outOfBoundsFunc();
+
+        let iterable = iterableFunc();
+
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(iterable) && (index >= LinqInternal.getExplicitCardinality(iterable)))
+            return outOfBoundsFunc();
+
+        if (LinqInternal.isIndexedCollection(iterable))
+            return iterable[index];
+
+        let counter = 0;
+
+        for (let item of iterable)
         {
-            if (Object.prototype.hasOwnProperty.call(obj, property))
-                arr.push(property);
+            if (counter === index)
+                return item;
+
+            counter += 1;
         }
-        
-        return arr;
-    };
 
-    linq_helper.isFunction = function (func)
-    {
-        return (typeof func == "function");
-    };
+        return outOfBoundsFunc();
+    }
 
-    linq_helper.isArray = function (obj)
+    static normalizeComparerOrDefault(comparer)
     {
-        return (Object.prototype.toString.call(obj) === '[object Array]');
-    };
+        return (comparer == null ? Linq.strictComparer : Linq.normalizeComparer(comparer));
+    }
 
-    linq_helper.extendDeferredSort = function (info, appendInfo)
+    static ensureLinq(collection)
     {
-        var helper = function (x)
-        {
-            return {
-                keySelector: x.keySelector,
-                comparer: x.comparer,
-                reverse: x.reverse,
-                next: (x.next == null ? appendInfo : helper(x.next))
-            };
+        return (Linq.isLinq(collection) ? collection : new Linq(collection));
+    }
+
+    static createDeferredSort(keySelector, comparer, isReverse, parent = null)
+    {
+        return {
+            keySelector,
+            comparer,
+            isReverse,
+            parent
         };
+    }
 
-        return helper(info);
-    };
-
-    linq_helper.createLambda = function (expr)
+    static performDeferredSort(buffer, deferredSort)
     {
-        if (linq_helper.isFunction(expr))
-            return expr;
+        let sortChain = LinqInternal.buildSortChain(deferredSort);
 
-        if ((typeof expr == typeof "") && (expr !== ""))
+        let compare = (x, y, info) =>
         {
-            if (expr.indexOf("=>") < 0)
-                return new Function("$,$$,$$$", "return " + expr);
+            let value;
 
-            var match = expr.match(/^\s*\(?\s*([^)]*)\s*\)?\s*=>(.*)/);
-            return new Function(match[1], "return " + match[2]);
-        }
-
-        return expr;
-    };
-
-    linq_helper.processDeferredSort = function (collection)
-    {
-        if (collection.deferredSort == null)
-            return;
-
-        var compare = function (x, y, info)
-        {
-            var value;
-
-            if (info.reverse)
+            if (info.isReverse)
                 value = info.comparer(info.keySelector(y), info.keySelector(x));
             else
                 value = info.comparer(info.keySelector(x), info.keySelector(y));
 
-            if (value == 0)
+            if (value === 0)
             {
                 if (info.next == null)
                     return 0;
 
-                // Recursively evaluate the next level of ordering...
                 return compare(x, y, info.next);
             }
             else
                 return value;
         };
 
-        collection.array.sort(function (x, y) { return compare(x, y, collection.deferredSort); });
-        collection.deferredSort = null;
-    };
+        buffer.sort((x, y) => compare(x, y, sortChain));
+    }
 
-    linq_helper.identity = function (x) { return x; };
-    linq_helper.merge = function (x, y) { return [x, y]; };
-    
-    linq_helper.isString = function (x) { return (typeof x === 'string' || x instanceof String); }
-    linq_helper.isBoolean = function (x) { return (typeof x === 'boolean' || x instanceof Boolean); }
-    linq_helper.isNumber = function (x) { return (typeof x === 'number' || x instanceof Number); }
-    
-    linq_helper.caseInsensitiveComparer = function (x, y)
+    static buildSortChain(deferredSort)
     {
-        var tempX = (linq_helper.isString(x) ? x.toLowerCase() : x);
-        var tempY = (linq_helper.isString(x) ? y.toLowerCase() : y);
-        
-        return (tempX < tempY ? -1 : tempX > tempY ? 1 : 0);
-    };
-    
-    linq_helper.caseSensitiveComparer = function (x, y) { return (x < y ? -1 : x > y ? 1 : 0); };
-    linq_helper.defaultStringComparer = linq_helper.caseSensitiveComparer;
-    linq_helper.strictComparer = function (x, y) { return (x === y); };
-    
-    // Allows "-1/0/1"-returning comparers (used for ordered comparisons) to be used where
-    // "true/false"-returning comparers are expected.
-    linq_helper.normalizeComparer = function (func)
-    {
-        return function (x, y)
+        let helper = (ds, child) =>
         {
-            var tempValue = func(x, y);
-            
-            if (linq_helper.isBoolean(tempValue))
-                return tempValue;
-            else if (linq_helper.isNumber(tempValue))
-                return (tempValue == 0);
-            else
-                throw new Error("Invalid value from comparer function.");
+            let chainItem = {
+                keySelector: ds.keySelector,
+                comparer: ds.comparer,
+                isReverse: ds.isReverse,
+                next: child
+            };
+
+            if (ds.parent == null)
+                return chainItem;
+
+            return helper(ds.parent, chainItem);
         };
-    };
-    
-    /**
-        Creates a new linq object.
-        @constructor
-        @param array The array that contains the elements to include
-        @param copyArray Optional, a flag indicating whether to directly use the array or make a copy, first
-    */
-    var linq = function (array)
+
+        return helper(deferredSort, null);
+    }
+
+    static orderByBasedOperator(originalLinq, keySelector, comparer, isReverse)
     {
-        var copyArray = true;
+        LinqInternal.validateRequiredFunction(keySelector);
+        LinqInternal.validateOptionalFunction(comparer);
 
-        if ((arguments.length >= 1) && (arguments[1] != null) && !arguments[1])
-            copyArray = false;
+        if (comparer == null)
+            comparer = Linq.generalComparer;
 
-        if (copyArray)
-            this.array = (array == null ? [] : array.slice(0));
+        let linq = new Linq(originalLinq);
+
+        linq[deferredSortSymbol] = LinqInternal.createDeferredSort(keySelector, comparer, isReverse);
+
+        return linq;
+    }
+
+    static thenByBasedOperator(originalLinq, keySelector, comparer, isReverse)
+    {
+        LinqInternal.validateRequiredFunction(keySelector);
+        LinqInternal.validateOptionalFunction(comparer);
+
+        let parentDeferredSort = originalLinq[deferredSortSymbol];
+
+        if (parentDeferredSort == null)
+            throw new Error(`${isReverse ? 'ThenByDescending' : 'ThenBy'} can only be called following OrderBy, OrderByDescending, ThenBy, or ThenByDescending.`);
+
+        if (comparer == null)
+            comparer = Linq.generalComparer;
+
+        let linq = new Linq(originalLinq);
+
+        linq[deferredSortSymbol] = LinqInternal.createDeferredSort(keySelector, comparer, isReverse, parentDeferredSort);
+
+        return linq;
+    }
+
+    static getExtremeValue(linq, compareSelector, isMoreExtremeFunc, resultSelector)
+    {
+        let aggregationFunc = (extremeItem, x) =>
+        {
+            let extremeValue = compareSelector(extremeItem);
+            let tempValue = compareSelector(x);
+
+            return (isMoreExtremeFunc(tempValue, extremeValue) ? x : extremeItem);
+        };
+
+        return linq.aggregate(null, aggregationFunc, resultSelector);
+    }
+
+    static isValidNumber(value, furtherPredicate)
+    {
+        if ((value == null) || isNaN(value))
+            return false;
+
+        if (furtherPredicate != null)
+            return furtherPredicate(value);
+
+        return true;
+    }
+
+    static minComparer(x, y) { return x < y; }
+    static maxComparer(x, y) { return x > y; }
+}
+
+// Unfortunately, there's no Set class with custom equality comparison.  So instead, using a simple
+// version of a Set that is not as efficient as a native Set (with custom equality comparison) 
+// would be.  Also, this only implements the operations that we need, including adding to the 
+// Set, removing from the Set, and checking for membership.
+export class SimpleSet
+{
+    constructor(equalityComparer)
+    {
+        this.set = new Set();
+        this.comparer = equalityComparer;
+        this.usesComparer = (equalityComparer != null);
+        this.containsOnlyPrimitives = true;
+    }
+
+    static initialize(iterable, equalityComparer)
+    {
+        let set = new SimpleSet(equalityComparer);
+
+        for (let item of iterable)
+        {
+            set.add(item);
+        }
+
+        return set;
+    }
+
+    add(item)
+    {
+        if (this.containsOnlyPrimitives && !Linq.isPrimitive(item))
+            this.containsOnlyPrimitives = false;
+
+        if (this.usesComparer)
+        {
+            if (!this.has(item))
+                this.set.add(item);
+        }
+        else if (this.containsOnlyPrimitives || !this.has(item))
+            this.set.add(item);
+    }
+
+    remove(item)
+    {
+        if (!this.usesComparer && this.containsOnlyPrimitives)
+            return this.set.delete(item);
+
+        let normalizedComparer = (this.usesComparer ? this.comparer : Linq.strictComparer);
+
+        for (let value of this.set.values())
+        {
+            if (normalizedComparer(item, value))
+            {
+                this.set.delete(value);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    has(item)
+    {
+        if (!this.usesComparer && this.containsOnlyPrimitives)
+            return this.set.has(item);
+
+        let normalizedComparer = (this.usesComparer ? this.comparer : Linq.strictComparer);
+
+        for (let value of this.set.values())
+        {
+            if (normalizedComparer(item, value))
+                return true;
+        }
+
+        return false;
+    }
+}
+
+// Used in the Linq.isGenerator() function to test for being a generator.
+var GeneratorFunction = (function*(){}).constructor;
+
+var deferredSortSymbol = Symbol('Provides private-like access for a deferredSort property.');
+
+export class Grouping
+{
+    constructor(key, values)
+    {
+        this.key = key;
+        this.values = (values == null ? [] : Array.from(values));
+    }
+}
+
+export class Linq
+{
+    /**
+     * A type that can be passed the the Linq constructor.
+     * @typedef {iterable|generator|Linq|function} LinqCompatible
+     */
+
+    /**
+     * A function that can act as a projection function (i.e., projects a value into some other value).
+     * @callback projection
+     * @param {*} value - The value to be projected
+     * @returns {*} - The projected value.
+     */
+
+    /**
+     * A function that can act as a projection function (i.e., projects a value into some other value),
+     * but also passes in the positional, zero-based index of the element.
+     * @callback indexedProjection
+     * @param {*} value - The value to be projected
+     * @param {number} [index] - The zero-based index of the value
+     * @returns {*} - The projected value.
+     */
+
+    /**
+     * A function that projects a value to a numeric value.
+     * @callback numericProjection
+     * @param {*} value - The value to be projected
+     * @returns {number} - The projected numeric value.
+     */
+
+    /**
+     * A function that projects two values into a third value.
+     * @callback biSourceProjection
+     * @param {*} firstValue - The first of the values to involve in the projection
+     * @param {*} secondValue - The second of the values to involve in the projection
+     * @returns {*} - The projected value.
+     */
+
+    /**
+     * A function that projects a value into a LinqCompatible value
+     * @callback collectionProjection
+     * @param {*} value - The value to be projected
+     * @returns {LinqCompatible} - The projected set of values
+     */
+
+    /**
+     * A function that can act as a predicate function (i.e., projects a value to a boolean value).
+     * @callback predicate
+     * @param {*} value - The value to test
+     * @returns {boolean}
+     */
+
+     /**
+      * A function that acts upon a value.
+      * @callback action
+      * @param {*} value - The value upon which to act
+      */
+
+    /**
+     * A comparer is a function that takes two values and returns 0 if they are considered the "same" (by
+     * the comparer), -1 if they are considered "in order", and 1 if they are considered "out-of-order".
+     * @callback comparer
+     * @param {*} value1 - The first value to compare
+     * @param {*} value2 - The second value to compare
+     * @returns {number} - The value (-1/0/1) that represents the ordering of the two values.
+     */
+
+    /**
+     * An equality comparer is a function that takes two values and returns a boolean value indicating 
+     * whether the two values are considered the "same" (by the equality comparer).
+     * @callback equalityComparer
+     * @param {*} value1 - The first value to compare
+     * @param {*} value2 - The second value to compare
+     * @returns {boolean} - The value indicating whether the two values are the same.
+     */
+
+    /**
+     * A function that aggregates two values into a single value.
+     * @callback aggregator
+     * @param {*} acc - The seed or previously-accumulated value
+     * @param {*} value - The new value to aggregate
+     * @returns {*} - The new, accumulated value.
+     */
+
+    /**
+     * A function that returns a value given no input.  In function programming terms (i.e., if assuming a 
+     * pure function), this could be called a "constant" function.
+     * @callback constantFunction
+     * @returns {*} - The returned value.
+     */
+
+    /**
+     * Creates a new linq object.  If `source` is a function, then it is expected to return an iterable, a generator
+     * or another function that returns either an iterable or a generator.
+     * 
+     * The iterables that can be passed in `source` are those defined by the "iterable protocol" (see
+     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable).
+     * 
+     * @constructor
+     * @param {LinqCompatible} source - The source from which this linq object enumerates values
+     * @throws If `source` is not an iterable, a generator, or a function.
+     */
+    constructor(source)
+    {
+        if (source == null)
+            source = [];
+
+        if (LinqInternal.isConstructorCompatibleSource(source))
+            this.source = source;
         else
-            this.array = array;
+            throw new Error('The \'source\' is neither an iterable, a generator, nor a function that returns such.');
+    }
 
-        this.deferredSort = null;
-    };
+    // Helper functions
+    static isFunction(func) { return (typeof func == "function"); }
+    static isArray(obj) { return Array.isArray(obj); }  // Kept for backwards-compatibility reasons
+    static isString(obj) { return (typeof obj === 'string' || obj instanceof String); }
+    static isBoolean(obj) { return (typeof obj === 'boolean' || obj instanceof Boolean); }
+    static isNumber(obj) { return (typeof obj === 'number' || obj instanceof Number); }
+    static isSymbol(obj) { return (typeof obj === 'symbol'); }    
+    static isIterable(obj) { return obj != null && typeof obj[Symbol.iterator] === 'function'; }
+    static isGenerator(obj) { return (obj instanceof GeneratorFunction); }
+    static isLinq(obj) { return (obj instanceof Linq); }
 
-    // Add helper functions to linq class
-    linq.isFunction = linq_helper.isFunction;
-    linq.isArray = linq_helper.isArray;
-    linq.identity = linq_helper.identity;
-    linq.isString = linq_helper.isString;
-    linq.isBoolean = linq_helper.isBoolean;
-    linq.isNumber = linq_helper.isNumber;
-    linq.caseInsensitiveComparer = linq_helper.caseInsensitiveComparer;
-    linq.caseSensitiveComparer = linq_helper.caseSensitiveComparer;
-    linq.defaultStringComparer = linq_helper.defaultStringComparer;
-    linq.strictComparer = linq_helper.strictComparer;
+    static isPrimitive(obj) 
+    { 
+        return Linq.isString(obj) || 
+            Linq.isNumber(obj) || 
+            Linq.isBoolean(obj) || 
+            Linq.isSymbol(obj) ||
+            (obj === null) ||
+            (obj === undefined);
+    }
+
+    static identity(x) { return x; }
+    static tuple(x, y) { return [x, y]; }
+
+    // Comparer functions
+    static strictComparer(x, y) { return x === y; }
+    static defaultStringComparer(x, y) { return Linq.caseSensitiveStringComparer(x, y); }
+
+    static caseSensitiveStringComparer(x, y) 
+    { 
+        let normalize = value => (value == null ? null : LinqInternal.convertToString(value));
+
+        return Linq.generalComparer(normalize(x), normalize(y)); 
+    }
+
+    static caseInsensitiveStringComparer(x, y) 
+    {  
+        let normalize = value => (Linq.isString(value) ? value.toLowerCase() : value);
+
+        return Linq.caseSensitiveStringComparer(normalize(x), normalize(y));
+    }
+
+    static defaultStringEqualityComparer(x, y) { return Linq.caseSensitiveStringEqualityComparer(x, y); }
+    static caseSensitiveStringEqualityComparer(x, y) { return (Linq.caseSensitiveStringComparer(x, y) === 0); }
+    static caseInsensitiveStringEqualityComparer(x, y) { return (Linq.caseInsensitiveStringComparer(x, y) === 0); }
+
+    static generalComparer(x, y) 
+    {  
+        if (x == null && y == null)
+            return 0;
+
+        if (x == null)
+            return -1;
+
+        if (y == null)
+            return 1;
+
+        return (x < y ? -1 : (x > y ? 1 : 0));
+    }
 
     /**
-        Creates a new linq object from either another linq object, an array, a jQuery object, or otherwise an array with 'collection'
-        as the only element.
-        @param collection The collection-like object to use to constuct a linq object
-        @returns A new linq object.
-    */
-    linq.from = function (collection)
+     * This function converts a "comparer" into an "equality comparer".  If the function is already an equality
+     * comparer, then the resultant function will remain an equality comparer.
+     * 
+     * @param {comparer} comparer - The function to convert into an equality comparer
+     * @returns {equalityComparer}
+     */
+    static normalizeComparer(comparer)
     {
-        if (collection == null)
-            return new linq([]);
+        return (x, y) =>
+        {
+            let value = comparer(x, y);
 
-        if (collection instanceof linq)
-            return collection;
-
-        if (linq_helper.isArray(collection))
-            return new linq(collection);
-
-        if (typeof jQuery !== 'undefined' && (collection instanceof jQuery))
-            return new linq(collection.get());
-
-        // Create an array with 'collection' as the only element
-        return new linq([collection], false);
-    };
+            if (Linq.isBoolean(value))
+                return value;
+            else
+                return (value == 0);
+        };
+    }
 
     /**
-        Create a new linq object that contains a range of integers.
-        @param from The starting value of the range
-        @param to The ending value of the range
-        @param step Optional, the amount by which to increment each iteration
-        @returns A new linq object.
-    */
-    linq.range = function (from, to, step)
+     * This function creates a new comparer based upon the `projection` of values passed to the new comparer.  This
+     * function can also be passed a `comparer` that is used in the new comparer to compare the projected values.
+     * 
+     * @param {projection} projection - The projection from which compare projected values
+     * @param {comparer} [comparer] - A comparer with which to compare projected values
+     * @returns {comparer}
+     */
+    static createProjectionComparer(projection, comparer = null)
     {
-        if ((from == null) || isNaN(from))
+        if (projection == null)
+            throw new Error('Invalid projection.');
+
+        if (comparer == null)
+            comparer = (x, y) => Linq.generalComparer(x, y);
+
+        return (x, y) => {
+            let results = comparer(projection(x), projection(y));
+
+            if (Linq.isBoolean(results))
+                throw new Error('The given \'comparer\' was an equality comparer instead of a comparer.');
+
+            return results;
+        };
+    }
+
+    /**
+     * This function create a new equality comparer based upon the `projection` of the values passed to the new equality
+     * comparer.  This function can also be passed a `comparer` that is used in the new equality comparer to compare the
+     * projected values.
+     * 
+     * @param {projection} projection - The projection from which to compare projected values
+     * @param {comparer|equalityComparer} [comparer] - The comparer with which to compare projected values
+     * @returns {equalityComparer}
+     */
+    static createProjectionEqualityComparer(projection, comparer = null)
+    {
+        if (projection == null)
+            throw new Error('Invalid projection.');
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+
+        return (x, y) => normalizedComparer(projection(x), projection(y));
+    }
+
+    // Constructor functions
+
+    /**
+     * Creates a new Linq object, acting very similarly as the Linq constructor, but also accepts:
+     * 
+     * (1) jQuery objects, and 
+     * (2) objects that would cause the constructor to throw an exception (resulting in a Linq object 
+     *     that represents a single-item list containing the object).
+     * 
+     * @param {*} source - A source of items
+     * @returns {Linq} 
+     */
+    static from(source)
+    {
+        if (source == null || LinqInternal.isConstructorCompatibleSource(source))
+            return new Linq(source);
+        else if (typeof jQuery !== 'undefined' && (source instanceof jQuery))
+            return new Linq(source.get());
+        else
+            return new Linq([source]);
+    }
+
+    /**
+     * Create a new Linq object that contains a range of integers.
+     * 
+     * @param {num} from - The starting value of the range
+     * @param {num} to - The ending value of the range
+     * @param {num} [step=1] - The amount by which to increment each iteration
+     * @returns {Linq} 
+     */
+    static range(from, to, step)
+    {
+        if (!LinqInternal.isValidNumber(from))
             throw new Error("Invalid 'from' value.");
 
-        if ((to == null) || isNaN(to))
+        if (!LinqInternal.isValidNumber(to))
             throw new Error("Invalid 'to' value.");
 
-        if ((step == null) || isNaN(step))
+        if (!LinqInternal.isValidNumber(step))
             step = 1;
 
-        var array = [];
+        if (step == 0)
+            throw new Error("Invalid 'step' value--cannot be zero.");
 
-        for (var i = from; i <= to; i += step)
+        let compare;
+
+        if (step > 0)
+            compare = (x, y) => x <= y;
+        else
+            compare = (x, y) => x >= y;
+
+        function* rangeGenerator()
         {
-            array.push(i);
-        }
+            for (let i = from; compare(i, to); i += step)
+            {
+                yield i;
+            }
+        }    
 
-        return new linq(array, false);
-    };
+        return new Linq(rangeGenerator);
+    }
 
     /**
-        Create a new linq object that contains a given number of repetitions of an object.
-        @param item The item to repeat
-        @param repetitions Optional, the number of times to repeat the object (defaults to 1)
-        @returns A new linq object.
-    */
-    linq.repeat = function (item, repetitions)
+     * Create a new Linq object that contains a given number of repetitions of an object.
+     * 
+     * @param {*} item - The item to repeat
+     * @param {num} [repetitions=1] - The number of times to repeat the object
+     * @returns {Linq}
+     */
+    static repeat(item, repetitions)
     {
-        if ((repetitions == null) || isNaN(repetitions))
+        if (!LinqInternal.isValidNumber(repetitions))
             repetitions = 1;
 
-        var array = [];
-
-        for (var i = 0; i < repetitions; i++)
+        function* repeatGenerator()
         {
-            array.push(item);
+            for (let i = 0; i < repetitions; i++)
+            {
+                yield item;
+            }
         }
 
-        return new linq(array, false);
-    };
+        return new Linq(repeatGenerator);
+    }
 
     /**
-        Create a new linq object that contains all of the matches for a regex pattern.  Note that
-        'g' does not need to be added to the flags parameter (it will be automatically added).
-        @param text The input string for the regular expression
-        @param pattern The pattern string or RegExp object for the regular expression
-        @param flags Optional, the RegExp flags to use (e.g., 'i' = ignore case, 'm' = multiline)
-    */
-    linq.matches = function (text, pattern, flags)
+     * Create a new linq object that contains all of the matches for a regex pattern.  Note that 'g' does not need to be added 
+     * to the `flags` parameter (it will be automatically added).
+     * 
+     * @param {string} text 
+     * @param {string|RegExp} pattern 
+     * @param {string} [flags] 
+     * @returns {Linq}
+     */
+    static matches(text, pattern, flags)
     {
         if (pattern == null)
-            throw new Error("Invalid 'pattern' value.");
+            throw new Error('Invalid \'pattern\' value.');
 
         if (text == null)
-            return new linq([]);
+            return new Linq();
 
-        if (typeof text != typeof "")
-            throw new Error("Parameter 'text' is not a string.");
+        if (!Linq.isString(text))
+            throw new Error('Parameter \'text\' is not a string.');
 
         if (flags == null)
             flags = '';
-
-        if (flags.indexOf('g') < 0)
+        
+        if (!flags.includes('g'))
             flags += 'g';
 
-        var internalPattern;
+        let internalPattern;
 
         if (pattern instanceof RegExp)
         {
-            if ((flags.indexOf('i') < 0) && pattern.ignoreCase)
+            if (!flags.includes('i') && pattern.ignoreCase)
                 flags += 'i';
 
-            if ((flags.indexOf('m') < 0) && pattern.multiline)
+            if (!flags.includes('m') && pattern.multiline)
                 flags += 'm';
 
             internalPattern = pattern.source;
@@ -367,2280 +755,2009 @@
         else
             internalPattern = pattern;
 
-        var regex = new RegExp(internalPattern, flags);
-        var matches = text.match(regex);
+        let regex = new RegExp(internalPattern, flags);
+        let matches = text.match(regex);
 
-        return new linq((matches == null ? [] : matches), false);
-    };
+        return new Linq(matches == null ? [] : matches);
+    }
 
     /**
-        Create a new linq object that contains an element for each property of the 'object' passed
-        to the method.  Each element will have a property named by the 'keyPropertyName' parameter
-        whose value will equal the name of the property and a property named by the 'valuePropertyName'
-        parameter whose value will equal the value of the property.  If the 'keyPropertyName'
-        parameter is not given, then it will default to "key"; if the 'valuePropertyName' parameter 
-        is not given, then it will default to "value".
-        @param obj The object from which to enumerate properties
-        @param keyPropertyName Optional, the name of the property in the resultant elements containing
-            the property's key
-        @param valuePropertyName Optional, the name of the property in the resultant elements containing
-            the property's value           
+     * Create a new linq object that contains an element for each property of the 'object' passed
+     * to the method.  Each element will have a property named by the `keyPropertyName` parameter
+     * whose value will equal the name of the property and a property named by the `valuePropertyName`
+     * parameter whose value will equal the value of the property.  If the `keyPropertyName`
+     * parameter is not given, then it will default to "key"; if the `valuePropertyName` parameter 
+     * is not given, then it will default to "value".
+     * 
+     * @param {*} obj - The object from which to enumerate properties
+     * @param {string} [keyPropertyName=key] - The name of the property in the resultant elements containing
+     *      the property's key
+     * @param {string} [valuePropertyName=value] - The name of the property in the resultant elements containing
+     *      the property's value
+     * @returns {Linq}
      */
-    linq.properties = function (obj, keyPropertyName, valuePropertyName)
+    static properties(obj, keyPropertyName, valuePropertyName)
     {
         if (obj == null)
-            return new linq([]);
-            
-        if (keyPropertyName == null || keyPropertyName == '')
+            return new Linq();
+
+        if (LinqInternal.isStringNullOrEmpty(keyPropertyName))
             keyPropertyName = 'key';
-            
-        if (valuePropertyName == null || keyPropertyName == '')
+
+        if (LinqInternal.isStringNullOrEmpty(valuePropertyName))
             valuePropertyName = 'value';
-            
-        var selector = function (key)
+
+        let projection = key =>
         {
-            var result = {};
-            
+            let result = {};
+
             result[keyPropertyName] = key;
             result[valuePropertyName] = obj[key];
-            
-            return result;
-        };       
-            
-        return new linq(linq_helper.map(linq_helper.object_keys(obj), selector), false);
-    };
-
-    linq.prototype = {
-        /**
-            Returns the aggregate value of performing the 'operation' function on each of the values of
-            'this' collection, starting with a value equal to 'seed' (or to the value of the first element
-            of 'this' collection, if 'seed' is null).  The final value is either directly returned (if no
-            'result selector' function is given) or the final value is first passed to the 'result selector'
-            function and the return value from that function is returned.
-            @param seed The initial value of the aggregation
-            @param operation The function to use to aggregate the values of 'this' collection
-            @param resultSelector Optional, the function that projects the final value to the returned result
-        */
-        aggregate: function (seed, operation, resultSelector)
-        {
-            operation = linq_helper.createLambda(operation);
-            resultSelector = linq_helper.createLambda(resultSelector);
-
-            if ((operation == null) || !linq_helper.isFunction(operation))
-                throw new Error("Invalid operation.");
-
-            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            if ((len == 0) && (seed == null))
-                throw new Error("Cannot aggregate on empty collection when seed is not given.");
-
-            var current = (seed == null ? this.array[0] : seed);
-            var startingIndex = (seed == null ? 1 : 0);
-
-            for (var i = startingIndex; i < len; i++)
-            {
-                if (i in this.array)
-                    current = operation(current, this.array[i]);
-            }
-
-            return (resultSelector == null ? current : resultSelector(current));
-        },
-
-        /**
-            Returns a boolean value indicating whether all of the elements of the collection satisfy the 
-            predicate.  Returns 'true' if the collection is empty.
-            @param predicate The predicate applied to the collection
-        */
-        all: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            return linq_helper.every(this.array, predicate);
-        },
-
-        /**
-            Returns a boolean value indicating whether any of the elements of the collection satisfy the 
-            predicate.  Returns 'false' if the collection is empty.
-            @param predicate The predicate applied to the collection
-        */
-        any: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate != null) && !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            if (predicate == null)
-                return (this.array.length > 0);
-
-            return linq_helper.some(this.array, predicate);
-        },
-
-        /**
-            Returns the average value of all of the elements (or projection of the elements, if there is
-            a selector), excluding null values.  If any of the elements (or projection of the elements) are
-            NaN (i.e., not a number), then an exception will be thrown.
-            @param selector Optional, a projection function that returns the value to be averaged
-        */
-        average: function (selector)
-        {
-            selector = linq_helper.createLambda(selector);
-
-            if ((selector != null) && !linq_helper.isFunction(selector))
-                throw new Error("Invalid selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var result = 0;
-            var counter = 1;
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var value = (selector == null ? this.array[i] : selector(this.array[i]));
-
-                    if (value == null)
-                        continue;
-
-                    if (isNaN(value))
-                        throw new Error("Encountered an element that is not a number.");
-
-                    result += (value - result) / counter;
-                    counter += 1;
-                }
-            }
 
             return result;
-        },
+        };
 
-        /**
-            Returns an array with the elements of 'this' collection grouped into separate 
-            arrays (i.e., "buckets") of the 'size' given.  If the 'result selector' is given
-            the the buckets will contain the values projected from the elements by the result
-            selector.  The given 'size' must be greater than zero.
-            @param size The size of buckets into which to group the elements
-            @param resultSelector Optional, the function to use to project the result values
-        */
-        batch: function (size, resultSelector)
+        return new Linq(Object.keys(obj).map(projection));
+    }
+
+    /**
+     * Returns a new empty Linq object.
+     * 
+     * @returns {Linq}
+     */
+    static empty()
+    {
+        return new Linq([]);
+    }
+
+    // Linq operators
+
+    /**
+     * Returns the aggregate value of performing the `operation` function on each of the values of
+     * 'this' collection, starting with a value equal to `seed` (or to the value of the first element
+     * of 'this' collection, if `seed` is null).  The final value is either directly returned (if no
+     * `resultSelector` function is given) or the final value is first passed to the `resultSelector`
+     * function and the return value from that function is returned.
+     * 
+     * @param {*} seed - The initial value of the aggregation 
+     * @param {aggregator} operation - The function to use to aggregate the values of 'this' collection
+     * @param {projection} [resultSelector] - The function that projects the final value to the returned result
+     * @returns {*} - The aggregate value.
+     */
+    aggregate(seed, operation, resultSelector)
+    {
+        LinqInternal.validateRequiredFunction(operation, "Invalid operation.");
+        LinqInternal.validateOptionalFunction(resultSelector, "Invalid result selector.");
+
+        let iterator = LinqInternal.getIterator(this.toIterable());
+        let currentValue = null;
+        let result = null;
+
+        let getNext = () => 
         {
-            resultSelector = linq_helper.createLambda(resultSelector);
+            let state = iterator.next();
 
-            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
+            currentValue = state.value;
 
-            if ((size == null) || isNaN(size) || (size <= 0))
-                throw new Error("Invalid size.");
+            return !state.done;
+        };
 
-            linq_helper.processDeferredSort(this);
+        if (getNext())
+            result = (seed == null ? currentValue : operation(seed, currentValue));
+        else if (seed == null)
+            throw new Error("Cannot evaluate aggregation of an empty collection with no seed.");
+        else
+            return (resultSelector == null ? seed : resultSelector(seed));
 
-            var results = [];
-            var index = 0;
-            var len = this.array.length;
-            var currentBucket = null;
+        while (getNext())
+        {
+            result = operation(result, currentValue);
+        }
 
-            for (var i = 0; i < len; i++)
+        return (resultSelector == null ? result : resultSelector(result));
+    }
+
+    /**
+     * Returns a boolean value indicating whether all of the elements of the collection satisfy the 
+     * predicate.  Returns 'true' if the collection is empty.
+     * 
+     * @param {predicate} predicate - The predicate applied to the collection
+     * @returns {boolean} - A value indicating whether all of the elements satisfied the predicate.
+     */
+    all(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        for (let item of iterable)
+        {
+            if (!predicate(item))
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns a boolean value indicating whether any of the elements of the collection satisfy the 
+     * predicate.  Returns 'false' if the collection is empty.
+     * 
+     * @param {predicate} [predicate] - The predicate applied to the collection
+     * @returns {boolean} - A value indicating whether any of the elements satisfied the predicate. 
+     */
+    any(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        if (predicate == null)
+            return !LinqInternal.isEmptyIterable(iterable);
+
+        for (let item of iterable)
+        {
+            if (predicate(item))
+                return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns a collection containing the same elements as the 'this' collection but also including
+     * the `value` element appended to the end.
+     * 
+     * @param {*} value - The value to append to the 'this' collection
+     * @returs {Linq}
+     */
+    append(value)
+    {
+        let iterable = this.toIterable();
+
+        function* appendGenerator()
+        {
+            for (let item of iterable)
             {
-                if (i in this.array)
+                yield item;
+            }
+
+            yield value;
+        }
+
+        return new Linq(appendGenerator);
+    }
+
+    /**
+     * Returns the average value of all of the elements (or projection of the elements, if there is
+     * a selector), excluding null values.  If any of the elements (or projection of the elements) are
+     * NaN (i.e., not a number), then an exception will be thrown.
+     * 
+     * @param {projection} [selector] - A projection function that returns the value to be averaged
+     * @returns {number} - The average value calculated from the collection.
+     */
+    average(selector)
+    {
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+        let result = 0;
+        let counter = 1;
+
+        for (let item of iterable)
+        {
+            let value = (selector == null ? item : selector(item));
+
+            if (value == null)
+                continue;
+
+            if (isNaN(value))
+                throw new Error('Encountered an element that is not a number.');
+
+            result += (value - result) / counter;
+            counter += 1;
+        }
+
+        return result;
+    }
+
+    /**
+     * Returns an collection with the elements of 'this' collection grouped into separate 
+     * arrays (i.e., "buckets") of the 'size' given.  If the 'result selector' is given
+     * the the buckets will contain the values projected from the elements by the result
+     * selector.  The given 'size' must be greater than zero.
+     * 
+     * @param {number} size - The size of buckets into which to group the elements
+     * @param {projection} [resultSelector] - The projection function to use to project the result values
+     * @returns {Linq}
+     */
+    batch(size, resultSelector)
+    {
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        if (!LinqInternal.isValidNumber(size, x => x > 0))
+            throw new Error('Invalid size.');
+
+        let iterable = this.toIterable();
+
+        function* batchGenerator()
+        {
+            let bucket = null;
+            let index = 0;
+
+            for (let item of iterable)
+            {
+                if (bucket == null)
+                    bucket = [];
+
+                bucket[index] = (resultSelector == null ? item : resultSelector(item));
+                index += 1;
+
+                if (index == size)
                 {
-                    if (currentBucket == null)
-                    {
-                        currentBucket = [];
-                        results.push(currentBucket);
-                    }
+                    yield bucket;
 
-                    currentBucket[index] = (resultSelector == null ? this.array[i] : resultSelector(this.array[i]));
-                    index += 1;
-
-                    if (index == size)
-                    {
-                        currentBucket = null;
-                        index = 0;
-                    }
+                    bucket = null;
+                    index = 0;
                 }
             }
 
-            return new linq(results, false);
-        },
+            if ((bucket != null) && (index > 0))
+                yield bucket;
+        }
 
-        /**
-            Returns a collection containing all of the elements of 'this' collection followed by 
-            all of the elements of the 'second' collection.
-            @param second The collection of items to append to 'this' collection
-        */
-        concat: function (second)
+        return new Linq(batchGenerator);
+    }
+
+    /**
+     * Returns a collection containing all of the elements of 'this' collection followed by 
+     * all of the elements of the 'second' collection.
+     * 
+     * @param {LinqCompatible} [second] - The collection of items to append to 'this' collection
+     * @returns {Linq} - The concatenation of the collection with a second collection.
+     */
+    concat(second)
+    {
+        if (second == null)
+            return new Linq(this);
+
+        var secondLinq = LinqInternal.ensureLinq(second);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        function* concatGenerator()
         {
-            linq_helper.processDeferredSort(this);
-
-            if (second == null)
-                return new linq(this.array);
-
-            var secondLinq = linq.from(second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            return new linq(this.array.concat(secondLinq.array), false);
-        },
-
-        /**
-            Returns a boolean value indicating whether 'this' collection contains the given 'item'.  The
-            'comparer' function can be used to specify how the 'item' is compared to the elements of 'this' 
-            collection.  If 'comparer' is not given, the "===" operator is used to compare elements.
-            @param item The item to search for in 'this' collection
-            @param comparer Optional, the function to use to compare elements to the 'item'
-        */
-        contains: function (item, comparer)
-        {
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            return linq_helper.some(this.array, function (x)
+            for (let item of firstIterable)
             {
-                if (comparer == null)
-                    return (x === item);
-                else
-                    return comparer(x, item);
-            });
-        },
-
-        /**
-            Returns the number of items in 'this' collection (if no 'predicate' is given) or the number of
-            items in 'this' collection that satisfy the 'predicate'.
-            @param predicate Optional, the predicate used to count elements in 'this' collection
-        */
-        count: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate != null) && !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            if (predicate == null)
-                return this.array.length;
-
-            var len = this.array.length;
-            var counter = 0;
-
-            for (var i = 0; i < len; i++)
-            {
-                if ((i in this.array) && predicate(this.array[i]))
-                    counter += 1;
+                yield item;
             }
 
-            return counter;
-        },
+            for (let item of secondIterable)
+            {
+                yield item;
+            }
+        }
 
-        /**
-            Returns either 'this' collection, if 'this' collection is empty, or a collection containing
-            only the 'defaultValue' as an element.  In other words, this function always returns a collection 
-            containing at least one element.
-            @param defaultValue The value for the resulting collection to contain if 'this' collection is empty
-        */
-        defaultIfEmpty: function (defaultValue)
+        return new Linq(concatGenerator);
+    }
+
+    /**
+     * Returns a boolean value indicating whether 'this' collection contains the given `item`.  The
+     * `comparer` function can be used to specify how the `item` is compared to the elements of 'this' 
+     * collection.  If `comparer` is not given, the "===" operator is used to compare elements.
+     * 
+     * @param {*} item - The item to search for in 'this' collection
+     * @param {comparer|equalityComparer} [comparer] - The function to use to compare elements
+     * @returns {boolean}
+     */
+    contains(item, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let iterable = this.toIterable();
+
+        for (let iItem of iterable)
         {
-            linq_helper.processDeferredSort(this);
+            if (normalizedComparer(item, iItem))
+                return true;
+        }
 
-            if (this.array.length == 0)
-                return new linq([defaultValue], false);
+        return false;
+    }
+
+    /**
+     * Returns the number of items in 'this' collection (if no `predicate` is given) or the number of
+     * items in 'this' collection that satisfy the `predicate`.
+     * 
+     * @param {predicate} [predicate] - The predicate used to count elements
+     * @returns {number}
+     */
+    count(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        if (predicate == null && LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
+            return LinqInternal.getExplicitCardinality(iterable);
+
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            if (predicate == null || predicate(item))
+                counter += 1;
+        }
+
+        return counter;
+    }
+
+    /**
+     * Returns either 'this' collection, if 'this' collection is empty, or a collection containing
+     * only the `defaultValue` as an element.  In other words, this function always returns a collection 
+     * containing at least one element.
+     * 
+     * @param {*} defaultValue 
+     * @returns {Linq}
+     */
+    defaultIfEmpty(defaultValue)
+    {
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            return new Linq([defaultValue]);
+        else
+            return new Linq(this);
+    }
+
+    /**
+     * Returns a collection of all of the distinct elements of 'this' collection, using `comparer` (if it
+     * is given) to determine whether two elements are equal.  If `comparer` is not given, the "===" operator
+     * is used to compare elements.
+     * 
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements
+     * @returns {Linq} 
+     */
+    distinct(comparer)
+    {
+        return this.distinctBy(Linq.identity, comparer);
+    }
+
+    /**
+     * Returns a collection of all of the elements that are considered distinct relative to the key value returned
+     * by the `keySelector` projection, using `comparer` (if it is given) to determine whether to keys are equal.
+     * If `comparer` is not given, the "===" operator is used to compare keys.
+     * 
+     * @param {projection} keySelector - The projection function used to return keys for the elements
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare keys
+     * @returns {Linq} 
+     */
+    distinctBy(keySelector, comparer)
+    {
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        // So sad--ES6's Set class does not allow for custom equality comparison, so have to use
+        // groupBy instead of Set, which would perform more quickly.
+        return this.groupBy(keySelector, null, comparer).select(x => x.values[0]);
+    }
+
+    /**
+     * Returns the element of 'this' collection located at the ordinal position given by `index` (a zero-based 
+     * index).  If that position is either less than zero or greater than or equal to the size of 'this' 
+     * collection, then an error will be thrown.
+     * 
+     * @param {number} index - The zero-based index of the element to return
+     * @returns {*}
+     */
+    elementAt(index)
+    {
+        return LinqInternal.elementAtBasedOperator(index,
+            () => this.toIterable(),
+            () => { throw new Error('Invalid index.'); });
+    }
+
+    /**
+     * Returns either the element of 'this' collection located at the ordinal position given by `index` (a
+     * zero-based index), if the `index` is contained within the bounds of 'this' collection, or the `defaultValue`,
+     * if the `index` is not contained within the bounds of 'this' collection.
+     * 
+     * @param {number} index - The zero-based index of the element to return
+     * @param {*} defaultValue - The value to return if the `index` is outside the bounds of 'this' collection
+     * @returns {*}
+     */
+    elementAtOrDefault(index, defaultValue)
+    {
+        return LinqInternal.elementAtBasedOperator(index, 
+            () => this.toIterable(),
+            () => defaultValue);
+    }
+
+    /**
+     * Returns 'this' collection "zipped-up" with the `second` collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the `second` collection.  If the size of 'this' collection and the `second` 
+     * collection are not equal, then an exception will be thrown.
+     * 
+     * @param {LinqCompatible} second - The collection to zip with 'this' collection 
+     * @param {projection} [resultSelector] - The function to use to project the result values
+     * @returns {Linq}
+     */
+    equiZip(second, resultSelector)
+    {
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        if (resultSelector == null)
+            resultSelector = Linq.tuple;
+
+        let secondLinq = LinqInternal.ensureLinq(second);
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(firstIterable) &&
+            LinqInternal.doesCollectionHaveExplicitCardinality(secondIterable) &&
+            (LinqInternal.getExplicitCardinality(firstIterable) !== LinqInternal.getExplicitCardinality(secondIterable)))
+        {
+            throw new Error('The two collections being equi-zipped are not of equal lengths.');
+        }
+
+        function* equizipGenerator()
+        {
+            let firstIterator = LinqInternal.getIterator(firstIterable);
+            let secondIterator = LinqInternal.getIterator(secondIterable);
+
+            let firstState = firstIterator.next();
+            let secondState = secondIterator.next();
+
+            while (!firstState.done)
+            {
+                if (secondState.done)
+                    throw new Error('Second collection is too short.');
+
+                yield resultSelector(firstState.value, secondState.value);
+
+                firstState = firstIterator.next();
+                secondState = secondIterator.next();
+            }
+
+            if (!secondState.done)
+                throw new Error('First collection is too short.');
+        }
+
+        return new Linq(equizipGenerator);
+    }
+
+    /**
+     * Returns elements in 'this' collection that do not also exist in the `second` collection, using `comparer`
+     * (if it is given) to determine whether two items are equal.  Also, the returned elements will not include
+     * duplicates from 'this' collection. If `comparer` is not given, the "===" operator is used to compare elements.
+     * 
+     * @param {LinqCompatible} second - The collection to use to exlude elements
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements 
+     */
+    except(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+        let secondLinq = LinqInternal.ensureLinq(second);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        let disqualifiedSet = SimpleSet.initialize(secondIterable, normalizedComparer);
+
+        function* exceptGenerator()
+        {
+            for (let item of firstIterable)
+            {
+                let isDisqualified = disqualifiedSet.has(item);
+
+                if (!isDisqualified)
+                {
+                    disqualifiedSet.add(item);
+                    yield item;
+                }
+            }
+        }
+
+        return new Linq(exceptGenerator);
+    }
+
+    /**
+     * Returns either the first element of 'this' collection (if 'predicate' is not given) or the 
+     * first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
+     * If there is no "first" element to return (either because 'this' collection is empty or no element 
+     * satisfies the 'predicate'), an error is thrown.
+     * 
+     * @param {predicate} [predicate] - The predicate function used to determine the element to return
+     * @returns {*}
+     */
+    first(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.firstBasedOperator(iterable, predicate, null, true);
+    }
+    
+    /**
+     * Returns either the first element of 'this' collection (if `predicate` is not given) or the
+     * first element of 'this' collection that satisfies the `predicate` (if `predicate` is given).
+     * If there is no "first" element to return (either because 'this' collection is empty or no element
+     * satisfies the `predicate`), the `defaultValue` is returned.
+     * 
+     * @param {predicate} [predicate] - The predicate function used to determine the element to return 
+     * @param {*} [defaultValue] - The value to return if no "first" element is found
+     * @returns {*}
+     */
+    firstOrDefault(predicate, defaultValue)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.firstBasedOperator(iterable, predicate, defaultValue, false);
+    }
+
+    /**
+     * Executes the given `action` on each element of 'this' collection.
+     * @param {action} action - The function that is executed for each element 
+     */
+    foreach(action)
+    {
+        LinqInternal.validateRequiredFunction(action, 'Invalid action.');
+
+        let iterable = this.toIterable();
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            action(item, counter);
+
+            counter += 1;
+        }
+    }
+
+    /**
+     * Return a collection of groupings (i.e., objects with a property called 'key' that
+     * contains the grouping key and a property called 'values' that contains an array
+     * of elements that are grouped under the grouping key).  The array of elements grouped
+     * under the grouping key will be elements of 'this' collection (if no `elementSelector` 
+     * is given) or projected elements given by `elementSelector`.  The grouping key for 
+     * each element in 'this' collection is given by the `keySelector` function.  If a
+     * `keyComparer` function is given, it will be used to determine equality among the
+     * grouping keys (if `comparer` is not given, it the "===" operator will be used).
+     * 
+     * @param {projection} keySelector - The function that returns the grouping key for an element 
+     * @param {projection} [elementSelector] - The function that projects elements to be returned 
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare grouping keys
+     * @returns {Linq} - A Linq object representing a collection of `Grouping` objects.
+     */
+    groupBy(keySelector, elementSelector, keyComparer)
+    {
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(elementSelector, 'Invalid element selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+
+        let normalizedKeyComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
+
+        let iterable = this.toIterable();
+        let groupings = [];
+        let groupingsLinq = new Linq(groupings);
+
+        for (let item of iterable)
+        {
+            let key = keySelector(item);
+            let element = (elementSelector == null ? item : elementSelector(item));
+
+            let foundGroup = groupingsLinq.firstOrDefault(x => normalizedKeyComparer(x.key, key), null);
+
+            if (foundGroup == null)
+                groupings.push(new Grouping(key, [element]));
             else
-                return new linq(this.array);
-        },
+                foundGroup.values.push(element);
+        }
 
-        /**
-            Returns a collection of all of the distinct elements of 'this' collection, using 'comparer' (if it
-            is given) to determine whether two elements are equal.  If 'comparer' is not given, the "===" operator
-            is used to compare elements.
-            @param comparer Optional, the function used to compare elements
-        */
-        distinct: function (comparer)
+        return groupingsLinq;
+    }
+
+    /**
+     * Returns a "left outer" join of 'this' collection (the "outer" collection) and the `inner`
+     * collection, using the `outerKeySelector` and `innerKeySelector` to project the keys from 
+     * each collection, and using the `keyComparer` function (if it is given) to compare the
+     * projected keys.  If the `keyComparer` is not given, the "===" operator will be used to 
+     * compare the projected keys.  The `resultSelector` function is used to convert the joined 
+     * results into the results that are returned by the groupJoin function.  The `resultSelector` 
+     * takes as parameters the outer object (of the join) and an array of the joined inner objects 
+     * (this array will be an empty array if there were no inner elements associated with the outer
+     * element).
+     * 
+     * @param {LinqCompatible} inner - The collection that is "left-outer" joined with 'this' collection
+     * @param {projection} outerKeySelector - The function that projects the key for the outer elements (in 'this' collection)
+     * @param {projection} innerKeySelector - The function that projects the key for the inner elements
+     * @param {biSourceProjection} resultSelector - The function that converts the joined results into the results returned
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare the projected keys
+     * @returns {Linq}
+     */
+    groupJoin(inner, outerKeySelector, innerKeySelector, resultSelector, keyComparer)
+    {
+        if (inner == null)
+            throw new Error('Invalid inner collection.');
+
+        LinqInternal.validateRequiredFunction(outerKeySelector, 'Invalid outer key selector.');
+        LinqInternal.validateRequiredFunction(innerKeySelector, 'Invalid inner key selector.');
+        LinqInternal.validateRequiredFunction(resultSelector, 'Invalid result selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+
+        let normalizedKeyComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
+        let innerLinq = LinqInternal.ensureLinq(inner);
+        let iterable = this.toIterable();
+        let groupings = innerLinq.groupBy(innerKeySelector, null, keyComparer);
+        let results = [];
+
+        for (let item of iterable)
         {
-            return this.distinctBy(linq_helper.identity, comparer);
-        },
+            let outerKey = outerKeySelector(item);
 
-        /**
-            Returns a collection of all of the elements that are considered distinct relative to the key value returned
-            by the 'keySelector' projection, using 'comparer' (if it is given) to determine whether to keys are equal.
-            If 'comparer' is not given, the "===" operator is used to compare keys.
-            @param keySelector The projection function to return keys for the elements
-            @param comparer Optional, the function used to compare keys
-        */
-        distinctBy: function (keySelector, comparer)
+            let groupValues = groupings.firstOrDefault(x => normalizedKeyComparer(x.key, outerKey));
+
+            results.push(resultSelector(item, (groupValues == null ? [] : groupValues.values)));
+        }
+
+        return new Linq(results);
+    }
+
+    /**
+     * Returns a collection of objects with the "key" property of each object equal to either the zero-based
+     * index of the element in 'this' collection (if `startIndex` is not given) or the index, starting at
+     * `startIndex`, of the element in 'this' collection, and with the "value" property of the object equal to
+     * the element in 'this' collection.
+     * 
+     * @param {number} [startIndex] - The starting index for the results (defaults to `0`)
+     */
+    index(startIndex)
+    {
+        if (startIndex == null)
+            startIndex = 0;
+
+        if (isNaN(startIndex))
+            throw new Error('Invalid startIndex.');
+
+        return this.select((x, i) => ({ key: (startIndex + i), value: x }));
+    }
+
+    /**
+     * Returns the index of the first element that satisfies the `predicate`.  Returns the value "-1" if
+     * none of the elements satisfy the `predicate`.
+     * 
+     * @param {predicate} predicate - The function used to determine which index to return
+     * @returns {number}
+     */
+    indexOf(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+        let counter = 0;
+
+        for (let item of iterable)
         {
-            keySelector = linq_helper.createLambda(keySelector);
-            comparer = linq_helper.createLambda(comparer);
+            if (predicate(item))
+                return counter;
 
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
+            counter += 1;
+        }
 
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
+        return -1;
+    }
 
-            linq_helper.processDeferredSort(this);
+    /**
+     * Returns the index of the first element to be equal to the given `element`.  If the optional `comparer` 
+     * function is given, then the `comparer` function is used to determine equality between the elements 
+     * of 'this' collection and the given `element`.
+     * 
+     * @param {*} element - The element to find within the collection
+     * @param {comparer|equalityComparer} [comparer] = The function used to compare the elements of the collection
+     * @returns {number}
+     */
+    indexOfElement(element, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
-            return this.groupBy(keySelector, null, comparer)
-                .select(function (x) { return (new linq(x.values, false)).first(); });
-        },
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let iterable = this.toIterable();
+        let counter = 0;
 
-        /**
-            Returns the element of 'this' collection located at the ordinal position given by 'index' (a zero-based 
-            index).  If that position is either less than zero or greater than or equal to the size of 'this' 
-            collection, then an error will be thrown.
-            @param index The zero-based index of the element to return
-        */
-        elementAt: function (index)
+        for (let item of iterable)
         {
-            if ((index == null) || isNaN(index) || (index < 0) || (index >= this.array.length))
-                throw new Error("Invalid index.");
+            if (normalizedComparer(element, item))
+                return counter;
 
-            linq_helper.processDeferredSort(this);
+            counter += 1;
+        }
 
-            return this.array[index];
-        },
+        return -1;
+    }
 
-        /**
-            Returns either the element of 'this' collection located at the ordinal position given by 'index' (a
-            zero-based index), if the 'index' is contained within the bounds of 'this' collection, or the 'defaultValue',
-            if the 'index' is not contained within the bounds of 'this' collection.
-            @param index The zero-based index of the element to return
-            @param defaultValue The value to return if the 'index' is outside the bounds of 'this' collection
-        */
-        elementAtOrDefault: function (index, defaultValue)
+    /**
+     * Returns the intersection of elements in 'this' collection and the `second` collection, using the
+     * `comparer` function to determine whether two different elements are equal.  If the `comparer` 
+     * function is not given, then the "===" operator will be used to compare elements.
+     * 
+     * @param {LinqCompatible} second - The collection of elements to test for intersection
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements
+     * @returns {Linq}
+     */
+    intersect(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        let secondLinq = LinqInternal.ensureLinq(second);
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        let includedSet = SimpleSet.initialize(secondIterable, normalizedComparer);
+
+        function* intersectGenerator()
         {
-            if ((index == null) || isNaN(index) || (index < 0) || (index >= this.array.length))
-                return defaultValue;
-
-            linq_helper.processDeferredSort(this);
-
-            return this.array[index];
-        },
-
-        /**
-            Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
-            returned collection is the value projected from the corresponding element from each of 'this'
-            collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
-            collection are not equal, then an exception will be thrown.
-            @param second The collection to zip with 'this' collection
-            @param resultSelector Optional, the function to use to project the result values
-        */
-        equiZip: function (second, resultSelector)
-        {
-            resultSelector = linq_helper.createLambda(resultSelector);
-
-            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
-                
-            if (resultSelector == null)
-                resultSelector = linq_helper.merge;
-
-            linq_helper.processDeferredSort(this);
-
-            var secondLinq = linq.from(second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            if (this.array.length != secondLinq.array.length)
-                throw new Error("The two collections being equi-zipped are not of equal lengths.");
-
-            var len = this.array.length;
-            var results = [];
-
-            for (var i = 0; i < len; i++)
+            for (let item of firstIterable)
             {
-                results.push(resultSelector(this.array[i], secondLinq.array[i]));
+                let wasRemoved = includedSet.remove(item);
+
+                if (wasRemoved)
+                    yield item;
             }
+        }
 
-            return new linq(results, false);
-        },
+        return new Linq(intersectGenerator);
+    }
 
-        /**
-            Returns elements in 'this' collection that do not also exist in the 'second' collection, using 'comparer'
-            (if it is given) to determine whether two items are equal.  Also, the returned elements will not include
-            duplicates from 'this' collection. If 'comparer' is not given, the "===" operator is used to compare elements.
-            @param second The collection to use to exclude elements
-            @param comparer Optional, the function used to compare elements
-        */
-        except: function (second, comparer)
+    /**
+     * Returns an "inner" join of 'this' collection (the "outer" collection) and the `inner`
+     * collection, using the `outerKeySelector` and `innerKeySelector` functions to project the
+     * keys from each collection, and using the `keyComparer` function (if it is given) to compare
+     * the projected keys.  If the `keyComparer` is not given, the "===" operator will be used to 
+     * compare the projected keys.  The `resultSelector` function is used to convert the joined
+     * results into the results that are returned by the join function.  The `resultSelector` 
+     * function takes as parameters the outer object and the inner object of the join.
+     * 
+     * @param {LinqCompatible} inner - The collection that is "inner" joined with 'this' collection
+     * @param {projection} outerKeySelector - The function that projects the key for the outer elements (in 'this' collection)
+     * @param {projection} innerKeySelector - The function that projects the key for the inner elements
+     * @param {biSourceProjection} resultSelector - The function that converts the joined results into results returned
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare the projected keys
+     */
+    join(inner, outerKeySelector, innerKeySelector, resultSelector, keyComparer)
+    {
+        if (inner == null)
+            throw new Error('Invalid inner collection.');
+
+        LinqInternal.validateRequiredFunction(outerKeySelector, 'Invalid outer key selector.');
+        LinqInternal.validateRequiredFunction(innerKeySelector, 'Invalid inner key selector.');
+        LinqInternal.validateRequiredFunction(resultSelector, 'Invalid result selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+
+        let innerLinq = LinqInternal.ensureLinq(inner);
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
+        let innerGroupings = innerLinq.groupBy(innerKeySelector, null, normalizedComparer);
+        let outerIterable = this.toIterable();
+
+        function* joinGenerator()
         {
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            if (second == null)
-                second = [];
-
-            var secondLinq = linq.from(second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            var len = this.array.length;
-            var results = new linq([], false);
-
-            for (var i = 0; i < len; i++)
+            for (let item of outerIterable)
             {
-                if (i in this.array)
-                {
-                    var value = this.array[i];
+                let outerKey = outerKeySelector(item);
+                let groupValues = innerGroupings.firstOrDefault(x => normalizedComparer(x.key, outerKey));
 
-                    var predicate = function (x)
+                if ((groupValues != null) && (groupValues.values.length > 0))
+                {
+                    for (let groupItem of groupValues.values)
                     {
-                        if (comparer == null)
-                            return (x === value);
-                        else
-                            return comparer(x, value);
-                    };
-
-                    var inFirst = linq_helper.some(results.array, predicate);
-                    var inSecond = linq_helper.some(secondLinq.array, predicate);
-
-                    if (!inFirst && !inSecond)
-                        results.array.push(value);
-                }
-            }
-
-            return results;
-        },
-
-        /**
-            Returns either the first element of 'this' collection (if 'predicate' is not given) or the 
-            first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
-            If there is no "first" element to return (either because 'this' collection is empty or no element 
-            satisfies the 'predicate'), an error is thrown.
-            @param predicate Optional, the predicate function used to determine the element to return
-        */
-        first: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate != null) && !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if ((i in this.array) && ((predicate == null) || predicate(this.array[i])))
-                    return this.array[i];
-            }
-
-            throw new Error("No first item was found in collection.");
-        },
-
-        /**
-            Returns either the first element of 'this' collection (if 'predicate' is not given) or the
-            first element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
-            If there is no "first" element to return (either because 'this' collection is empty or no element
-            satisfies the 'predicate'), the 'defaultValue' is returned.
-            
-            Alternately, if only one parameter is passed to this function and that single parameter is a
-            function, then it will be treated as the 'predicate' and the 'defaultValue' will be considered
-            to be null.
-            @param defaultValue The value to return if no "first" element is found
-            @param predicate Optional, the predicate function used to determine the element to return
-        */
-        firstOrDefault: function (defaultValue, predicate)
-        {
-            // If there is only one parameter, and it is a function, then assume that it is
-            // the predicate and that the defaultValue is null
-            if (arguments.length == 1 && linq_helper.isFunction(defaultValue))
-            {
-                predicate = defaultValue;
-                defaultValue = null;
-            }
-            
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate != null) && !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if ((i in this.array) && ((predicate == null) || predicate(this.array[i])))
-                    return this.array[i];
-            }
-
-            return defaultValue;
-        },
-
-        /**
-            Executes the given 'action' on each element in 'this' collection.
-            @param action The function that is executed for each element in 'this' collection
-        */
-        foreach: function (action)
-        {
-            action = linq_helper.createLambda(action);
-
-            if ((action == null) || !linq_helper.isFunction(action))
-                throw new Error("Invalid action.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                    action(this.array[i], i);
-            }
-        },
-
-        /**
-            Return a collection of groupings (i.e., objects with a property called 'key' that
-            contains the grouping key and a property called 'values' that contains an array
-            of elements that are grouped under the grouping key).  The array of elements grouped
-            under the grouping key will be elements of 'this' collection (if no 'elementSelector' 
-            is given) or projected elements given by 'elementSelector'.  The grouping key for 
-            each element in 'this' collection is given by the 'keySelector' function.  If a
-            'keyComparer' function is given, it will be used to determine equality among the
-            grouping keys (if 'comparer' is not given, it the "===" operator will be used).
-            @param keySelector The function that returns the grouping key for an element
-            @param elementSelector Optional, the function that projects elements to be returned in the results
-            @param keyComparer Optional, the function used to compare grouping keys
-        */
-        groupBy: function (keySelector, elementSelector, keyComparer)
-        {
-            keySelector = linq_helper.createLambda(keySelector);
-            elementSelector = linq_helper.createLambda(elementSelector);
-            keyComparer = linq_helper.createLambda(keyComparer);
-
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
-
-            if ((elementSelector != null) && !linq_helper.isFunction(elementSelector))
-                throw new Error("Invalid element selector.");
-
-            if ((keyComparer != null) && !linq_helper.isFunction(keyComparer))
-                throw new Error("Invalid key comparer.");
-                
-            if (keyComparer != null)
-                keyComparer = linq_helper.normalizeComparer(keyComparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var groupings = new linq([], false);
-
-            for (var i = 0; i < len; i++)
-            {
-                var value = this.array[i];
-                var key = keySelector(value);
-                var element = (elementSelector == null ? value : elementSelector(value));
-
-                var foundGroup = groupings.firstOrDefault(null, function (x)
-                {
-                    if (keyComparer == null)
-                        return (x.key === key);
-                    else
-                        return keyComparer(x.key, key);
-                });
-
-                if (foundGroup == null)
-                    groupings.array.push({ key: key, values: [element] });
-                else
-                    foundGroup.values.push(element);
-            }
-
-            return groupings;
-        },
-
-        /**
-            Returns a "left outer" join of 'this' collection (the "outer" collection) and the 'inner'
-            collection, using the 'outerKeySelector' and 'innerKeySelector' to project the keys from 
-            each collection, and using the 'keyComparer' function (if it is given) to compare the
-            projected keys.  If the 'keyComparer' is not given, the "===" operator will be used to 
-            compare the projected keys.  The 'resultSelector' function is used to convert the joined 
-            results into the results that are returned by the groupJoin function.  The 'resultSelector' 
-            takes as parameters the outer object (of the join) and an array of the joined inner objects 
-            (this array will be an empty array if there were no inner elements associated with the outer
-            element).
-            @param inner The collection that is "left-outer" joined with 'this' collection
-            @param outerKeySelector The function that projects the key for the outer elements (in 'this' collection)
-            @param innerKeySelector The function that projects the key for the inner elements
-            @param resultSelector The function that converts the joined results into the results returned
-            @param keyComparer Optional, the function used to compare the projected keys
-        */
-        groupJoin: function (inner, outerKeySelector, innerKeySelector, resultSelector, keyComparer)
-        {
-            outerKeySelector = linq_helper.createLambda(outerKeySelector);
-            innerKeySelector = linq_helper.createLambda(innerKeySelector);
-            resultSelector = linq_helper.createLambda(resultSelector);
-            keyComparer = linq_helper.createLambda(keyComparer);
-
-            if (inner == null)
-                throw new Error("Invalid inner collection.");
-
-            if ((outerKeySelector == null) || !linq_helper.isFunction(outerKeySelector))
-                throw new Error("Invalid outer key selector.");
-
-            if ((innerKeySelector == null) || !linq_helper.isFunction(innerKeySelector))
-                throw new Error("Invalid inner key selector.");
-
-            if ((resultSelector == null) || !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
-
-            if ((keyComparer != null) && !linq_helper.isFunction(keyComparer))
-                throw new Error("Invalid key comparer.");
-                
-            if (keyComparer != null)
-                keyComparer = linq_helper.normalizeComparer(keyComparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var innerLinq = linq.from(inner);
-            var groupings = innerLinq.groupBy(innerKeySelector, null, keyComparer);
-
-            var len = this.array.length;
-            var results = [];
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var value = this.array[i];
-                    var outerKey = outerKeySelector(value);
-
-                    var groupValues = groupings.firstOrDefault(null, function (x)
-                    {
-                        if (keyComparer == null)
-                            return (x.key === outerKey);
-                        else
-                            return keyComparer(x.key, outerKey);
-                    });
-
-                    results.push(resultSelector(value, (groupValues == null ? [] : groupValues.values)));
-                }
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns a collection of objects with the "key" property of each object equal to either the zero-based
-            index of the element in 'this' collection (if 'startIndex' is not given) or the index, starting at
-            'startIndex', of the element in 'this' collection, and with the "value" property of the object equal to
-            the element in 'this' collection.
-            @param startIndex Optional, the starting index for the results (defaults to '0')
-        */
-        index: function (startIndex)
-        {
-            if (startIndex == null)
-                startIndex = 0;
-
-            if (isNaN(startIndex))
-                throw new Error("Invalid startIndex");
-
-            return this.select(function (x, i) { return { key: (startIndex + i), value: x }; });
-        },
-
-        /**
-            Returns the index of the first element that satisfies the 'predicate'.  Returns the value "-1" if
-            none of the elements satisfy the 'predicate'.
-            @param predicate The function used to determine which index to return
-        */
-        indexOf: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if ((i in this.array) && predicate(this.array[i]))
-                    return i;
-            }
-
-            return -1;
-        },
-
-        /**
-            Returns the index of the first element to be equal to the given 'item'.  If the optional 'comparer' 
-            function is given, then the 'comparer' function is used to determine equality between the elements 
-            of 'this' collection and the given 'item'.
-            @param item The item to find within 'this' collection
-            @param comparer Optional, the function used to compare the elements of 'this' collection with the given 'item'
-        */
-        indexOfElement: function (item, comparer)
-        {
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    if (((comparer == null) && (this.array[i] === item)) ||
-                        ((comparer != null) && comparer(this.array[i], item)))
-                    {
-                        return i;
+                        yield resultSelector(item, groupItem);
                     }
                 }
             }
+        }
 
-            return -1;
-        },
+        return new Linq(joinGenerator);
+    }
 
-        /**
-            Returns the intersection of elements in 'this' collection and the 'second' collection, using the
-            'comparer' function to determine whether two different elements are equal.  If the 'comparer' 
-            function is not given, then the "===" operator will be used to compare elements.
-            @param second The collection of elements to test for intersection
-            @param comparer Optional, the function used to compare elements
-        */
-        intersect: function (second, comparer)
+    /**
+     * Returns either the last element of 'this' collection (if `predicate` is not given) or the
+     * last element of 'this' collection that satisfies the `predicate` (if `predicate` is given).
+     * If there is no "last" element to return (either because 'this' collection is empty or no element
+     * satisfies the `predicate`), an error is thrown.
+     * 
+     * @param {predicate} [predicate] - The function used to determine the element to return
+     * @returns {*}
+     */
+    last(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.lastBasedOperator(iterable, predicate, null, true);
+    }
+
+    /**
+     * Returns the index of the last element that satisfies the `predicate`.  Returns the value "-1" if
+     * none of the elements satisfy the `predicate`.
+     * 
+     * @param {predicate} predicate - The function used to determine which index to return
+     * @returns {number}
+     */
+    lastIndexOf(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let element = this.index()
+            .where(x => predicate(x.value))
+            .reverse()
+            .firstOrDefault();
+
+        return (element == null ? -1 : element.key);
+    }
+
+    /**
+     * Returns the index of the last element to be equal to the given `item`.  If the optional `comparer` 
+     * function is given, then the `comparer` function is used to determine equality between the elements 
+     * of 'this' collection and the given 'item'.
+     * 
+     * @param {*} item - The item to find within 'this' collection
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare the elements of 'this' collection with the given `item`
+     * @returns {*} 
+     */
+    lastIndexOfElement(item, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+
+        return this.lastIndexOf(x => normalizedComparer(x, item));
+    }
+
+    /**
+     * Returns either the last element of 'this' collection (if 'predicate' is not given) or the
+     * last element of 'this' collection that satisfies the 'predicate' (if 'predicate is given).
+     * If there is no "last" element to return (either because 'this' collection is empty or no element
+     * satisfies the 'predicate'), the 'defaultValue' is returned.
+     * 
+     * @param {predicate} [predicate] - The predicate function used to determine the element to return 
+     * @param {*} [defaultValue] - The value to return if no "last" element is found
+     * @returns {*} 
+     */
+    lastOrDefault(predicate, defaultValue)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.lastBasedOperator(iterable, predicate, defaultValue, false);
+    }
+
+    /**
+     * Returns either the minimum element (if `selector` is not given) or the minimum element projected by 
+     * the `selector` function in 'this' collection.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} [selector] - The function that projects the value to use to determine a minimum
+     * @returns {*} 
+     */
+    min(selector)
+    {
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');        
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No minimum element.');
+        
+        if (selector == null)
+            selector = Linq.identity;
+
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.minComparer, selector);
+    }
+
+    /**
+     * Returns the "minimum" element of 'this' collection, determined by the value projected by 
+     * the `selector` function.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} selector - The function that projects the value to use to determine a minimum
+     * @returns {*}
+     */
+    minBy(selector)
+    {
+        LinqInternal.validateRequiredFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No minimum element.');
+
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.minComparer, Linq.identity);
+    }
+
+    /**
+     * Returns either the maximum element (if `selector` is not given) or the maximum element projected by 
+     * the `selector` function in 'this' collection.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} [selector] - The function that projects the value to use to determine the maximum
+     * @returns {*} 
+     */
+    max(selector)
+    {
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No maximum element.');
+
+        if (selector == null)
+            selector = Linq.identity;
+
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.maxComparer, selector);
+    }
+
+    /**
+     * Returns the "maximum" element of 'this' collection, determined by the value projected by 
+     * the `selector` function.  If 'this' collection is empty, an error is thrown.
+     * 
+     * @param {projection} selector - The function that projects the value to use to determine the maximum
+     * @returns {*} 
+     */
+    maxBy(selector)
+    {
+        LinqInternal.validateRequiredFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.isEmptyIterable(iterable))
+            throw new Error('No maximum element.');
+
+        return LinqInternal.getExtremeValue(this, selector, LinqInternal.maxComparer, Linq.identity);
+    }
+
+    /**
+     * Returns the elements of 'this' collection sorted in ascending order of the projected value
+     * given by the `keySelector` function, using the `comparer` function to compare the projected
+     * values.  If the `comparer` function is not given, a comparer that uses the natural ordering 
+     * of the values will be used to compare the projected values.  Note that subsequent, immediate 
+     * calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
+     * is, sorting when two elements are determined to be equal by this orderBy call).
+     * 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
+     * @returns {Linq}
+     */
+    orderBy(keySelector, comparer)
+    {
+        return LinqInternal.orderByBasedOperator(this, keySelector, comparer, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection sorted in descending order of the projected value
+     * given by the `keySelector` function, using the `comparer` function to compare the projected
+     * values.  If the `comparer` function is not given, a comparer that uses the natural ordering 
+     * of the values will be used to compare the projected values.  Note that subsequent, immediate 
+     * calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
+     * is, sorting when two elements are determined to be equal by this orderBy call).
+     * 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
+     * @returns {Linq}
+     */
+    orderByDescending(keySelector, comparer)
+    {
+        return LinqInternal.orderByBasedOperator(this, keySelector, comparer, true);
+    }
+
+    /**
+     * Returns a collection the same elements as 'this' collection but with extra elements added 
+     * to the end so that the results collection has a length of at least `width`.  The extra
+     * elements that are added are equal to the `padding` value.
+     * 
+     * @param {number} width - The length that the results collection will be at least equal to
+     * @param {*} padding - The value that is added to the results collection to fill it out
+     * @returns {Linq}
+     */
+    pad(width, padding)
+    {
+        return this.padWith(width, () => padding);
+    }
+
+    /**
+     * Returns a collection the same elements as 'this' collection but with extra elements added 
+     * to the end so that the results collection has a length of at least `width`.  The extra
+     * elements that are added are determined by the `paddingSelector` function—a function that 
+     * takes an integer as a parameter (i.e., the position/index that the element returned by the 
+     * `paddingSelector` function will have in the results collection .  
+     * 
+     * @param {number} width - The length that the results collection will be at least equal to
+     * @param {projection} paddingSelector - The function that indicates the value to add to the results collection
+     * @returns {Linq}
+     */
+    padWith(width, paddingSelector)
+    {
+        if (!LinqInternal.isValidNumber(width))
+            throw new Error('Invalid width.');
+
+        LinqInternal.validateRequiredFunction(paddingSelector, 'Invalid padding selector.');
+
+        let iterable = this.toIterable();
+
+        function* padWithGenerator()
         {
-            if (second == null)
-                return new linq([], false);
+            let counter = 0;
 
-            comparer = linq_helper.createLambda(comparer);
-
-            var secondLinq = linq.from(second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var results = new linq([], false);
-
-            for (var i = 0; i < len; i++)
+            for (let item of iterable)
             {
-                if (i in this.array)
+                yield item;
+                counter += 1;
+            }
+
+            while (counter < width)
+            {
+                yield paddingSelector(counter);
+                counter += 1;
+            }
+        }
+
+        return new Linq(padWithGenerator);
+    }
+
+    /**
+     * Returns the same elements as 'this' collection, but first executes an `action` on
+     * each element of 'this' collection.
+     * 
+     * @param {action} action - The function to execute on each element of 'this' collection
+     * @returns {Linq}
+     */
+    pipe(action)
+    {
+        LinqInternal.validateRequiredFunction(action, 'Invalid action.');
+
+        let iterable = this.toIterable();
+        let counter = 0;
+
+        for (let item of iterable)
+        {
+            action(item, counter);
+
+            counter += 1;
+        }
+
+        return new Linq(this.source);
+    }
+
+    /**
+     * Returns 'this' collection with the `value` prepended (i.e, added to the front).
+     * 
+     * @param {*} value - The value to be prepended to 'this' collection
+     * @returns {Linq}
+     */
+    prepend(value)
+    {
+        let iterable = this.toIterable();
+
+        function* prependGenerator()
+        {
+            yield value;
+
+            for (let item of iterable)
+            {
+                yield item;
+            }
+        }
+
+        return new Linq(prependGenerator);
+    }
+
+    /**
+     * Returns an equal-length collection where the N-th element is the aggregate of the
+     * `operation` function performed on the first N-1 elements of 'this' collection (the
+     * first element of the results is set to the `identity` value).  The `operation` 
+     * function should be a commutative, binary operation (e.g., sum, multiplication, etc.)
+     * Also, the `identity` parameter should be passed the value that is the "identity" for
+     * the `operation`—that is, when the `operator` is applied to the `identity` value and 
+     * any other value, the results is that same value (e.g., for addition, 0 + n = n; for
+     * multiplication, 1 * n = n; for string concatenation, "" + str = str; etc.)
+     * 
+     * @param {aggregator} operation - The function that aggregates the values of 'this' collection 
+     * @param {*} identity - The identity value of the operation
+     * @returns {Linq}
+     */
+    prescan(operation, identity)
+    {
+        LinqInternal.validateRequiredFunction(operation, 'Invalid operation.');
+
+        let iterable = this.toIterable();
+        let iterator = LinqInternal.getIterator(iterable);
+
+        function* prescanGenerator()
+        {
+            let acc = identity;
+            let state = iterator.next();
+
+            while (!state.done)
+            {
+                yield acc;
+
+                let {value} = state;
+
+                state = iterator.next();
+
+                if (!state.done)
+                    acc = operation(acc, value);
+            }
+        }
+
+        return new Linq(prescanGenerator);
+    }
+
+    /**
+     * Returns the elements of 'this' collection in reverse order.
+     * 
+     * @returns {Linq}
+     */
+    reverse()
+    {
+        let iterable = this.toIterable();
+
+        function* gen()
+        {
+            for (let i = iterable.length - 1; i >= 0; i--)
+            {
+                yield iterable[i];
+            }
+        }
+
+        if (!LinqInternal.isIndexedCollection(iterable) || !LinqInternal.doesCollectionHaveLength(iterable))
+            iterable = Array.from(iterable);
+
+        return new Linq(gen);
+    }
+
+    /**
+     * If the `seed` is not given, returns an equal-length collection where the N-th element
+     * is the aggregate of the `operation` function performed on the first N elements of
+     * 'this' collection.  
+     * 
+     * If the `seed` is given, then the same as the if the `seed` where not given but on 
+     * 'this' collection with the `seed` prepended to it.  Note, that with the `seed` given,
+     * this function returns the result of calling `aggregate` (with the same `operation` and
+     * `seed`) but with the intermediate aggregation results included with the final aggregation
+     * result.
+     *   
+     * The `operation` function should be a commutative, binary operation (e.g., sum, 
+     * multiplication, etc.).
+     * 
+     * @param {aggregator} operation - The function that aggregates the values of 'this' collection
+     * @param {*} [seed] - An initial, seed value that causes scan to generate intermediate values of aggregate function
+     * @returns {Linq}
+     */
+    scan(operation, seed)
+    {
+        LinqInternal.validateRequiredFunction(operation, 'Invalid operation.');
+
+        let col = (seed === undefined ? this : this.prepend(seed));
+
+        function* scanGenerator()
+        {
+            let iterable = col.toIterable();
+            let iterator = LinqInternal.getIterator(iterable);
+            let state = iterator.next();
+
+            if (state.done)
+                return;
+
+            let acc = state.value;
+
+            yield acc;
+
+            state = iterator.next();
+
+            while (!state.done)
+            {
+                acc = operation(acc, state.value);
+                yield acc;
+
+                state = iterator.next();
+            }
+        }
+
+        return new Linq(scanGenerator);
+    }
+
+    /**
+     * Returns a collection of values projected from the elements of 'this' collection.
+     * 
+     * @param {indexedProjection} selector - The function that projects the values from the elements
+     * @returns {Linq}
+     */
+    select(selector)
+    {
+        LinqInternal.validateRequiredFunction(selector, 'Invalid selector.');
+
+        let iterable = this.toIterable();
+        let i = 0;
+
+        function* selectGenerator()
+        {
+            for (let item of iterable)
+            {
+                yield selector(item, i);
+
+                i += 1;
+            }
+        }
+
+        return new Linq(selectGenerator);
+    }
+
+    /**
+     * Returns the concatenation of values projected from the elements of 'this' collection by the
+     * `collectionSelector` function.  If the `resultSelector` function is given, then the results
+     * returned by this function will be projected from an element in the concatenation and the 
+     * element that originated the part of the concatenation.  Otherwise, the results returned by
+     * this function will be the element of the concatenation.
+     * 
+     * @param {collectionProjection} collectionSelector - The function that projects a collection of values from an element
+     * @param {projection} [resultSelector] - The function that projects the results from the concatenated results
+     * @returns {Linq}
+     */
+    selectMany(collectionSelector, resultSelector)
+    {
+        LinqInternal.validateRequiredFunction(collectionSelector, 'Invalid collection selector.');
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        var iterable = this.toIterable();
+
+        function* selectManyGenerator()
+        {
+            let i = 0;
+
+            for (let outerItem of iterable)
+            {
+                let projectedItems = collectionSelector(outerItem, i);
+
+                i += 1;
+
+                if (projectedItems == null)
+                    continue;
+
+                let innerIterable = LinqInternal.ensureLinq(projectedItems).toIterable();
+
+                for (let innerItem of innerIterable)
                 {
-                    var value = this.array[i];
-
-                    var predicate = function (x)
-                    {
-                        if (comparer == null)
-                            return (x === value);
-                        else
-                            return comparer(x, value);
-                    };
-
-                    var inFirst = linq_helper.some(results.array, predicate);
-                    var inSecond = linq_helper.some(secondLinq.array, predicate);
-
-                    if (!inFirst && inSecond)
-                        results.array.push(value);
+                    yield (resultSelector == null ? innerItem : resultSelector(innerItem, outerItem));
                 }
             }
+        }
 
-            return results;
-        },
+        return new Linq(selectManyGenerator);
+    }
 
-        /**
-            Returns an "inner" join of 'this' collection (the "outer" collection) and the 'inner'
-            collection, using the 'outerKeySelector' and 'innerKeySelector' functions to project the
-            keys from each collection, and using the 'keyComparer' function (if it is given) to compare
-            the projected keys.  If the 'keyComparer' is not given, the "===" operator will be used to 
-            compare the projected keys.  The 'resultSelector' function is used to convert the joined
-            results into the results that are returned by the join function.  The 'resultSelector' 
-            function takes as parameters the outer object and the inner object of the join.
-            @param inner The collection that is "inner" joined with 'this' collection
-            @param outerKeySelector The function that projects the key for the outer elements (in 'this' collection)
-            @param innerKeySelector The function that projects the key for the inner elements
-            @param resultSelector The function that converts the joined results into the results returned
-            @param keyComparer Optional, the function used to compare the projected keys
-        */
-        join: function (inner, outerKeySelector, innerKeySelector, resultSelector, keyComparer)
+    /**
+     * Returns whether 'this' collection is equal to the `second` collection (that is, has the same elements in the
+     * same order).  If the `comparer` function is given, it is used to determine whether elements from each of the
+     * two collections are equal.  Otherwise, the "===" operator is used to determine equality.
+     * 
+     * @param {LinqCompatible} second - The collection to which 'this' collection is compared
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements of the two collections
+     * @returns {boolean}
+     */
+    sequenceEqual(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        if (second == null)
+            return false;
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = LinqInternal.ensureLinq(second).toIterable();
+        let firstLength = LinqInternal.getExplicitCardinality(firstIterable);
+        let secondLength = LinqInternal.getExplicitCardinality(secondIterable);
+        
+        if (firstLength != null && secondLength != null && firstLength !== secondLength)
+            return false;
+
+        let firstIterator = LinqInternal.getIterator(firstIterable);
+        let secondIterator = LinqInternal.getIterator(secondIterable);
+        let firstState = firstIterator.next();
+        let secondState = secondIterator.next();
+        
+        while (!firstState.done && !secondState.done)
         {
-            outerKeySelector = linq_helper.createLambda(outerKeySelector);
-            innerKeySelector = linq_helper.createLambda(innerKeySelector);
-            resultSelector = linq_helper.createLambda(resultSelector);
-            keyComparer = linq_helper.createLambda(keyComparer);
-
-            if (inner == null)
-                throw new Error("Invalid inner collection.");
-
-            if ((outerKeySelector == null) || !linq_helper.isFunction(outerKeySelector))
-                throw new Error("Invalid outer key selector.");
-
-            if ((innerKeySelector == null) || !linq_helper.isFunction(innerKeySelector))
-                throw new Error("Invalid inner key selector.");
-
-            if ((resultSelector == null) || !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
-
-            if ((keyComparer != null) && !linq_helper.isFunction(keyComparer))
-                throw new Error("Invalid key comparer.");
-                
-            if (keyComparer != null)
-                keyComparer = linq_helper.normalizeComparer(keyComparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var innerLinq = linq.from(inner);
-            var groupings = innerLinq.groupBy(innerKeySelector, null, keyComparer);
-
-            var len = this.array.length;
-            var results = [];
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var value = this.array[i];
-                    var outerKey = outerKeySelector(value);
-
-                    var groupValues = groupings.firstOrDefault(null, function (x)
-                    {
-                        if (keyComparer == null)
-                            return (x.key === outerKey);
-                        else
-                            return keyComparer(x.key, outerKey);
-                    });
-
-                    if ((groupValues != null) && (groupValues.values.length > 0))
-                    {
-                        var len2 = groupValues.values.length;
-
-                        for (var j = 0; j < len2; j++)
-                        {
-                            results.push(resultSelector(value, groupValues.values[j]));
-                        }
-                    }
-                }
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns either the last element of 'this' collection (if 'predicate' is not given) or the
-            last element of 'this' collection that satisfies the 'predicate' (if 'predicate' is given).
-            If there is no "last" element to return (either because 'this' collection is empty or no element
-            satisfies the 'predicate'), an error is thrown.
-            @param predicate Optional, the predicate function used to determine the element to return
-        */
-        last: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate != null) && !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            for (var i = this.array.length - 1; i >= 0; i--)
-            {
-                if ((i in this.array) && ((predicate == null) || predicate(this.array[i])))
-                    return this.array[i];
-            }
-
-            throw new Error("No last item was found in collection.");
-        },
-
-        /**
-            Returns the index of the last element that satisfies the 'predicate'.  Returns the value "-1" if
-            none of the elements satisfy the 'predicate'.
-            @param predicate The function used to determine which index to return
-        */
-        lastIndexOf: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = len - 1; i >= 0; i--)
-            {
-                if ((i in this.array) && predicate(this.array[i]))
-                    return i;
-            }
-
-            return -1;
-        },
-
-        /**
-            Returns the index of the last element to be equal to the given 'item'.  If the optional 'comparer' 
-            function is given, then the 'comparer' function is used to determine equality between the elements 
-            of 'this' collection and the given 'item'.
-            @param item The item to find within 'this' collection
-            @param comparer Optional, the function used to compare the elements of 'this' collection with the given 'item'
-        */
-        lastIndexOfElement: function (item, comparer)
-        {
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = len - 1; i >= 0; i--)
-            {
-                if (i in this.array)
-                {
-                    if (((comparer == null) && (this.array[i] === item)) ||
-                        ((comparer != null) && comparer(this.array[i], item)))
-                    {
-                        return i;
-                    }
-                }
-            }
-
-            return -1;
-        },
-
-        /**
-            Returns either the last element of 'this' collection (if 'predicate' is not given) or the
-            last element of 'this' collection that satisfies the 'predicate' (if 'predicate is given).
-            If there is no "last" element to return (either because 'this' collection is empty or no element
-            satisfies the 'predicate'), the 'defaultValue' is returned.
-            
-            Alternately, if only one parameter is passed to this function and that single parameter is a
-            function, then it will be treated as the 'predicate' and the 'defaultValue' will be considered
-            to be null.
-            @param defaultValue the value to return if no "last" element is found
-            @param predicate Optional, the predicate function used to determine the element to return
-        */
-        lastOrDefault: function (defaultValue, predicate)
-        {
-            // If there is only one parameter, and it is a function, then assume that it is
-            // the predicate and that the defaultValue is null
-            if (arguments.length == 1 && linq_helper.isFunction(defaultValue))
-            {
-                predicate = defaultValue;
-                defaultValue = null;
-            }
-            
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate != null) && !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            for (var i = this.array.length - 1; i >= 0; i--)
-            {
-                if ((i in this.array) && ((predicate == null) || predicate(this.array[i])))
-                    return this.array[i];
-            }
-
-            return defaultValue;
-        },
-
-        /**
-            Returns either the minimum element (if 'selector' is not given) or the minimum element projected by 
-            the 'selector' function in 'this' collection.  If 'this' collection is empty, an error is thrown.
-            @param selector Optional, the function that projects the value of which to determine a minimum
-        */
-        min: function (selector)
-        {
-            if (this.array.length == 0)
-                throw new Error("No minimum element.");
-
-            selector = linq_helper.createLambda(selector);
-
-            if ((selector != null) && !linq_helper.isFunction(selector))
-                throw new Error("Invalid selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var minValue = (selector == null ? this.array[0] : selector(this.array[0]));
-
-            for (var i = 1; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var tempValue = (selector == null ? this.array[i] : selector(this.array[i]));
-
-                    if (tempValue < minValue)
-                        minValue = tempValue;
-                }
-            }
-
-            return minValue;
-        },
-
-        /**
-            Returns the "minimum" element of 'this' collection, determined by the value projected by 
-            the 'selector' function.  If 'this' collection is empty, an error is thrown.
-            @param selector Optional, the function that projects the value to used to determine a minimum element
-        */
-        minBy: function (selector)
-        {
-            if (this.array.length == 0)
-                throw new Error("No mininum element.");
-
-            selector = linq_helper.createLambda(selector);
-
-            if ((selector == null) || !linq_helper.isFunction(selector))
-                throw new Error("Invalid selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var minValue = selector(this.array[0]);
-            var minObject = this.array[0];
-
-            for (var i = 1; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var tempObject = this.array[i];
-                    var tempValue = selector(tempObject);
-
-                    if (tempValue < minValue)
-                    {
-                        minValue = tempValue;
-                        minObject = tempObject;
-                    }
-                }
-            }
-
-            return minObject;
-        },
-
-        /**
-            Returns either the maximum element (if 'selector' is not given) or the maximum element projected by 
-            the 'selector' function in 'this' collection.  If 'this' collection is empty, an error is thrown.
-            @param selector Optional, the function that projects the value of which to determine a maximum
-        */
-        max: function (selector)
-        {
-            if (this.array.length == 0)
-                throw new Error("No maximum element.");
-
-            selector = linq_helper.createLambda(selector);
-
-            if ((selector != null) && !linq_helper.isFunction(selector))
-                throw new Error("Invalid selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var maxValue = (selector == null ? this.array[0] : selector(this.array[0]));
-
-            for (var i = 1; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var tempValue = (selector == null ? this.array[i] : selector(this.array[i]));
-
-                    if (tempValue > maxValue)
-                        maxValue = tempValue;
-                }
-            }
-
-            return maxValue;
-        },
-
-        /**
-            Returns the "maximum" element of 'this' collection, determined by the value projected by 
-            the 'selector' function.  If 'this' collection is empty, an error is thrown.
-            @param selector Optional, the function that projects the value to used to determine a maximum element
-        */
-        maxBy: function (selector)
-        {
-            if (this.array.length == 0)
-                throw new Error("No maximum element.");
-
-            selector = linq_helper.createLambda(selector);
-
-            if ((selector == null) || !linq_helper.isFunction(selector))
-                throw new Error("Invalid selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var maxValue = selector(this.array[0]);
-            var maxObject = this.array[0];
-
-            for (var i = 1; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var tempObject = this.array[i];
-                    var tempValue = selector(tempObject);
-
-                    if (tempValue > maxValue)
-                    {
-                        maxValue = tempValue;
-                        maxObject = tempObject;
-                    }
-                }
-            }
-
-            return maxObject;
-        },
-
-        /**
-            Returns the elements of 'this' collection sorted in ascending order of the projected value
-            given by the 'keySelector' function, using the 'comparer' function to compare the projected
-            values.  If the 'comparer' function is not given, a comparer that uses the natural ordering 
-            of the values will be used to compare the projected values.  Note that subsequent, immediate 
-            calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
-            is, sorting when two elements are determined to be equal by this orderBy call).
-            @param keySelector The function that projects the value used to sort the elements
-            @param comparer Optional, the function that compares projected values
-        */
-        orderBy: function (keySelector, comparer)
-        {
-            keySelector = linq_helper.createLambda(keySelector);
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-
-            if (comparer == null)
-                comparer = linq_helper.defaultStringComparer;
-
-            linq_helper.processDeferredSort(this);
-
-            var results = new linq(this.array);
-
-            results.deferredSort = { keySelector: keySelector, comparer: comparer, reverse: false, next: null };
-
-            return results;
-        },
-
-        /**
-            Returns the elements of 'this' collection sorted in descending order of the projected value
-            given by the 'keySelector' function, using the 'comparer' function to compare the projected
-            values.  If the 'comparer' function is not given, a comparer that uses the natural ordering 
-            of the values will be used to compare the projected values.  Note that subsequent, immediate 
-            calls to either thenBy or thenByDescending will provide subsequent "levels" of sorting (that 
-            is, sorting when two elements are determined to be equal by this orderBy call).
-            @param keySelector The function that projects the value used to sort the elements
-            @param comparer Optional, the function that compares projected values
-        */
-        orderByDescending: function (keySelector, comparer)
-        {
-            keySelector = linq_helper.createLambda(keySelector);
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-
-            if (comparer == null)
-                comparer = linq_helper.defaultStringComparer;
-
-            linq_helper.processDeferredSort(this);
-
-            var results = new linq(this.array);
-
-            results.deferredSort = { keySelector: keySelector, comparer: comparer, reverse: true, next: null };
-
-            return results;
-        },
-
-        /**
-            Returns a collection the same elements as 'this' collection but with extra elements added 
-            to the end so that the results collection has a length of at least 'width'.  The extra
-            elements that are added are equal to the 'padding' value.
-            @param width The length that the results collection will be at least equal to
-            @param padding The value that is added to the results collection to fill it out
-        */
-        pad: function (width, padding)
-        {
-            if ((width == null) || isNaN(width))
-                throw new Error("Invalid width.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            if (len >= width)
-                return new linq(this.array);
-
-            return new linq(this.array.concat(linq.repeat(padding, width - len).array), false);
-        },
-
-        /**
-            Returns a collection the same elements as 'this' collection but with extra elements added 
-            to the end so that the results collection has a length of at least 'width'.  The extra
-            elements that are added are determined by the 'paddingSelector' function.  
-            @param width The length that the results collection will be at least equal to
-            @param paddingSelector The function that indicates the value to add to the results collection
-        */
-        padWith: function (width, paddingSelector)
-        {
-            if ((width == null) || isNaN(width))
-                throw new Error("Invalid width");
-
-            paddingSelector = linq_helper.createLambda(paddingSelector);
-
-            if ((paddingSelector == null) || !linq_helper.isFunction(paddingSelector))
-                throw new Error("Invalid padding selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            if (len >= width)
-                return new linq(this.array);
-
-            var paddingArray = [];
-
-            for (var i = len; i < width; i++)
-            {
-                paddingArray.push(paddingSelector(i));
-            }
-
-            return new linq(this.array.concat(paddingArray), false);
-        },
-
-        /**
-            Returns the same elements as 'this' collection, but first executes an 'action' on
-            each element of 'this' collection.
-            @param action The function to execute on each element of 'this' collection
-        */
-        pipe: function (action)
-        {
-            action = linq_helper.createLambda(action);
-
-            if ((action == null) || !linq_helper.isFunction(action))
-                throw new Error("Invalid action.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    action(this.array[i], i);
-                }
-            }
-
-            return new linq(this.array);
-        },
-
-        /**
-            Returns 'this' collection with the 'value' prepended (i.e, added to the front).
-            @param value The value to be prepended to 'this' collection
-        */
-        prepend: function (value)
-        {
-            linq_helper.processDeferredSort(this);
-
-            return new linq([value].concat(this.array), false);
-        },
-
-        /**
-            Returns an equal-length collection where the N-th element is the aggregate of the
-            'operation' function performed on the first N-1 elements of 'this' collection (the
-            first element of the results is set to the 'identity' value).  The 'operation' 
-            function should be a commutative, binary operation (e.g., sum, multiplication, etc.)
-            @param operation The function that aggregates the values of 'this' collection
-        */
-        prescan: function (operation, identity)
-        {
-            operation = linq_helper.createLambda(operation);
-
-            if ((operation == null) || !linq_helper.isFunction(operation))
-                throw new Error("Invalid operation.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            if (len == 0)
-                return new linq([], false);
-
-            var aggregate = identity;
-            var results = [aggregate];
-
-            for (var i = 0; i < len - 1; i++)
-            {
-                if (i in this.array)
-                {
-                    aggregate = operation(aggregate, this.array[i]);
-                    results.push(aggregate);
-                }
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns the elements of 'this' collection in reverse order.
-        */
-        reverse: function ()
-        {
-            linq_helper.processDeferredSort(this);
-
-            return new linq(this.array.reverse(), false);
-        },
-
-        /**
-            Returns an equal-length collection where the N-th element is the aggregate of 
-            the 'operation' function performed on the first N elements of 'this' collection.  
-            The 'operation' function should be a commutative, binary operation (e.g., sum, 
-            multiplication, etc.).
-            @param operation The function that aggregates the values of 'this' collection
-        */
-        scan: function (operation)
-        {
-            operation = linq_helper.createLambda(operation);
-
-            if ((operation == null) || !linq_helper.isFunction(operation))
-                throw new Error("Invalid operation.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-
-            if (len == 0)
-                throw new Error("Cannot scan on empty collection.");
-
-            var aggregate = this.array[0];
-            var results = [aggregate];
-
-            for (var i = 1; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    aggregate = operation(aggregate, this.array[i]);
-                    results.push(aggregate);
-                }
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns a collection of values projected from the elements of 'this' collection.
-            @param selector The function that projects values from the elements
-        */
-        select: function (selector)
-        {
-            selector = linq_helper.createLambda(selector);
-
-            if ((selector == null) || !linq_helper.isFunction(selector))
-                throw new Error("Invalid selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            return new linq(linq_helper.map(this.array, selector), false);
-        },
-
-        /**
-            Returns the concatenation of values projected from the elements of 'this' collection by the
-            'collectionSelector' function.  If the 'resultSelector' function is given, then the results
-            returned by this function will be projected from an element in the concatenation and the 
-            element that originated the part of the concatenation.  Otherwise, the results returned by
-            this function will be the element of the concatenation.
-            @param collectionSelector The function that projects a collection of values from an element 
-            @param resultSelector Optional, the function that projects the results from the concatenated results
-        */
-        selectMany: function (collectionSelector, resultSelector)
-        {
-            collectionSelector = linq_helper.createLambda(collectionSelector);
-            resultSelector = linq_helper.createLambda(resultSelector);
-
-            if ((collectionSelector == null) || !linq_helper.isFunction(collectionSelector))
-                throw new Error("Invalid collection selector.");
-
-            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var innerLength = this.array.length;
-            var results = [];
-
-            for (var i = 0; i < innerLength; i++)
-            {
-                var outerItem = this.array[i];
-                var outerArray = collectionSelector(outerItem, i);
-
-                if (!linq_helper.isArray(outerArray))
-                    outerArray = (linq.from(outerArray)).toArray();
-
-                if ((outerArray != null) && (outerArray.length > 0))
-                {
-                    var outerLength = outerArray.length;
-
-                    for (var j = 0; j < outerLength; j++)
-                    {
-                        var innerItem = outerArray[j];
-                        var innerResult = (resultSelector == null ? innerItem : resultSelector(innerItem, outerItem));
-
-                        results.push(innerResult);
-                    }
-                }
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns whether 'this' collection is equal to the 'second' collection (that is, has the same elements in the
-            same order).  If the 'comparer' function is given, it is used to determine whether elements from each of the
-            two collections are equal.  Otherwise, the "===" operator is used to determine equality.
-            @param second The collection to which 'this' collection is compared
-            @param comparer Optional, the function used to compare elements of the two collections
-        */
-        sequenceEqual : function (second, comparer)
-        {
-            if (second == null)
+            if (!normalizedComparer(firstState.value, secondState.value))
                 return false;
 
-            comparer = linq_helper.createLambda(comparer);
+            firstState = firstIterator.next();
+            secondState = secondIterator.next();
+        }
 
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
+        if (!firstState.done || !secondState.done)
+            return false;
 
-            linq_helper.processDeferredSort(this);
+        return true;
+    }
 
-            var secondLinq = linq.from(second);
+    /**
+     * Returns whether 'this' collection is equivalent to the `second` collection (that is, has the 
+     * same elements regardless of order).  If the `comparer` function is given, it is used to determine
+     * whether elements from each of the two collections are equal.  Otherwise, the "===" operator is
+     * used to determine equality.
+     * 
+     * @param {LinqCompatible} second - The collection to which 'this' collection is compared
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements of the two collections
+     * @returns {boolean} 
+     */
+    sequenceEquivalent(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
 
-            linq_helper.processDeferredSort(secondLinq);
+        if (second == null)
+            return false;
 
-            var len = this.array.length;
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(comparer);
+        let secondLinq = LinqInternal.ensureLinq(second);
 
-            if (len != secondLinq.array.length)
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+        let firstLength = LinqInternal.getExplicitCardinality(firstIterable);
+        let secondLength = LinqInternal.getExplicitCardinality(secondIterable);
+
+        if (firstLength != null && secondLength != null && firstLength !== secondLength)
+            return false;
+
+        let firstLookup = this.toLookup(Linq.identity, comparer);
+        let secondLookup = secondLinq.toLookup(Linq.identity, comparer);
+
+        let haveSameCount = firstLookup.count() === secondLookup.count();
+
+        let predicate = x =>
+        {
+            let lookupNode = secondLookup.firstOrDefault(y => normalizedComparer(y.key, x.key));                
+
+            if (lookupNode == null)
                 return false;
 
-            for (var i = 0; i < len; i++)
+            return (x.values.length === lookupNode.values.length);
+        };
+
+        return (haveSameCount && firstLookup.all(predicate));
+    }
+
+    /**
+     * Returns either the only element of 'this' collection (if `predicate` is not given) or the
+     * first (and only) element of 'this' collection that satisfies the `predicate` (if 'predicate' is 
+     * given).  If there are either multiple elements in 'this' collection (if `predicate` is not given)
+     * or there are multiple elements that satisfy the 'predicate' (if `predicate` is given), then an
+     * error is thrown.  If there is no "single" element (either because 'this' collection is empty or
+     * no element satisfies the `predicate`), an error is thrown.
+     * 
+     * @param {predicate} [predicate] - The function used to determine the element to return
+     * @returns {*} 
+     */
+    single(predicate)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.singleBasedOperator(iterable, predicate, null, true);
+    }
+
+    /**
+     * Returns either the only element of 'this' collection (if `predicate` is not given) or the
+     * first (and only) element of 'this' collection that satisfies the `predicate` (if 'predicate' is 
+     * given).  If there are either multiple elements in 'this' collection (if `predicate` is not given)
+     * or there are multiple elements that satisfy the `predicate` (if `predicate` is given), then an
+     * error is thrown.  If there is no "single" element (either because 'this' collection is empty or
+     * no element satisfies the `predicate`), the `defaultValue` is returned (or `undefined` if `defaultValue`
+     * is not given).
+     * 
+     * @param {predicate} [predicate] - The function used to determine the element to return 
+     * @param {*} [defaultValue] - The default value that is returned if no single element is found
+     * @returns {*} 
+     */
+    singleOrDefault(predicate, defaultValue)
+    {
+        LinqInternal.validateOptionalFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.singleBasedOperator(iterable, predicate, () => defaultValue, false);
+    }
+
+    /**
+     * Returns either the only element of 'this' collection or the value returned by the `fallback`
+     * function if 'this' collection is empty.  If there are more than one element in 'this' collection,
+     * then an exception will be thrown.
+     * 
+     * @param {constantFunction} fallback 
+     */
+    singleOrFallback(fallback)
+    {
+        LinqInternal.validateRequiredFunction(fallback, 'Invalid fallback function.');
+
+        let iterable = this.toIterable();
+
+        return LinqInternal.singleBasedOperator(iterable, null, fallback, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection with the first `count` number of elements skipped.
+     * 
+     * @param {number} count - The number of elements to skip from 'this' collection
+     * @returns {Linq}
+     */
+    skip(count)
+    {
+        if (!LinqInternal.isValidNumber(count))
+            throw new Error('Invalid count.');
+        
+        let iterable = this.toIterable();
+
+        function* skipGenerator()
+        {
+            let counter = 1;
+
+            for (let item of iterable)
             {
-                if (comparer == null)
-                {
-                    if (this.array[i] !== secondLinq.array[i])
-                        return false;
-                }
-                else if (!comparer(this.array[i], secondLinq.array[i]))
-                    return false;
+                if (counter > count)
+                    yield item;
+
+                counter += 1;
             }
+        }
 
-            return true;
-        },
+        return new Linq(skipGenerator);
+    }
 
-        /**
-            Returns whether 'this' collection is equivalent to the 'second' collection (that is, has the 
-            same elements regardless of order).  If the 'comparer' function is given, it is used to determine
-            whether elements from each of the two collections are equal.  Otherwise, the "===" operator is
-            used to determine equality.
-            @param second The collection to which 'this' collection is compared
-            @param comparer Optional, the function used to compare elements of the two collections
-        */
-        sequenceEquivalent: function (second, comparer)
+    /**
+     * Returns the elements of 'this' collection, skipping initial elements until an element satisfies
+     * the `predicate` function (that first element that satisfies the `predicate` function is 
+     * included in the results).
+     * 
+     * @param {predicate} predicate - The function that indicates when to stop skipping elements
+     * @returns {Linq}
+     */
+    skipUntil(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        return this.skipWhile(x => !predicate(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection skipping initial elements until an element does not
+     * satisfy the `predicate` function (that first element that fails to satisfy the `predicate` function
+     * is included in the results).
+     * 
+     * @param {predicate} predicate = The function that indicates which of the initial elements to skip
+     * @returns {Linq} 
+     */
+    skipWhile(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        function* skipWhileGenerator()
         {
-            if (second == null)
-                return false;
+            let isSkipping = true;
 
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var secondLinq = linq.from(second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            var len1 = this.array.length;
-            var len2 = secondLinq.array.length;
-
-            if (len1 != len2)
-                return false;
-
-            var lookup1 = this.toLookup("x => x", comparer);
-            var lookup2 = secondLinq.toLookup("x => x", comparer);
-
-            return ((lookup1.count() == lookup2.count()) &&
-                lookup1.all(function (x)
-                {
-                    var lookupNode = lookup2.firstOrDefault(null, function (y)
-                    {
-                        if (comparer == null)
-                            return (y.key === x.key);
-                        else
-                            return comparer(y.key, x.key);
-                    });
-
-                    if (lookupNode == null)
-                        return false;
-
-                    return (x.values.length == lookupNode.values.length);
-                }));
-        },
-
-        /**
-            Returns either the only element of 'this' collection (if 'predicate' is not given) or the
-            first (and only) element of 'this' collection that satisfies the 'predicate' (if 'predicate' is 
-            given).  If there are either multiple elements in 'this' collection (if 'predicate is not given)
-            or there are multiple elements that satisfy the 'predicate' (if 'predicate' is given), then an
-            error is thrown.  If there is no "single" element (either because 'this' collection is empty or
-            no element satisfies the 'predicate'), an error is thrown.
-            @param predicate Optional, the predicate function used to determine the element to return
-        */
-        single: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if (predicate == null)
+            for (let item of iterable)
             {
-                if (this.array.length == 0)
-                    throw new Error("No single item in the collection.");
-
-                if (this.array.length > 1)
-                    throw new Error("More than one item in the collection.");
-
-                linq_helper.processDeferredSort(this);
-
-                return this.array[0];
-            }
-
-            if (!linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var isFound = false;
-            var foundValue = null;
-
-            for (var i = 0; i < len; i++)
-            {
-                if ((i in this.array) && predicate(this.array[i]))
-                {
-                    if (isFound)
-                        throw new Error("More than one item matched the predicate in the collection.");
-
-                    isFound = true;
-                    foundValue = this.array[i];
-                }
-            }
-
-            if (!isFound)
-                throw new Error("No single item matched the predicate in the collection.");
-
-            return foundValue;
-        },
-
-        /**
-            Returns either the only element of 'this' collection (if 'predicate' is not given) or the
-            first (and only) element of 'this' collection that satisfies the 'predicate' (if 'predicate' is 
-            given).  If there are either multiple elements in 'this' collection (if 'predicate is not given)
-            or there are multiple elements that satisfy the 'predicate' (if 'predicate' is given), then an
-            error is thrown.  If there is no "single" element (either because 'this' collection is empty or
-            no element satisfies the 'predicate'), the 'defaultValue' is returned.
-            
-            Alternately, if only one parameter is passed to this function and that single parameter is a
-            function, then it will be treated as the 'predicate' and the 'defaultValue' will be considered
-            to be null.
-            @param defaultValue The default value that is returned if no "single" element is found
-            @param predicate Optional, the predicate function used to determine the element to return
-        */
-        singleOrDefault: function (defaultValue, predicate)
-        {
-            // If there is only one parameter, and it is a function, then assume that it is
-            // the predicate and that the defaultValue is null
-            if (arguments.length == 1 && linq_helper.isFunction(defaultValue))
-            {
-                predicate = defaultValue;
-                defaultValue = null;
-            }
-            
-            predicate = linq_helper.createLambda(predicate);
-
-            if (predicate == null)
-            {
-                if (this.array.length == 0)
-                    return defaultValue;
-
-                if (this.array.length > 1)
-                    throw new Error("More than one item in the collection.");
-
-                linq_helper.processDeferredSort(this);
-
-                return this.array[0];
-            }
-
-            if (!linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var isFound = false;
-            var foundValue = null;
-
-            for (var i = 0; i < len; i++)
-            {
-                if ((i in this.array) && predicate(this.array[i]))
-                {
-                    if (isFound)
-                        throw new Error("More than one item matched the predicate in the collection.");
-
-                    isFound = true;
-                    foundValue = this.array[i];
-                }
-            }
-
-            return (isFound ? foundValue : defaultValue);
-        },
-
-        /**
-            Returns either the only element of 'this' collection or the value returned by the 'fallback'
-            function if 'this' collection is empty.  If there are more than one element in 'this' collection,
-            then an exception will be thrown.
-            @param fallback The function that determines the value to return if there are no elements in 'this' collection
-        */
-        singleOrFallback: function (fallback)
-        {
-            fallback = linq_helper.createLambda(fallback);
-
-            if ((fallback == null) || !linq_helper.isFunction(fallback))
-                throw new Error("Invalid fallback");
-
-            linq_helper.processDeferredSort(this);
-
-            if (this.array.length == 0)
-                return fallback();
-            else if (this.array.length == 1)
-                return this.array[0];
-            else
-                throw new Error("More than one item in the collection.");
-
-        },
-
-        /**
-            Returns the elements of 'this' collection with the first 'count' number of elements skipped.
-            @param count The number of elements to skip from 'this' collection
-        */
-        skip: function (count)
-        {
-            if ((count == null) || isNaN(count))
-                throw new Error("Invalid count.");
-
-            linq_helper.processDeferredSort(this);
-
-            return new linq(this.array.slice(count), false);
-        },
-
-        /**
-            Returns the elements of 'this' collection, skipping initial elements until an element satisfies
-            the 'predicate' function (that first element that satisfies the 'predicate' function is 
-            included in the results).
-            @param predicate The function that indicates when to stop skipping elements
-        */
-        skipUntil: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate");
-
-            return this.skipWhile(function (x) { return !predicate(x); });
-        },
-
-        /**
-            Returns the elements of 'this' collection skipping initial elements until an element does not
-            satisfy the 'predicate' function (that first element that fails to satisfy the 'predicate' function
-            is included in the results).
-            @param predicate The function that indicates which of the initial elements to skip
-        */
-        skipWhile: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var results = [];
-            var isSkipping = true;
-
-            for (var i = 0; i < len; i++)
-            {
-                var value = this.array[i];
-
                 if (!isSkipping)
-                    results.push(value);
-                else if (!predicate(value))
+                    yield item;
+                else if (!predicate(item))
                 {
                     isSkipping = false;
-                    results.push(value);
+                    yield item;
                 }
             }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns either the sum of the elements of 'this' collection (if 'selector' is not given) or the
-            sum of the projected value of each element of 'this' collection (if 'selector' is given).
-            @param selector Optional, the function that projects the values to be summed
-        */
-        sum: function (selector)
-        {
-            linq_helper.processDeferredSort(this);
-
-            if (this.array.length == 0)
-                return 0;
-
-            selector = linq_helper.createLambda(selector);
-
-            if ((selector != null) && (!linq_helper.isFunction(selector)))
-                throw new Error("Invalid selector.");
-
-            var len = this.array.length;
-            var sumValue = 0;
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var value = (selector == null ? this.array[i] : selector(this.array[i]));
-
-                    if (value != null)
-                        sumValue += value;
-                }
-            }
-
-            return sumValue;
-        },
-
-        /**
-            Returns the elements of 'this' collection taking only the first 'count' number of elements.
-            @param count The number of elements to take from the beginning of the collection
-        */
-        take: function (count)
-        {
-            if ((count == null) || isNaN(count))
-                throw new Error("Invalid count.");
-
-            linq_helper.processDeferredSort(this);
-
-            return new linq(this.array.slice(0, count), false);
-        },
-
-        /**
-            Returns every n-th (n = step) element of 'this' collection.
-            @param step The number of elements to bypass before returning the next element
-        */
-        takeEvery: function (step)
-        {
-            if ((step == null) || isNaN(step))
-                throw new Error("Invalid count.");
-
-            linq_helper.processDeferredSort(this);
-
-            return this.where(function (x, i) { return (i % step) == 0; });
-        },
-
-        /**
-            Returns the elements of 'this' collection, taking only the last 'count' number of elements.
-            @param count The number of elements to take from the end of the collection
-        */
-        takeLast: function (count)
-        {
-            if ((count == null) || isNaN(count))
-                throw new Error("Invalid count.");
-
-            linq_helper.processDeferredSort(this);
-
-            if (count <= 0)
-                return new linq([], false);
-
-            if (count > this.array.length)
-                count = this.array.length;
-
-            return new linq(this.array.slice(this.array.length - count), false);
-        },
-
-        /**
-            Returns the elements of 'this' collection taking element until an element satisfies the
-            'predicate' function (that first element that satisfies the 'predicate' function is not
-            included in the results).
-            @param predicate The function that indicates when to stop including elements in the results
-        */
-        takeUntil: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate");
-
-            return this.takeWhile(function (x) { return !predicate(x); });
-        },
-
-        /**
-            Returns the elements of 'this' collection taking elements until an element does not satisfy
-            the 'predicate' function (that first element that fails to satisfy the 'predicate' function
-            is not included in the results).
-            @param predicate The function that indicates which of the initial elements to include in the results
-        */
-        takeWhile: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var results = [];
-            var isTaking = true;
-
-            for (var i = 0; (i < len) && isTaking; i++)
-            {
-                var value = this.array[i];
-
-                if (!predicate(value))
-                    isTaking = false;
-                else
-                    results.push(value);
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
-            call) in ascending order of the projected value given by the 'keySelector' function, using the
-            'comparer' function to compare the projected values.  If the 'comparer' function is not given,
-            a comparer that uses the natural ordering of the values will be used to compare the projected values.  
-            Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
-            thenBy, or thenByDescending call.
-            @param keySelector The function that projects the value used to sort elements
-            @param comparer Optional, the function that compares projected values
-        */
-        thenBy: function (keySelector, comparer)
-        {
-            keySelector = linq_helper.createLambda(keySelector);
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-
-            if (this.deferredSort == null)
-                throw new Error("ThenBy can only be called following an OrderBy/OrderByDescending.");
-
-            if (comparer == null)
-                comparer = linq_helper.defaultStringComparer;
-
-            var results = new linq(this.array);
-
-            results.deferredSort = linq_helper.extendDeferredSort(this.deferredSort, { keySelector: keySelector, comparer: comparer, reverse: false, next: null });
-
-            return results;
-        },
-
-        /**
-            Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
-            call) in descending order of the projected value given by the 'keySelector' function, using the
-            'comparer' function to compare the projected values.  If the 'comparer' function is not given,
-            a comparer that uses the natural ordering of the values will be used to compare the projected values.  
-            Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
-            thenBy, or thenByDescending call.
-            @param keySelector The function that projects the value used to sort elements
-            @param comparer Optional, the function that compares projected values
-        */
-        thenByDescending: function (keySelector, comparer)
-        {
-            keySelector = linq_helper.createLambda(keySelector);
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-
-            if (this.deferredSort == null)
-                throw new Error("ThenByDescending can only be called following an OrderBy/OrderByDescending.");
-
-            if (comparer == null)
-                comparer = linq_helper.defaultStringComparer;
-
-            var results = new linq(this.array);
-
-            results.deferredSort = linq_helper.extendDeferredSort(this.deferredSort, { keySelector: keySelector, comparer: comparer, reverse: true, next: null });
-
-            return results;
-        },
-
-        /**
-            Returns a string consisting of all of the elements of 'this' collection delimited by the given
-            'delimiter' value.  If a 'delimiter' value is not given, then the delimiter "," is used.
-            @param delimiter The delimiter separating the elements in the results
-        */
-        toDelimitedString: function (delimiter)
-        {
-            if (delimiter == null)
-                delimiter = ',';
-
-            linq_helper.processDeferredSort(this);
-
-            return this.array.join(delimiter);
-        },
-
-        /**
-            Returns an object that represents a "dictionary" of the elements of 'this' collection.  The
-            'keySelector' function is used to project the "key" value for each element of 'this' collection.
-            If the 'elementSelector' function is given, the "value" associated with each "key" value is the
-            value projected by the 'elementSelector' function.  If the 'elementSelector' function is not 
-            given, the "value" associated with each "key" value is the element, itself.
-            @param keySelector The function that projects the key for each element
-            @param elementSelector Optional, the function that projects the value for each key
-        */
-        toDictionary: function (keySelector, elementSelector)
-        {
-            keySelector = linq_helper.createLambda(keySelector);
-            elementSelector = linq_helper.createLambda(elementSelector);
-
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
-
-            if ((elementSelector != null) && !linq_helper.isFunction(elementSelector))
-                throw new Error("Invalid element selector.");
-
-            linq_helper.processDeferredSort(this);
-
-            var len = this.array.length;
-            var results = {};
-
-            for (var i = 0; i < len; i++)
-            {
-                var value = this.array[i];
-                var key = keySelector(value);
-
-                if (key in results)
-                    throw new Error("Duplicate key in collection.");
-
-                results[key] = (elementSelector == null ? value : elementSelector(value));
-            }
-
-            return results;
-        },
-
-        /**
-            Returns a jQuery collection containing the elements of 'this' collection.  If jQuery is not
-            available, an exception will be thrown.
-        */
-        toJQuery: function ()
-        {
-            if (!jQuery)
-                throw new Error("Cannot return jQuery object--jQuery not available.");
-
-            linq_helper.processDeferredSort(this);
-
-            return jQuery(this.array);
-        },
-
-        /**
-            Returns a lookup-collection with the elements of 'this' collection grouped by a key
-            projected by the 'keySelector' function.  If the optional 'comparer' is provided, then
-            the comparer will be used to determine equality between keys.  If the 'comparer is not
-            provided, the '===' operator will be used to determine equality between keys.
-            @param keySelector The function used to project keys from the elements of 'this' collection
-            @param comparer Optional, the function used to compare keys
-        */
-        toLookup: function (keySelector, comparer)
-        {
-            keySelector = linq_helper.createLambda(keySelector);
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((keySelector == null) || !linq_helper.isFunction(keySelector))
-                throw new Error("Invalid key selector.");
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var results = new linq([], false);
-            var len = this.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var item = this.array[i];
-                    var key = keySelector(item);
-
-                    var lookupNode = results.firstOrDefault(null, function (x)
-                    {
-                        if (comparer == null)
-                            return x.key === key;
-                        else
-                            return comparer(x.key, key);
-                    });
-
-                    if (lookupNode == null)
-                    {
-                        lookupNode = { key: key, values: [] };
-                        results.array.push(lookupNode);
-                    }
-
-                    lookupNode.values.push(item);
-                }
-            }
-
-            return results;
-        },
-
-        /**
-            Returns the union of elements in 'this' collection and the 'second' collection, using the
-            'comparer' function to determine whether two different elements are equal.  If the 'comparer'
-            function is not given, then the "===" operator will be used to compare elements.
-            @param second The collection of elements to test for union
-            @param comparer Optional, the function used to compare elements
-        */
-        union: function (second, comparer)
-        {
-            comparer = linq_helper.createLambda(comparer);
-
-            if ((comparer != null) && !linq_helper.isFunction(comparer))
-                throw new Error("Invalid comparer.");
-                
-            if (comparer != null)
-                comparer = linq_helper.normalizeComparer(comparer);
-
-            linq_helper.processDeferredSort(this);
-
-            var secondLinq = linq.from(second == null ? [] : second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            var len = this.array.length;
-            var results = new linq([], false);
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in this.array)
-                {
-                    var value = this.array[i];
-
-                    var inResults = linq_helper.some(results.array, function (x)
-                    {
-                        if (comparer == null)
-                            return (x === value);
-                        else
-                            return comparer(x, value);
-                    });
-
-                    if (!inResults)
-                        results.array.push(value);
-                }
-            }
-
-            len = secondLinq.array.length;
-
-            for (var i = 0; i < len; i++)
-            {
-                if (i in secondLinq.array)
-                {
-                    var value = secondLinq.array[i];
-
-                    var inResults = linq_helper.some(results.array, function (x)
-                    {
-                        if (comparer == null)
-                            return (x === value);
-                        else
-                            return comparer(x, value);
-                    });
-
-                    if (!inResults)
-                        results.array.push(value);
-                }
-            }
-
-            return results;
-        },
-
-        /**
-            Returns the elements of 'this' collection that satisfy the 'predicate' function.
-            @param predicate The function that determines which elements to return
-        */
-        where: function (predicate)
-        {
-            predicate = linq_helper.createLambda(predicate);
-
-            if ((predicate == null) || !linq_helper.isFunction(predicate))
-                throw new Error("Invalid predicate.");
-
-            linq_helper.processDeferredSort(this);
-
-            return new linq(linq_helper.filter(this.array, predicate), false);
-        },
-
-        /**
-            Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
-            returned collection is the value projected from the corresponding element from each of 'this'
-            collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
-            collection are not equal, the size of the returned collection will equal the minimum of the
-            sizes of 'this' collection and the 'second' collection.
-            @param second The collection to zip with 'this' collection
-            @param resultSelector Optional, the function to use to project the result values
-        */
-        zip: function (second, resultSelector)
-        {
-            resultSelector = linq_helper.createLambda(resultSelector);
-
-            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
-                
-            if (resultSelector == null)
-                resultSelector = linq_helper.merge;
-
-            linq_helper.processDeferredSort(this);
-
-            if (second == null)
-                return new linq([], false);
-
-            var secondLinq = linq.from(second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            var len = Math.min(this.array.length, secondLinq.array.length);
-            var results = [];
-
-            for (var i = 0; i < len; i++)
-            {
-                results.push(resultSelector(this.array[i], secondLinq.array[i]));
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns 'this' collection "zipped-up" with the 'second' collection such that each value of the
-            returned collection is the value projected from the corresponding element from each of 'this'
-            collection and the 'second' collection.  If the size of 'this' collection and the 'second' 
-            collection are not equal, the size of the returned collection will equal the maximum of the
-            sizes of 'this' collection and the 'second' collection, and the shorter collection with use
-            values given by the 'defaultForFirst' and 'defaultForSecond' parameters (corresponding with
-            which corresponding list is shorter).
-            @param second The collection to zip with 'this' collection
-            @param resultSelector Optional, the function to use to project the result values
-        */
-        zipLongest: function (second, defaultForFirst, defaultForSecond, resultSelector)
-        {
-            resultSelector = linq_helper.createLambda(resultSelector);
-
-            if ((resultSelector != null) && !linq_helper.isFunction(resultSelector))
-                throw new Error("Invalid result selector.");
-                
-            if (resultSelector == null)
-                resultSelector = linq_helper.merge;
-
-            linq_helper.processDeferredSort(this);
-
-            var secondLinq = linq.from(second);
-
-            linq_helper.processDeferredSort(secondLinq);
-
-            var len = Math.max(this.array.length, secondLinq.array.length);
-            var results = [];
-
-            for (var i = 0; i < len; i++)
-            {
-                results.push(
-                    resultSelector(
-                        (i >= this.array.length ? defaultForFirst : this.array[i]), 
-                        (i >= secondLinq.array.length ? defaultForSecond : secondLinq.array[i])));
-            }
-
-            return new linq(results, false);
-        },
-
-        /**
-            Returns an array with the same elements as 'this' collection.
-        */
-        toArray: function ()
-        {
-            linq_helper.processDeferredSort(this);
-
-            return this.array.slice(0);
         }
-    };
 
-    if (typeof module !== 'undefined' && module.exports)
-        module.exports = linq;
-    else
-    {
-        root.linq = linq;
-        root.$linq = linq.from;
+        return new Linq(skipWhileGenerator);
     }
-})(this);
+
+    /**
+     * Returns either the sum of the elements of 'this' collection (if `selector` is not given) or the
+     * sum of the projected value of each element of 'this' collection (if `selector` is given).
+     * 
+     * @param {numericProjection} [selector] - The function that projects the values to be summed
+     * @returns {number}
+     */
+    sum(selector) 
+    {
+        LinqInternal.validateOptionalFunction(selector, 'Invalid selector.');
+        
+        let normalizingSelector = x =>
+        {
+            let value = (selector == null ? x : selector(x));
+
+            if (value == null)
+                value = 0;
+            else if (isNaN(value))
+                throw new Error('Encountered an element that is not a number.');
+
+            return value;
+        };
+
+        return this.aggregate(0, (acc, x) => acc + normalizingSelector(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking only the first `count` number of elements.
+     * 
+     * @param {number} count - The number of elements to take from the beginning of the collection
+     * @returns {Linq} 
+     */
+    take(count)
+    {
+        if (!LinqInternal.isValidNumber(count))
+            throw new Error('Invalid count.');
+
+        let iterable = this.toIterable();
+
+        function* takeGenerator()
+        {
+            let counter = 0;
+
+            for (let item of iterable)
+            {
+                if (counter >= count)
+                    return;
+
+                yield item;
+                counter += 1;
+            }
+        }
+
+        return new Linq(takeGenerator);
+    }
+
+    /**
+     * Returns every n-th (n = step) element of 'this' collection.
+     * 
+     * @param {number} step - The number of elements to bypass before returning the next element
+     * @returns {Linq}
+     */
+    takeEvery(step)
+    {
+        if (!LinqInternal.isValidNumber(step, x => x > 0))
+            throw new Error('Invalid step.');
+
+        return this.where((x, i) => (i % step) === 0);
+    }
+
+    /**
+     * Returns the elements of 'this' collection, taking only the last 'count' number of elements.
+     * 
+     * @param {number} count - The number of elements to take from the end of the collection
+     * @returns {Linq}
+     */
+    takeLast(count)
+    {
+        if (!LinqInternal.isValidNumber(count, x => x >= 0))
+            throw new Error('Invalid count');
+
+        if (count === 0)
+            return Linq.empty();
+
+        let iterable = this.toIterable();
+
+        if (LinqInternal.doesCollectionHaveExplicitCardinality(iterable))
+        {
+            let length = LinqInternal.getExplicitCardinality(iterable);
+
+            if (length != null)
+                return this.skip(length - count);
+        }
+
+        let aggregationFunc = (acc, x) =>
+        {
+            if (acc.length === count)
+                acc.shift();
+
+            acc.push(x);
+
+            return acc;
+        };
+
+        return new Linq(this.aggregate([], aggregationFunc));
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking element until an element satisfies the
+     * `predicate` function (that first element that satisfies the `predicate` function is not
+     * included in the results).
+     * 
+     * @param {predicate} predicate - The function that indicates when to stop including elements in the results
+     * @returns {Linq}
+     */
+    takeUntil(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        return this.takeWhile(x => !predicate(x));
+    }
+
+    /**
+     * Returns the elements of 'this' collection taking elements until an element does not satisfy
+     * the `predicate` function (that first element that fails to satisfy the `predicate` function
+     * is not included in the results).
+     * 
+     * @param {predicate} predicate - The function that indicates which of the initial elements to include in the results
+     * @returns {Linq}
+     */
+    takeWhile(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        var iterable = this.toIterable();
+
+        function* takeWhileGenerator()
+        {
+            for (let item of iterable)
+            {
+                if (!predicate(item))
+                    return;
+
+                yield item;
+            }
+        }
+
+        return new Linq(takeWhileGenerator);
+    }
+
+    /**
+     * Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
+     * call) in ascending order of the projected value given by the `keySelector` function, using the
+     * `comparer` function to compare the projected values.  If the `comparer` function is not given,
+     * a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+     * Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+     * thenBy, or thenByDescending call.
+     * 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
+     * @returns {Linq}
+     */
+    thenBy(keySelector, comparer)
+    {
+        return LinqInternal.thenByBasedOperator(this, keySelector, comparer, false);
+    }
+
+    /**
+     * Returns the elements of 'this' collection further sorted (from an immediately preceeding orderBy 
+     * call) in descending order of the projected value given by the `keySelector` function, using the
+     * `comparer` function to compare the projected values.  If the `comparer` function is not given,
+     * a comparer that uses the natural ordering of the values will be used to compare the projected values.  
+     * Note that this thenBy call must be immediately preceeded by either an orderBy, orderByDescending, 
+     * thenBy, or thenByDescending call.
+     * 
+     * @param {projection} keySelector - The function that projects the value used to sort the elements
+     * @param {comparer} [comparer] - The function that compares the projected values
+     * @returns {Linq}
+     */
+    thenByDescending(keySelector, comparer)
+    {
+        return LinqInternal.thenByBasedOperator(this, keySelector, comparer, true);
+    }
+
+    /**
+     * Returns an array that represents the contents of the Linq object.
+     */
+    toArray()
+    {
+        return Array.from(this.toIterable());
+    }
+
+    /**
+     * Returns a string consisting of all of the elements of 'this' collection delimited by the given
+     * 'delimiter' value.  If a `delimiter` value is not given, then the delimiter "," is used.
+     * 
+     * @param {string} [delimiter] - The delimiter separating the elements in the results
+     * @returns {string} 
+     */
+    toDelimitedString(delimiter)
+    {
+        if (LinqInternal.isEmptyIterable(this.toIterable()))
+            return '';
+
+        if (delimiter == null)
+            delimiter = ',';
+
+        return this.aggregate(null, (acc, x) => `${acc}${delimiter}${x}`);   
+    }
+
+    /**
+     * Returns an object that represents a "dictionary" of the elements of 'this' collection.  The
+     * `keySelector` function is used to project the "key" value for each element of 'this' collection.
+     * If the `elementSelector` function is given, the "value" associated with each "key" value is the
+     * value projected by the `elementSelector` function.  If the `elementSelector` function is not 
+     * given, the "value" associated with each "key" value is the element, itself.
+     * 
+     * @param {projection} keySelector - The function that projects the key for each element
+     * @param {projection} [elementSelector] - The function that projects the value for each key
+     * @returns {Linq}
+     */
+    toDictionary(keySelector, elementSelector)
+    {
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(elementSelector, 'Invalid element selector.');
+
+        let normalizedElementSelector = (elementSelector == null ? Linq.identity : elementSelector);
+        let iterable = this.toIterable();
+        let results = {};
+
+        for (let item of iterable)
+        {
+            let key = keySelector(item);
+
+            if (key in results)
+                throw new Error('Duplicate key in collection.');
+
+            results[key] = normalizedElementSelector(item);
+        }
+
+        return results;
+    }
+
+    /**
+     * Returns an iterable (as defined by the "iterable protocol"--see
+     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#iterable) that 
+     * represents the contents of the Linq object.
+     */
+    toIterable()
+    {
+        let helper = source =>
+        {
+            if (Linq.isLinq(source))
+                return helper(source.source);
+            else if (Linq.isIterable(source))
+                return source;
+            else if (Linq.isGenerator(source))
+                return source();
+            else if (Linq.isFunction(source))
+                return helper(source());
+            else 
+                throw new Error('Could not return an iterable because the \'source\' was not valid.');
+        };
+
+        let iterable = helper(this.source);
+        let deferredSort = this[deferredSortSymbol];
+
+        if (deferredSort == null)
+            return iterable;
+
+        function* deferredSortGenerator()
+        {
+            let buffer = Array.from(iterable);
+
+            LinqInternal.performDeferredSort(buffer, deferredSort);
+
+            for (let item of buffer)
+            {
+                yield item;
+            }
+        }
+
+        return deferredSortGenerator();
+    }
+
+    /**
+     * Returns a lookup-collection with the elements of 'this' collection grouped by a key
+     * projected by the `keySelector` function.  If the optional `comparer` is provided, then
+     * the comparer will be used to determine equality between keys.  If the `comparer` is not
+     * provided, the '===' operator will be used to determine equality between keys.
+     * 
+     * @param {projection} keySelector - The function used to project keys from the elements of 'this' collection 
+     * @param {comparer|equalityComparer} [keyComparer] - The function used to compare keys 
+     * @returns {Linq}
+     */
+    toLookup(keySelector, keyComparer)
+    {
+        LinqInternal.validateRequiredFunction(keySelector, 'Invalid key selector.');
+        LinqInternal.validateOptionalFunction(keyComparer, 'Invalid key comparer.');
+
+        let normalizedComparer = LinqInternal.normalizeComparerOrDefault(keyComparer);
+
+        let iterable = this.toIterable();
+        let resultsArray = [];
+        let results = new Linq(resultsArray);
+
+        for (let item of iterable)
+        {
+            let key = keySelector(item);
+            let lookupNode = results.firstOrDefault(x => normalizedComparer(x.key, key));
+
+            if (lookupNode == null)
+            {
+                lookupNode = { key, values: [] };
+                resultsArray.push(lookupNode);
+            }
+            
+            lookupNode.values.push(item);
+        }
+
+        return results;
+    }
+
+    /**
+     * Returns the union of elements in 'this' collection and the `second` collection, using the
+     * `comparer` function to determine whether two different elements are equal.  If the `comparer`
+     * function is not given, then the "===" operator will be used to compare elements.
+     * 
+     * @param {LinqCompatible} second - The collection of elements to union
+     * @param {comparer|equalityComparer} [comparer] - The function used to compare elements
+     * @returns {Linq} 
+     */
+    union(second, comparer)
+    {
+        LinqInternal.validateOptionalFunction(comparer, 'Invalid comparer.');
+
+        let normalizedComparer = (comparer == null ? null : Linq.normalizeComparer(comparer));
+        let secondLinq = LinqInternal.ensureLinq(second);
+
+        let firstIterable = this.toIterable();
+        let secondIterable = secondLinq.toIterable();
+
+        let disqualifiedSet = new SimpleSet(normalizedComparer);
+
+        function* unionGenerator()
+        {
+            for (let item of firstIterable)
+            {
+                let isDisqualified = disqualifiedSet.has(item);
+
+                if (!isDisqualified)
+                {
+                    disqualifiedSet.add(item);
+                    yield item;
+                }
+            }
+
+            for (let item of secondIterable)
+            {
+                let isDisqualified = disqualifiedSet.has(item);
+
+                if (!isDisqualified)
+                {
+                    disqualifiedSet.add(item);
+                    yield item;
+                }
+            }
+        }
+
+        return new Linq(unionGenerator);
+    }
+
+    /**
+     * Returns the elements of 'this' collection that satisfy the `predicate` function.
+     * 
+     * @param {indexedProjection} predicate - The function that determines which elements to return
+     * @returns {Linq}
+     */
+    where(predicate)
+    {
+        LinqInternal.validateRequiredFunction(predicate, 'Invalid predicate.');
+
+        let iterable = this.toIterable();
+
+        function* whereGenerator()
+        {
+            let i = 0;
+
+            for (let item of iterable)
+            {
+                if (predicate(item, i))
+                    yield item;
+
+                i += 1;
+            }
+        }
+
+        return new Linq(whereGenerator);
+    }
+
+    /**
+     * Returns 'this' collection "zipped-up" with the `second` collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the `second` collection.  If the size of 'this' collection and the `second` 
+     * collection are not equal, the size of the returned collection will equal the minimum of the
+     * sizes of 'this' collection and the `second` collection.
+     * 
+     * @param {LinqCompatible} second - The collection to zip with 'this' collection
+     * @param {biSourceProjection} [resultSelector] - The function to use to project the result values
+     * @returns {Linq}
+     */
+    zip(second, resultSelector)
+    {
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        if (resultSelector == null)
+            resultSelector = Linq.tuple;
+
+        let secondLinq = LinqInternal.ensureLinq(second);
+        let firstIterator = LinqInternal.getIterator(this.toIterable());
+        let secondIterator = LinqInternal.getIterator(secondLinq.toIterable());
+
+        function* zipGenerator()
+        {
+            let firstState = firstIterator.next();
+            let secondState = secondIterator.next();
+
+            while (!firstState.done && !secondState.done)
+            {
+                yield resultSelector(firstState.value, secondState.value);
+
+                firstState = firstIterator.next();
+                secondState = secondIterator.next();
+            }
+        }
+
+        return new Linq(zipGenerator);
+    }
+
+    /**
+     * Returns 'this' collection "zipped-up" with the `second` collection such that each value of the
+     * returned collection is the value projected from the corresponding element from each of 'this'
+     * collection and the `second` collection.  If the size of 'this' collection and the `second` 
+     * collection are not equal, the size of the returned collection will equal the maximum of the
+     * sizes of 'this' collection and the `second` collection, and the shorter collection with use
+     * values given by the `defaultForFirst` and `defaultForSecond` parameters (corresponding with
+     * which corresponding list is shorter).
+     * 
+     * @param {LinqCompatible} second - The collection to zip with 'this' collection
+     * @param {*} defaultForFirst - The value used for 'this' collection when shorter
+     * @param {*} defaultForSecond - The value used for the 'second' collecction when shorter
+     * @param {biSourceProjection} [resultSelector] - The function to use to project the result values
+     * @returns {Linq}
+     */
+    zipLongest(second, defaultForFirst, defaultForSecond, resultSelector)
+    {
+        LinqInternal.validateOptionalFunction(resultSelector, 'Invalid result selector.');
+
+        if (resultSelector == null)
+            resultSelector = Linq.tuple;
+
+        let secondLinq = LinqInternal.ensureLinq(second);
+        let firstIterator = LinqInternal.getIterator(this.toIterable());
+        let secondIterator = LinqInternal.getIterator(secondLinq.toIterable());
+
+        function* zipGenerator()
+        {
+            let firstState = firstIterator.next();
+            let secondState = secondIterator.next();
+
+            while (!firstState.done || !secondState.done)
+            {
+                let firstValue = (firstState.done ? defaultForFirst : firstState.value);
+                let secondValue = (secondState.done ? defaultForSecond : secondState.value);
+
+                yield resultSelector(firstValue, secondValue);
+
+                if (!firstState.done)
+                    firstState = firstIterator.next();
+
+                if (!secondState.done)
+                    secondState = secondIterator.next();
+            }
+        }
+
+        return new Linq(zipGenerator);
+    }
+}
+
+export let $linq = Linq.from;

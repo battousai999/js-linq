@@ -1,2 +1,6 @@
 node_modules/
 coverage/
+dist/
+dist-node/
+nuget-pub/content/
+jslinq.min.js

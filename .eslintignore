@@ -1,0 +1,8 @@
+*.min.js
+old/*
+spec/*
+dist/*
+dist-node/*
+node_modules/*
+testing/*
+spec-ts/*
