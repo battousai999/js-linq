@@ -23,12 +23,13 @@
     "grunt-karma": "^0.12.1",
     "jasmine-core": "^2.4.1",
     "karma": "^1.2.0",
-    "karma-cli": "^1.0.1",
     "karma-chrome-launcher": "^2.0.0",
+    "karma-cli": "^1.0.1",
     "karma-jasmine": "^1.0.2",
     "karma-phantomjs-launcher": "^1.0.2",
     "karma-typescript": "^2.1.7",
     "load-grunt-tasks": "^3.4.1",
-    "phantomjs-prebuilt": "^2.1.4"
+    "phantomjs-prebuilt": "^2.1.4",
+    "typescript": "^2.0.3"
   }
 }
